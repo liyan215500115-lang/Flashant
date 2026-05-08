@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { advanceProject, failProject } from "@/lib/pipeline-db";
+import { finalizeVideo } from "@/lib/ffmpeg";
 import type { NextRequest } from "next/server";
 
 export async function POST(
@@ -29,18 +30,51 @@ export async function POST(
   }
 
   try {
+    const videoAssets = project.mediaAssets
+      .filter((a) => a.type === "VIDEO" && a.url)
+      .sort((a, b) => a.stageIndex - b.stageIndex);
+
+    const audioAsset = project.mediaAssets.find((a) => a.type === "AUDIO" && a.url);
+
+    if (videoAssets.length > 0 && audioAsset) {
+      const clips = videoAssets.map((v) => ({
+        videoPath: v.url,
+        durationSeconds: 5,
+      }));
+
+      const outputPath = await finalizeVideo(
+        clips[0]?.videoPath ?? "",
+        audioAsset.url,
+        id,
+      );
+
+      await db.videoProject.update({
+        where: { id },
+        data: { outputUrl: outputPath },
+      });
+    }
+
     const publishTargets = platforms.length > 0 ? platforms : ["douyin", "kuaishou"];
 
     const records = [];
     for (const platform of publishTargets) {
-      const record = await db.publishRecord.create({
-        data: {
-          videoProjectId: id,
-          platform,
-          status: "QUEUED",
-        },
+      const existing = await db.publishRecord.findFirst({
+        where: { videoProjectId: id, platform },
       });
-      records.push(record);
+
+      if (existing) {
+        records.push(existing);
+      } else {
+        const record = await db.publishRecord.create({
+          data: {
+            videoProjectId: id,
+            platform,
+            status: "UPLOADING",
+            aiLabelApplied: true,
+          },
+        });
+        records.push(record);
+      }
     }
 
     await advanceProject(id, "PUBLISHING");

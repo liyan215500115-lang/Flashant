@@ -32,9 +32,28 @@ interface StepProgressProps {
 }
 
 export function StepProgress({ status }: StepProgressProps) {
+  const isFailed = status === "FAILED";
+
+  if (isFailed) {
+    return (
+      <div className="flex items-center gap-1 py-2">
+        <div
+          className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+          style={{
+            background: "var(--error)",
+            color: "#fff",
+            borderRadius: "var(--radius-sm)",
+          }}
+        >
+          <span style={{ fontSize: 12 }}>{STEP_ICONS["FAILED"]}</span>
+          <span>{STEP_LABELS["FAILED"]}</span>
+        </div>
+      </div>
+    );
+  }
+
   const currentIdx = getStageIndex(status);
   const total = getTotalStages();
-  const isFailed = status === "FAILED";
 
   return (
     <div className="flex items-center gap-1 py-2">
@@ -44,18 +63,16 @@ export function StepProgress({ status }: StepProgressProps) {
 
         const done = i < currentIdx;
         const active = i === currentIdx;
-        const fail = isFailed && active;
 
         return (
           <div key={i} className="flex items-center gap-1 flex-1 last:flex-[0_0_auto]">
             <div
               className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap"
               style={{
-                background: fail ? "var(--error)" :
-                  active ? "var(--accent)" :
+                background: active ? "var(--accent)" :
                   done ? "var(--success)" :
                   "var(--bg)",
-                color: fail || active ? "#fff" :
+                color: active ? "#fff" :
                   done ? "var(--success)" :
                   "var(--text-secondary)",
                 borderRadius: "var(--radius-sm)",
