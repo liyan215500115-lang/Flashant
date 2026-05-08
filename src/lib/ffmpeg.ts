@@ -2,10 +2,27 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream";
+import { promisify as promisifyNode } from "util";
 
 const execFileAsync = promisify(execFile);
+const streamPipeline = promisifyNode(pipeline);
 
 const FFMPEG_PATH = process.env.FFMPEG_PATH || "ffmpeg";
+
+async function downloadToFile(url: string, destPath: string): Promise<void> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status} ${response.statusText} for ${url}`);
+  }
+  await fs.mkdir(path.dirname(destPath), { recursive: true });
+  const writer = createWriteStream(destPath);
+  if (!response.body) {
+    throw new Error(`No response body for ${url}`);
+  }
+  await streamPipeline(response.body as unknown as NodeJS.ReadableStream, writer);
+}
 
 interface MergeInput {
   videoPath: string;
@@ -124,20 +141,44 @@ export async function injectAiMetadata(
 }
 
 export async function finalizeVideo(
-  mergedVideoPath: string,
-  audioPath: string,
+  videoUrl: string,
+  audioUrl: string,
   projectId: string,
-): Promise<string> {
+): Promise<string | null> {
   const tmpDir = `/tmp/ai-pipeline/${projectId}`;
   await fs.mkdir(tmpDir, { recursive: true });
 
+  const downloadedVideo = path.join(tmpDir, "input_video.mp4");
+  const downloadedAudio = path.join(tmpDir, "input_audio.mp3");
   const mixedPath = path.join(tmpDir, "mixed.mp4");
   const watermarkedPath = path.join(tmpDir, "watermarked.mp4");
   const finalPath = path.join(tmpDir, "final.mp4");
 
-  await mixAudioWithVideo(mergedVideoPath, audioPath, mixedPath);
-  await applyAiWatermark(mixedPath, watermarkedPath);
-  await injectAiMetadata(watermarkedPath, finalPath);
+  try {
+    await downloadToFile(videoUrl, downloadedVideo);
+    await downloadToFile(audioUrl, downloadedAudio);
+  } catch (e) {
+    // URLs may be mock data or remote — skip FFmpeg if downloads fail
+    console.warn("Skipping FFmpeg: cannot download assets", e instanceof Error ? e.message : e);
+    await cleanup(downloadedVideo, downloadedAudio, mixedPath, watermarkedPath);
+    return null;
+  }
 
-  return finalPath;
+  try {
+    await mixAudioWithVideo(downloadedVideo, downloadedAudio, mixedPath);
+    await applyAiWatermark(mixedPath, watermarkedPath);
+    await injectAiMetadata(watermarkedPath, finalPath);
+    return finalPath;
+  } catch (e) {
+    console.error("FFmpeg processing failed:", e instanceof Error ? e.message : e);
+    return null;
+  } finally {
+    await cleanup(downloadedVideo, downloadedAudio, mixedPath, watermarkedPath);
+  }
+}
+
+async function cleanup(...paths: string[]) {
+  for (const p of paths) {
+    await fs.unlink(p).catch(() => {});
+  }
 }

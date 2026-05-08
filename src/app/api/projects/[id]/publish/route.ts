@@ -37,21 +37,18 @@ export async function POST(
     const audioAsset = project.mediaAssets.find((a) => a.type === "AUDIO" && a.url);
 
     if (videoAssets.length > 0 && audioAsset) {
-      const clips = videoAssets.map((v) => ({
-        videoPath: v.url,
-        durationSeconds: 5,
-      }));
-
       const outputPath = await finalizeVideo(
-        clips[0]?.videoPath ?? "",
+        videoAssets[0]?.url ?? "",
         audioAsset.url,
         id,
       );
 
-      await db.videoProject.update({
-        where: { id },
-        data: { outputUrl: outputPath },
-      });
+      if (outputPath) {
+        await db.videoProject.update({
+          where: { id },
+          data: { outputUrl: outputPath },
+        });
+      }
     }
 
     const publishTargets = platforms.length > 0 ? platforms : ["douyin", "kuaishou"];
