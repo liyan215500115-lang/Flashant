@@ -40,7 +40,7 @@ services:
     command: >
       sh -c "
         npx prisma migrate deploy &&
-        npx prisma db seed &&
+        echo 'Run seed manually: docker compose exec app npx tsx prisma/seed.ts' &&
         node server.js
       "
 
