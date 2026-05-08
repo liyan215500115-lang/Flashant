@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  role      String   @default("operator")
+  createdAt DateTime @default(now())
+}
+
+model VideoProject {
+  id                 String         @id @default(cuid())
+  userId             String
+  productUrl         String
+  productTitle       String         @default("")
+  productImage       String         @default("")
+  script             Json?
+  status             PipelineStatus @default(PARSING)
+  stageProgress      Int            @default(0)
+  estimatedRemaining Int            @default(0)
+  errorMessage       String?
+  outputUrl          String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  mediaAssets        MediaAsset[]
+  publishRecords     PublishRecord[]
+}
+
+model MediaAsset {
+  id             String   @id @default(cuid())
+  videoProjectId String
+  type           AssetType
+  url            String
+  stageIndex     Int
+  aiProvider     String?
+  generationMeta Json?
+  createdAt      DateTime @default(now())
+
+  project VideoProject @relation(fields: [videoProjectId], references: [id], onDelete: Cascade)
+}
+
+model PublishRecord {
+  id              String        @id @default(cuid())
+  videoProjectId  String
+  platform        String
+  status          PublishStatus @default(QUEUED)
+  platformPostId  String?
+  platformPostUrl String?
+  errorMessage    String?
+  aiLabelApplied  Boolean       @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+
+  project VideoProject @relation(fields: [videoProjectId], references: [id], onDelete: Cascade)
+}
+
+model PlatformAccount {
+  id           String   @id @default(cuid())
+  platform     String
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum PipelineStatus {
+  PARSING
+  SCRIPTING
+  GENERATING_IMAGES
+  GENERATING_VIDEO
+  GENERATING_AUDIO
+  REVIEW
+  APPROVED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum PublishStatus {
+  QUEUED
+  UPLOADING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
