@@ -67,19 +67,19 @@ function mockScriptProvider(): ScriptProvider {
 }
 
 function mockImageProvider(): ImageProvider {
-  let seed = 0;
   return {
     name: "mock-jimeng",
-    async generate(prompt: string): Promise<ImageGenerationResult> {
+    async generate(prompt: string, referenceImageUrl?: string): Promise<ImageGenerationResult> {
       await new Promise((r) => setTimeout(r, 600));
-      seed++;
-      // Use picsum for real photos as placeholders (no API key needed)
-      const imgId = (seed % 200) + 1;
+      // Mock: return the product image with a scene-specific seed for visual distinction
+      // Real mode: Jimeng/Kling API generates actual product scene images
+      const base = referenceImageUrl || `https://placehold.co/1080x1920/1A1D23/F8F9FA?text=${encodeURIComponent("上传商品图片")}`;
+      const seed = Math.random().toString(36).slice(2, 8);
       return {
-        url: `https://picsum.photos/seed/${imgId}/1080/1920`,
-        thumbnailUrl: `https://picsum.photos/seed/${imgId}/360/640`,
+        url: `${base}${base.includes("?") ? "&" : "?"}scene=${seed}`,
+        thumbnailUrl: `${base}${base.includes("?") ? "&" : "?"}thumb=${seed}`,
         provider: "mock-jimeng",
-        metadata: { model: "mock", seed, prompt: prompt.slice(0, 80) },
+        metadata: { model: "mock", prompt: prompt.slice(0, 100) },
       };
     },
   };
@@ -90,16 +90,15 @@ let videoSeed = 0;
 function mockVideoProvider(): VideoProvider {
   return {
     name: "mock-jimeng",
-    async generate(): Promise<VideoGenerationResult> {
+    async generate(prompt: string, startImageUrl: string): Promise<VideoGenerationResult> {
       await new Promise((r) => setTimeout(r, 1000));
       videoSeed++;
-      const imgId = (videoSeed % 200) + 100;
       return {
         url: "",
-        thumbnailUrl: `https://picsum.photos/seed/${imgId}/1080/1920`,
+        thumbnailUrl: startImageUrl,
         durationSeconds: 5,
         provider: "mock-jimeng",
-        metadata: { model: "mock", seed: videoSeed },
+        metadata: { model: "mock", seed: videoSeed, prompt: prompt.slice(0, 80) },
       };
     },
   };

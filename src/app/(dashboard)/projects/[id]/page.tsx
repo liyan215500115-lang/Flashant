@@ -224,6 +224,7 @@ export default function PipelinePage() {
       {images.length > 0 && (project.status === "GENERATING_IMAGES" || project.status === "GENERATING_VIDEO") && (
         <ImageGallery
           images={images as unknown as { id: string; url: string; stageIndex: number; aiProvider: string | null }[]}
+          scenes={project.script?.scenes as { index: number; description: string; imagePrompt: string }[] | undefined}
           onContinue={() => triggerStage("video")}
           onRegenerate={() => triggerStage("images")}
           loading={actionLoading}
