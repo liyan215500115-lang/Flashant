@@ -94,7 +94,7 @@ function mockVideoProvider(): VideoProvider {
       await new Promise((r) => setTimeout(r, 1000));
       videoSeed++;
       return {
-        url: "",
+        url: startImageUrl, // mock: use image as video placeholder
         thumbnailUrl: startImageUrl,
         durationSeconds: 5,
         provider: "mock-jimeng",
