@@ -67,31 +67,39 @@ function mockScriptProvider(): ScriptProvider {
 }
 
 function mockImageProvider(): ImageProvider {
+  let seed = 0;
   return {
     name: "mock-jimeng",
-    async generate(): Promise<ImageGenerationResult> {
+    async generate(prompt: string): Promise<ImageGenerationResult> {
       await new Promise((r) => setTimeout(r, 600));
+      seed++;
+      // Use picsum for real photos as placeholders (no API key needed)
+      const imgId = (seed % 200) + 1;
       return {
-        url: "https://placehold.co/1080x1920/1A1A1F/FFFFFF?text=AI+Generated+Image",
-        thumbnailUrl: "https://placehold.co/360x640/1A1A1F/FFFFFF?text=AI+Image",
+        url: `https://picsum.photos/seed/${imgId}/1080/1920`,
+        thumbnailUrl: `https://picsum.photos/seed/${imgId}/360/640`,
         provider: "mock-jimeng",
-        metadata: { model: "mock", seed: 42 },
+        metadata: { model: "mock", seed, prompt: prompt.slice(0, 80) },
       };
     },
   };
 }
+
+let videoSeed = 0;
 
 function mockVideoProvider(): VideoProvider {
   return {
     name: "mock-jimeng",
     async generate(): Promise<VideoGenerationResult> {
       await new Promise((r) => setTimeout(r, 1000));
+      videoSeed++;
+      const imgId = (videoSeed % 200) + 100;
       return {
         url: "",
-        thumbnailUrl: "https://placehold.co/1080x1920/1A1A1F/FFFFFF?text=AI+Generated+Video",
+        thumbnailUrl: `https://picsum.photos/seed/${imgId}/1080/1920`,
         durationSeconds: 5,
         provider: "mock-jimeng",
-        metadata: { model: "mock", seed: 42 },
+        metadata: { model: "mock", seed: videoSeed },
       };
     },
   };
