@@ -1,30 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function NewProjectPage() {
-  const [url, setUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [hint, setHint] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  function handleFile(f: File) {
+    if (!f.type.startsWith("image/")) {
+      setError("请上传图片文件");
+      return;
+    }
+    if (f.size > 10 * 1024 * 1024) {
+      setError("图片大小不能超过 10MB");
+      return;
+    }
+    setError("");
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = () => setPreview(reader.result as string);
+    reader.readAsDataURL(f);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (!url.trim()) {
-      setError("请输入商品链接");
+    if (!file) {
+      setError("请上传商品图片");
       return;
     }
 
     setLoading(true);
 
     try {
+      const formData = new FormData();
+      formData.append("image", file);
+      if (hint.trim()) {
+        formData.append("hint", hint.trim());
+      }
+
       const res = await fetch("/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productUrl: url.trim() }),
+        body: formData,
       });
 
       if (!res.ok) {
@@ -46,7 +78,7 @@ export default function NewProjectPage() {
       <div className="mb-8">
         <h1 style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.3 }}>新建项目</h1>
         <p style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 4 }}>
-          粘贴电商商品链接，AI 将自动生成短视频脚本和素材
+          上传商品图片，AI 将自动分析商品并生成短视频脚本和素材
         </p>
       </div>
 
@@ -60,22 +92,79 @@ export default function NewProjectPage() {
         }}
       >
         {error && (
-          <div className="error-state mb-4">{error}</div>
+          <div
+            className="error-state mb-4"
+            style={{
+              padding: "8px 12px",
+              borderRadius: "var(--radius-md)",
+              background: "var(--error)",
+              color: "#fff",
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </div>
         )}
 
+        <label className="block mb-2" style={{ fontSize: 14, fontWeight: 500 }}>
+          商品图片
+        </label>
+
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className="mb-4 rounded-lg border-2 border-dashed cursor-pointer flex flex-col items-center justify-center transition-colors"
+          style={{
+            minHeight: 200,
+            borderColor: dragOver ? "var(--accent)" : "var(--border)",
+            background: dragOver ? "rgba(37, 99, 235, 0.04)" : "var(--bg)",
+            borderRadius: "var(--radius-lg)",
+          }}
+        >
+          {preview ? (
+            <img
+              src={preview}
+              alt="商品预览"
+              className="max-w-full max-h-[300px] object-contain rounded-md"
+            />
+          ) : (
+            <div className="text-center p-6">
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
+              <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
+                点击上传或拖拽图片到此处
+              </p>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                支持 JPG、PNG、WebP，最大 10MB
+              </p>
+            </div>
+          )}
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+          }}
+        />
+
         <label
-          htmlFor="productUrl"
+          htmlFor="hint"
           className="block mb-2"
           style={{ fontSize: 14, fontWeight: 500 }}
         >
-          商品链接
+          商品名称（可选）
         </label>
         <input
-          id="productUrl"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          required
+          id="hint"
+          type="text"
+          value={hint}
+          onChange={(e) => setHint(e.target.value)}
           className="w-full px-3 py-2.5 rounded-md border mb-4"
           style={{
             background: "var(--bg)",
@@ -83,7 +172,7 @@ export default function NewProjectPage() {
             color: "var(--text-primary)",
             borderRadius: "var(--radius-md)",
           }}
-          placeholder="https://item.taobao.com/... 或 https://detail.tmall.com/..."
+          placeholder="如：电动牙刷、蓝牙耳机..."
         />
 
         <div
@@ -94,10 +183,10 @@ export default function NewProjectPage() {
           }}
         >
           <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
-            💡 生成流程
+            生成流程
           </p>
           <div className="flex items-center gap-2" style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-            <span>🔗 解析链接</span>
+            <span>🖼️ 分析商品图</span>
             <span>→</span>
             <span>📝 AI 脚本</span>
             <span>→</span>
@@ -116,7 +205,7 @@ export default function NewProjectPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !file}
           className="w-full py-2.5 rounded-md font-medium transition-colors disabled:opacity-50"
           style={{
             background: "var(--accent)",

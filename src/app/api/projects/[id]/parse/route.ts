@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { advanceProject, failProject } from "@/lib/pipeline-db";
+import { claudeProvider } from "@/lib/ai";
 import type { NextRequest } from "next/server";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
@@ -24,37 +25,42 @@ export async function POST(
   }
 
   try {
-    let title = "";
-    let image = "";
-
-    try {
-      const res = await fetch(project.productUrl, {
-        headers: { "User-Agent": "Mozilla/5.0" },
-        signal: AbortSignal.timeout(10000),
-      });
-      const html = await res.text();
-
-      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-      if (titleMatch) title = titleMatch[1].trim().replace(/\s+/g, " ").slice(0, 200);
-
-      const imgMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i)
-        ?? html.match(/<meta\s+name="twitter:image"\s+content="([^"]+)"/i);
-      if (imgMatch) image = imgMatch[1];
-    } catch {
-      title = "商品链接";
-      image = "";
+    if (!project.productImage) {
+      throw new Error("没有商品图片可供分析");
     }
+
+    // Build absolute URL for the image so Claude Vision can access it
+    const baseUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const imageUrl = project.productImage.startsWith("http")
+      ? project.productImage
+      : `${baseUrl}${project.productImage}`;
+
+    const analysis = await claudeProvider.analyzeImage(
+      imageUrl,
+      project.productTitle || undefined,
+    );
+
+    await db.videoProject.update({
+      where: { id },
+      data: {
+        productTitle: analysis.name,
+        productImage: project.productImage,
+        script: {
+          productAnalysis: analysis,
+        } as unknown as object,
+      },
+    });
 
     await advanceProject(id, "SCRIPTING");
 
-    const updated = await db.videoProject.update({
+    const updated = await db.videoProject.findUnique({
       where: { id },
-      data: { productTitle: title || "未命名商品", productImage: image },
+      include: { mediaAssets: true },
     });
 
     return Response.json(updated);
   } catch (e) {
-    await failProject(id, `解析失败: ${e instanceof Error ? e.message : "未知错误"}`);
+    await failProject(id, `图片分析失败: ${e instanceof Error ? e.message : "未知错误"}`);
     return Response.json({ error: "Parse failed" }, { status: 500 });
   }
 }

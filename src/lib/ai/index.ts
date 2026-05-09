@@ -11,11 +11,25 @@ import type {
   VideoGenerationResult,
   AudioGenerationResult,
   ScriptGenerationResult,
+  ProductAnalysis,
 } from "./types";
 
 function mockScriptProvider(): ScriptProvider {
   return {
     name: "mock-claude",
+    async analyzeImage(_imageUrl: string, hint?: string): Promise<ProductAnalysis> {
+      await new Promise((r) => setTimeout(r, 600));
+      const name = hint || "精选商品";
+      return {
+        name,
+        category: "日用百货",
+        features: ["高品质材质", "精致做工", "性价比高", "使用便捷"],
+        sellingPoints: ["限时优惠", "爆款热卖", "口碑好评"],
+        usageScenario: "日常居家使用，办公室也适用",
+        targetAudience: "20-40岁注重生活品质的消费者",
+        fullDescription: `${name}是一款品质出众的日用产品。采用优质材料，做工精细，设计人性化，非常适合日常使用。无论是自用还是送礼都是很好的选择。`,
+      };
+    },
     async generate(title: string): Promise<ScriptGenerationResult> {
       await new Promise((r) => setTimeout(r, 800));
       return {

@@ -47,7 +47,7 @@ export default async function ProjectsPage() {
         <div className="empty-state">
           <div className="mb-4" style={{ fontSize: 40 }}>🎬</div>
           <h3>还没有项目</h3>
-          <p>粘贴商品链接，AI 自动生成短视频</p>
+          <p>上传商品图片，AI 自动生成短视频</p>
           <Link
             href="/projects/new"
             className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium"
@@ -87,9 +87,16 @@ export default async function ProjectsPage() {
                       {STATUS_LABELS[p.status] || p.status}
                     </span>
                   </div>
-                  <p style={{ fontSize: 13, color: "var(--text-secondary)" }} className="truncate">
-                    {p.productUrl}
-                  </p>
+                  <div className="flex items-center gap-2" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                    {p.productImage && (
+                      <img
+                        src={p.productImage}
+                        alt=""
+                        style={{ width: 32, height: 32, borderRadius: 4, objectFit: "cover" }}
+                      />
+                    )}
+                    <span className="truncate">{p.productTitle}</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 ml-4">
                   {p.status !== "FAILED" && p.status !== "PUBLISHED" && (

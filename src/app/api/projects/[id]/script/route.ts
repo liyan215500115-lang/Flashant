@@ -25,19 +25,33 @@ export async function POST(
   }
 
   try {
+    // Extract product analysis description if available
+    let description = "暂无商品描述";
+    const existingScript = project.script as Record<string, unknown> | null;
+    const productAnalysis = existingScript?.productAnalysis as Record<string, unknown> | null;
+    if (productAnalysis?.fullDescription) {
+      description = productAnalysis.fullDescription as string;
+    }
+
     const script = await claudeProvider.generate(
       project.productTitle,
-      project.productImage || "未提供图片",
+      description,
       project.productImage || undefined,
     );
 
-    const updated = await db.videoProject.update({
+    // Merge script scenes with existing product analysis
+    const mergedScript = {
+      productAnalysis: productAnalysis || {},
+      ...script,
+    };
+
+    await db.videoProject.update({
       where: { id },
-      data: { script: script as unknown as object },
+      data: { script: mergedScript as unknown as object },
     });
 
     await advanceProject(id, "GENERATING_IMAGES");
-    return Response.json({ ...updated, script });
+    return Response.json({ ...project, script: mergedScript });
   } catch (e) {
     await failProject(id, `脚本生成失败: ${e instanceof Error ? e.message : "未知错误"}`);
     return Response.json({ error: "Script generation failed" }, { status: 500 });

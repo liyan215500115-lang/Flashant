@@ -1,53 +1,93 @@
-import type { ScriptProvider, ScriptGenerationResult } from "./types";
+import type { ScriptProvider, ScriptGenerationResult, ProductAnalysis } from "./types";
 
 export function createClaudeAdapter(apiKey?: string): ScriptProvider {
+  const key = apiKey;
+
+  async function callClaude(prompt: string, imageUrl?: string): Promise<string> {
+    if (!key) {
+      throw new Error("CLAUDE_API_KEY not configured");
+    }
+
+    const content: unknown[] = [{ type: "text", text: prompt }];
+    if (imageUrl) {
+      content.unshift({
+        type: "image",
+        source: {
+          type: "url",
+          url: imageUrl,
+        },
+      });
+    }
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        messages: [{ role: "user", content }],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Claude API error: ${response.status} ${await response.text()}`
+      );
+    }
+
+    const data = await response.json();
+    return data.content[0].text;
+  }
+
+  function extractJson<T>(text: string): T {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Claude response did not contain valid JSON");
+    }
+    return JSON.parse(jsonMatch[0]) as T;
+  }
+
   return {
     name: "claude",
+
+    async analyzeImage(imageUrl: string, hint?: string): Promise<ProductAnalysis> {
+      const prompt = `你是一个电商商品分析专家。请观察这张商品图片，分析商品信息。
+
+${hint ? `用户提示: ${hint}` : ""}
+
+请严格按照以下JSON格式输出，不要包含任何其他文字：
+
+{
+  "name": "商品名称（简洁准确）",
+  "category": "商品品类",
+  "features": ["卖点1", "卖点2", "卖点3"],
+  "sellingPoints": ["营销卖点1", "营销卖点2"],
+  "usageScenario": "使用场景描述",
+  "targetAudience": "目标人群描述",
+  "fullDescription": "完整的商品描述（用于生成脚本，150字以内）"
+}`;
+
+      const text = await callClaude(prompt, imageUrl);
+      return extractJson<ProductAnalysis>(text);
+    },
 
     async generate(
       productTitle: string,
       productDescription: string,
       productImageUrl?: string
     ): Promise<ScriptGenerationResult> {
-      if (!apiKey) {
-        throw new Error("CLAUDE_API_KEY not configured");
-      }
-
       const prompt = buildScriptPrompt(
         productTitle,
         productDescription,
         productImageUrl
       );
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 4096,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `Claude API error: ${response.status} ${await response.text()}`
-        );
-      }
-
-      const data = await response.json();
-      const text = data.content[0].text;
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-
-      if (!jsonMatch) {
-        throw new Error("Claude response did not contain valid JSON");
-      }
-
-      return JSON.parse(jsonMatch[0]) as ScriptGenerationResult;
+      const text = await callClaude(prompt);
+      return extractJson<ScriptGenerationResult>(text);
     },
   };
 }

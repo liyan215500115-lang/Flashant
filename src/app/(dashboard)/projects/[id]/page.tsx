@@ -151,9 +151,9 @@ export default function PipelinePage() {
           <div className="flex flex-col items-center gap-4">
             <div className="skeleton rounded-full" style={{ width: 56, height: 56 }} />
             <div>
-              <h3 style={{ fontSize: 18, fontWeight: 600 }}>正在解析商品链接</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 600 }}>正在分析商品图片</h3>
               <p style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 4 }}>
-                正在获取商品信息...
+                AI 正在识别商品信息...
               </p>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function PipelinePage() {
       )}
 
       {/* Stage: Scripting */}
-      {project.status === "SCRIPTING" && !project.script && (
+      {project.status === "SCRIPTING" && !project.script?.scenes && (
         <div
           className="p-12 rounded-lg border text-center"
           style={{
@@ -190,7 +190,7 @@ export default function PipelinePage() {
         </div>
       )}
 
-      {project.script && (project.status === "SCRIPTING" || project.status === "GENERATING_IMAGES") && (
+      {project.script?.scenes && (project.status === "SCRIPTING" || project.status === "GENERATING_IMAGES") && (
         <ScriptEditor
           script={project.script}
           onApprove={() => triggerStage("images")}

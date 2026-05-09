@@ -21,6 +21,16 @@ export interface AudioGenerationResult {
   provider: string;
 }
 
+export interface ProductAnalysis {
+  name: string;
+  category: string;
+  features: string[];
+  sellingPoints: string[];
+  usageScenario: string;
+  targetAudience: string;
+  fullDescription: string;
+}
+
 export interface ScriptGenerationResult {
   scenes: {
     index: number;
@@ -51,6 +61,7 @@ export interface AudioProvider {
 
 export interface ScriptProvider {
   readonly name: string;
+  analyzeImage(imageUrl: string, hint?: string): Promise<ProductAnalysis>;
   generate(
     productTitle: string,
     productDescription: string,

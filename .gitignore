@@ -2,3 +2,7 @@ node_modules/
 .next/
 .env
 *.log
+.pgdata/
+public/uploads/
+test-results/
+playwright-report/
