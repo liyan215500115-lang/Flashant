@@ -6,6 +6,7 @@ interface ReplicateConfig {
   apiKey: string;
   modelVersion: string;
   webhookUrl?: string;
+  timeoutMs?: number;
 }
 
 export function createReplicateProvider(config?: Partial<ReplicateConfig>): ImageProvider {
@@ -19,6 +20,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
     process.env.REPLICATE_MODEL_VERSION ??
     "black-forest-labs/flux-schnell";
   const webhookUrl = config?.webhookUrl ?? process.env.REPLICATE_WEBHOOK_URL;
+  const timeoutMs = config?.timeoutMs ?? 30_000;
   const baseUrl = "https://api.replicate.com/v1";
 
   return {
@@ -48,6 +50,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
       });
 
       if (!res.ok) {
@@ -67,6 +70,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
     async getPrediction(predictionId: string): Promise<ImageGenerationResult> {
       const res = await fetch(`${baseUrl}/predictions/${predictionId}`, {
         headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(15_000),
       });
 
       if (!res.ok) {
