@@ -1,70 +1,41 @@
-import { env } from "@/lib/env";
+export interface ImageGenerationInput {
+  prompt: string;
+  productImageUrl: string;
+  width?: number;
+  height?: number;
+  numOutputs?: number;
+}
+
+export interface ImageGenerationOutput {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+  fileSize: number;
+  mimeType: string;
+}
 
 export interface ImageGenerationResult {
-  url: string;
-  thumbnailUrl?: string;
-  provider: string;
-  metadata: Record<string, unknown>;
-}
-
-export interface VideoGenerationResult {
-  url: string;
-  thumbnailUrl?: string;
-  durationSeconds: number;
-  provider: string;
-  metadata: Record<string, unknown>;
-}
-
-export interface AudioGenerationResult {
-  url: string;
-  durationSeconds: number;
-  provider: string;
-}
-
-export interface ProductAnalysis {
-  name: string;
-  category: string;
-  features: string[];
-  sellingPoints: string[];
-  usageScenario: string;
-  targetAudience: string;
-  fullDescription: string;
-}
-
-export interface ScriptGenerationResult {
-  scenes: {
-    index: number;
-    description: string;
-    voiceoverText: string;
-    imagePrompt: string;
-    videoPrompt: string;
-    durationSeconds: number;
-  }[];
-  voiceover: string;
-  hashtags: string[];
+  outputs: ImageGenerationOutput[];
+  status: "succeeded" | "processing" | "failed";
+  error?: string;
+  webhookId?: string;
 }
 
 export interface ImageProvider {
   readonly name: string;
-  generate(prompt: string, referenceImageUrl?: string): Promise<ImageGenerationResult>;
+  createPrediction(
+    input: ImageGenerationInput
+  ): Promise<
+    Pick<ImageGenerationResult, "status" | "error" | "webhookId"> & {
+      predictionId: string;
+    }
+  >;
+  getPrediction(predictionId: string): Promise<ImageGenerationResult>;
+  isReady(predictionId: string): Promise<boolean>;
 }
 
-export interface VideoProvider {
-  readonly name: string;
-  generate(prompt: string, startImageUrl: string): Promise<VideoGenerationResult>;
-}
-
-export interface AudioProvider {
-  readonly name: string;
-  generate(text: string): Promise<AudioGenerationResult>;
-}
-
-export interface ScriptProvider {
-  readonly name: string;
-  analyzeImage(imageUrl: string, hint?: string): Promise<ProductAnalysis>;
-  generate(
-    productTitle: string,
-    productDescription: string,
-    productImageUrl?: string
-  ): Promise<ScriptGenerationResult>;
+export interface ValidationResult {
+  valid: boolean;
+  reason?: string;
 }
