@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { getStageIndex, getTotalStages } from "@/lib/pipeline";
 import type { PipelineStatus } from "@prisma/client";
 
@@ -32,22 +33,10 @@ interface StepProgressProps {
 }
 
 export function StepProgress({ status }: StepProgressProps) {
-  const isFailed = status === "FAILED";
-
-  if (isFailed) {
+  if (status === "FAILED") {
     return (
       <div className="flex items-center gap-1 py-2">
-        <div
-          className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap"
-          style={{
-            background: "var(--error)",
-            color: "#fff",
-            borderRadius: "var(--radius-sm)",
-          }}
-        >
-          <span style={{ fontSize: 12 }}>{STEP_ICONS["FAILED"]}</span>
-          <span>{STEP_LABELS["FAILED"]}</span>
-        </div>
+        <Badge variant="destructive">❌ {STEP_LABELS.FAILED}</Badge>
       </div>
     );
   }
@@ -56,18 +45,17 @@ export function StepProgress({ status }: StepProgressProps) {
   const total = getTotalStages();
 
   return (
-    <div className="flex items-center gap-1 py-2">
+    <div className="flex items-center gap-0 py-2 overflow-x-auto">
       {Array.from({ length: total }).map((_, i) => {
         const label = Object.keys(STEP_LABELS)[i] ?? "";
         const stepStatus = STATUS_ORDER[i] as PipelineStatus;
-
         const done = i < currentIdx;
         const active = i === currentIdx;
 
         return (
-          <div key={i} className="flex items-center gap-1 flex-1 last:flex-[0_0_auto]">
+          <div key={i} className="flex items-center gap-0 flex-1 last:flex-[0_0_auto]">
             <div
-              className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap"
               style={{
                 background: active ? "var(--accent)" :
                   done ? "var(--success)" :
@@ -76,15 +64,21 @@ export function StepProgress({ status }: StepProgressProps) {
                   done ? "var(--success)" :
                   "var(--text-secondary)",
                 borderRadius: "var(--radius-sm)",
+                fontSize: 11,
               }}
             >
-              <span style={{ fontSize: 12 }}>{STEP_ICONS[stepStatus] || "⏳"}</span>
+              <span>{STEP_ICONS[stepStatus] || "⏳"}</span>
               <span>{STEP_LABELS[stepStatus] || stepStatus}</span>
             </div>
             {i < total - 1 && (
               <div
-                className="flex-1 h-0.5 min-w-[12px]"
-                style={{ background: done ? "var(--success)" : "var(--border)" }}
+                className="flex-1 mx-0.5"
+                style={{
+                  height: 2,
+                  minWidth: 16,
+                  background: done ? "var(--success)" : "var(--border)",
+                  borderRadius: 1,
+                }}
               />
             )}
           </div>

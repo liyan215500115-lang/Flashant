@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function LoginForm() {
   const [username, setUsername] = useState("");
@@ -27,69 +29,46 @@ export function LoginForm() {
     if (result?.error) {
       setError("用户名或密码错误");
     } else {
-      router.push("/projects");
+      router.push("/");
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {error && (
-        <div className="error-state">
+        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
           {error}
         </div>
       )}
       <div>
-        <label htmlFor="username" className="block mb-1" style={{ fontSize: 13, fontWeight: 500 }}>
+        <label htmlFor="username" className="block mb-1.5 text-sm font-medium">
           用户名
         </label>
-        <input
+        <Input
           id="username"
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
-          className="w-full px-3 py-2 rounded-md border"
-          style={{
-            background: "var(--bg)",
-            border: "1px solid var(--border)",
-            color: "var(--text-primary)",
-            borderRadius: "var(--radius-md)",
-          }}
-          placeholder="输入用户名"
+          placeholder="请输入用户名"
         />
       </div>
       <div>
-        <label htmlFor="password" className="block mb-1" style={{ fontSize: 13, fontWeight: 500 }}>
+        <label htmlFor="password" className="block mb-1.5 text-sm font-medium">
           密码
         </label>
-        <input
+        <Input
           id="password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="w-full px-3 py-2 rounded-md border"
-          style={{
-            background: "var(--bg)",
-            border: "1px solid var(--border)",
-            color: "var(--text-primary)",
-            borderRadius: "var(--radius-md)",
-          }}
-          placeholder="输入密码"
+          placeholder="请输入密码"
         />
       </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-2.5 rounded-md font-medium transition-colors disabled:opacity-50"
-        style={{
-          background: "var(--accent)",
-          color: "#FFFFFF",
-          borderRadius: "var(--radius-md)",
-        }}
-      >
+      <Button type="submit" disabled={loading} className="w-full">
         {loading ? "登录中..." : "登录"}
-      </button>
+      </Button>
     </form>
   );
 }

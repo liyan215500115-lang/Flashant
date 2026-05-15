@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import type { ScriptGenerationResult } from "@/lib/ai/types";
 
 interface AudioAsset {
@@ -18,50 +19,22 @@ interface AudioPreviewProps {
 export function AudioPreview({ audio, script, onContinue, onRegenerate, loading }: AudioPreviewProps) {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="section-header">
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 600 }}>配音预览</h2>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-            AI 配音已生成，请试听确认
-          </p>
+          <h2 className="section-title">配音预览</h2>
+          <p className="section-subtitle">AI 配音已生成，请试听确认</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={onRegenerate}
-            disabled={loading}
-            className="px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-            style={{
-              background: "var(--bg)",
-              color: "var(--text-primary)",
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border)",
-            }}
-          >
+          <Button variant="outline" onClick={onRegenerate} disabled={loading}>
             🔄 重新生成
-          </button>
-          <button
-            onClick={onContinue}
-            disabled={loading}
-            className="px-5 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-            style={{
-              background: "var(--accent)",
-              color: "#fff",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
+          </Button>
+          <Button variant="default" onClick={onContinue} disabled={loading}>
             {loading ? "处理中..." : "✅ 进入审核"}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div
-        className="p-4 rounded-lg border"
-        style={{
-          background: "var(--surface)",
-          borderColor: "var(--border)",
-          borderRadius: "var(--radius-lg)",
-        }}
-      >
+      <div className="card-static p-4">
         {audio?.url ? (
           <audio src={audio.url} controls className="w-full mb-4" />
         ) : (

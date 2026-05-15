@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 interface VideoAsset {
   id: string;
   url: string;
@@ -20,10 +22,10 @@ export function VideoPreview({ videos, onContinue, onRegenerate, loading }: Vide
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="section-header">
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 600 }}>生成的视频片段</h2>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+          <h2 className="section-title">生成的视频片段</h2>
+          <p className="section-subtitle">
             AI 已将 {videos.length} 张图片转为视频片段
             {isMock && (
               <span
@@ -36,31 +38,12 @@ export function VideoPreview({ videos, onContinue, onRegenerate, loading }: Vide
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={onRegenerate}
-            disabled={loading}
-            className="px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-            style={{
-              background: "var(--bg)",
-              color: "var(--text-primary)",
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border)",
-            }}
-          >
+          <Button variant="outline" onClick={onRegenerate} disabled={loading}>
             🔄 重新生成
-          </button>
-          <button
-            onClick={onContinue}
-            disabled={loading}
-            className="px-5 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-            style={{
-              background: "var(--accent)",
-              color: "#fff",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
+          </Button>
+          <Button variant="default" onClick={onContinue} disabled={loading}>
             {loading ? "合成中..." : "✅ 确认并合成配音"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -71,17 +54,9 @@ export function VideoPreview({ videos, onContinue, onRegenerate, loading }: Vide
         {videos.map((vid) => (
           <div
             key={vid.id}
-            className="rounded-lg overflow-hidden border"
-            style={{
-              background: "var(--surface)",
-              borderColor: "var(--border)",
-              borderRadius: "var(--radius-lg)",
-            }}
+            className="card-static overflow-hidden"
           >
-            <div
-              className="aspect-[9/16] flex items-center justify-center relative"
-              style={{ background: "#1A1A1F" }}
-            >
+            <div className="media-canvas">
               {vid.url && isImageUrl(vid.url) ? (
                 <img
                   src={vid.url}

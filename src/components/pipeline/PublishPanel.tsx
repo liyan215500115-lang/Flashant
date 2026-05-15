@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
 interface PublishRecordItem {
   id: string;
   platform: string;
@@ -11,6 +14,11 @@ const PLATFORM_LABELS: Record<string, string> = {
   kuaishou: "快手",
 };
 
+const PLATFORM_ICONS: Record<string, string> = {
+  douyin: "🎵",
+  kuaishou: "📱",
+};
+
 const PUBLISH_STATUS_LABELS: Record<string, string> = {
   QUEUED: "排队中",
   UPLOADING: "上传中",
@@ -18,6 +26,13 @@ const PUBLISH_STATUS_LABELS: Record<string, string> = {
   PUBLISHED: "已发布",
   FAILED: "失败",
 };
+
+function PublishStatusBadge({ status }: { status: string }) {
+  const label = PUBLISH_STATUS_LABELS[status] || status;
+  if (status === "FAILED") return <Badge variant="destructive">{label}</Badge>;
+  if (status === "PUBLISHED") return <Badge variant="default" className="bg-[#16A34A] text-white">{label}</Badge>;
+  return <Badge variant="default">{label}</Badge>;
+}
 
 interface PublishPanelProps {
   records: PublishRecordItem[];
@@ -30,44 +45,25 @@ export function PublishPanel({ records, onPublish, loading }: PublishPanelProps)
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="section-header">
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 600 }}>发布</h2>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-            选择发布平台并追踪发布状态
-          </p>
+          <h2 className="section-title">发布</h2>
+          <p className="section-subtitle">选择发布平台并追踪发布状态</p>
         </div>
         {!hasRecords && (
-          <button
-            onClick={onPublish}
-            disabled={loading}
-            className="px-5 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-            style={{
-              background: "var(--accent)",
-              color: "#fff",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
+          <Button variant="default" onClick={onPublish} disabled={loading}>
             {loading ? "发布中..." : "📤 发布到平台"}
-          </button>
+          </Button>
         )}
       </div>
 
       {hasRecords && (
         <div className="flex flex-col gap-3">
           {records.map((record) => (
-            <div
-              key={record.id}
-              className="p-4 rounded-lg border flex items-center justify-between"
-              style={{
-                background: "var(--surface)",
-                borderColor: "var(--border)",
-                borderRadius: "var(--radius-lg)",
-              }}
-            >
+            <div key={record.id} className="card-static p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span style={{ fontSize: 18 }}>
-                  {record.platform === "douyin" ? "📱" : "📱"}
+                <span style={{ fontSize: 20 }}>
+                  {PLATFORM_ICONS[record.platform] || "📱"}
                 </span>
                 <div>
                   <p style={{ fontSize: 14, fontWeight: 500 }}>
@@ -92,17 +88,7 @@ export function PublishPanel({ records, onPublish, loading }: PublishPanelProps)
                     {record.errorMessage}
                   </span>
                 )}
-                <span
-                  className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
-                  style={{
-                    background: record.status === "PUBLISHED" ? "var(--success)" :
-                      record.status === "FAILED" ? "var(--error)" :
-                      "var(--accent)",
-                    color: "#fff",
-                  }}
-                >
-                  {PUBLISH_STATUS_LABELS[record.status] || record.status}
-                </span>
+                <PublishStatusBadge status={record.status} />
               </div>
             </div>
           ))}
@@ -110,15 +96,8 @@ export function PublishPanel({ records, onPublish, loading }: PublishPanelProps)
       )}
 
       {!hasRecords && (
-        <div
-          className="p-8 rounded-lg border text-center"
-          style={{
-            background: "var(--surface)",
-            borderColor: "var(--border)",
-            borderRadius: "var(--radius-lg)",
-          }}
-        >
-          <p style={{ fontSize: 15, fontWeight: 500, marginBottom: 2 }}>准备就绪</p>
+        <div className="card-static p-8 text-center">
+          <p style={{ fontSize: 15, fontWeight: 500, marginBottom: 4 }}>准备就绪</p>
           <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
             所有素材已审核通过，可发布到平台
           </p>

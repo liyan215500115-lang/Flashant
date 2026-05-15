@@ -18,6 +18,6 @@ describe("StepProgress", () => {
 
   it("shows failed state when status is FAILED", () => {
     render(<StepProgress status="FAILED" />);
-    expect(screen.getByText("失败")).toBeDefined();
+    expect(screen.getByText(/失败/)).toBeDefined();
   });
 });
