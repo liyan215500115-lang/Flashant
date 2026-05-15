@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { ImageProvider } from "./types";
 
 const providers = new Map<string, ImageProvider>();

@@ -1,6 +1,11 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
+import crypto from "crypto";
 
 export async function GET() {
   const session = await auth();
@@ -30,15 +35,62 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { title, promptTemplateId } = await req.json();
+  let title = "";
+  let promptTemplateId: string | null = null;
+  let imageUrl: string | null = null;
+  let fileName = "product.png";
+  let fileSize = 0;
+  let mimeType = "image/png";
+
+  const contentType = req.headers.get("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await req.formData();
+    title = (formData.get("title") as string) ?? "";
+    promptTemplateId = formData.get("promptTemplateId") as string | null;
+
+    const imageFile = formData.get("image") as File | null;
+    if (imageFile) {
+      fileName = imageFile.name;
+      fileSize = imageFile.size;
+      mimeType = imageFile.type || "image/png";
+
+      const ext = path.extname(fileName) || ".png";
+      const uniqueName = `${crypto.randomUUID()}${ext}`;
+      const buffer = Buffer.from(await imageFile.arrayBuffer());
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await mkdir(uploadDir, { recursive: true });
+      await writeFile(path.join(uploadDir, uniqueName), buffer);
+      imageUrl = `/uploads/${uniqueName}`;
+    }
+  } else {
+    const body = await req.json();
+    title = body.title ?? "";
+    promptTemplateId = body.promptTemplateId ?? null;
+  }
 
   const project = await db.imageProject.create({
     data: {
       userId: session.user.id,
-      title: title ?? "",
+      title: title || "未命名",
       promptTemplateId: promptTemplateId ?? null,
+      status: "DRAFT",
     },
   });
+
+  if (imageUrl) {
+    await db.productImage.create({
+      data: {
+        imageProjectId: project.id,
+        originalUrl: imageUrl,
+        s3Key: imageUrl,
+        fileName,
+        fileSize,
+        mimeType,
+        sortOrder: 0,
+      },
+    });
+  }
 
   return NextResponse.json({ project }, { status: 201 });
 }

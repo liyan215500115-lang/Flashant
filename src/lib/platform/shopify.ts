@@ -1,3 +1,5 @@
+import "server-only";
+
 import { encryptToken, decryptToken } from "@/lib/token-manager";
 import { db } from "@/lib/db";
 

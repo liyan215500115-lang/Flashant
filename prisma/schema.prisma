@@ -63,6 +63,7 @@ model ImageProject {
   productImages   ProductImage[]
   generatedImages GeneratedImage[]
   publishRecords  PublishRecord[]
+  tasks           Task[]
 }
 
 model ProductImage {
@@ -81,6 +82,7 @@ model ProductImage {
 
   project          ImageProject    @relation(fields: [imageProjectId], references: [id], onDelete: Cascade)
   generatedImages  GeneratedImage[]
+  tasks            Task[]
 }
 
 model GeneratedImage {
@@ -200,6 +202,26 @@ model PromptTemplate {
   createdAt     DateTime @default(now())
 
   imageProjects ImageProject[]
+  tasks          Task[]
+}
+
+// ── Generation Tasks ──────────────────────────────────────────────────
+
+model Task {
+  id             String           @id @default(cuid())
+  imageProjectId String
+  productImageId String
+  promptTemplateId String?
+  predictionId   String?
+  status         GenerationStatus @default(PENDING)
+  errorMessage   String?
+  resultUrl      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  project       ImageProject    @relation(fields: [imageProjectId], references: [id], onDelete: Cascade)
+  productImage  ProductImage    @relation(fields: [productImageId], references: [id])
+  promptTemplate PromptTemplate? @relation(fields: [promptTemplateId], references: [id])
 }
 
 // ── Enums ─────────────────────────────────────────────────────────────

@@ -4,8 +4,7 @@ import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { redirect } from "next/navigation";
-import { Plus, Image, CheckCircle, AlertCircle } from "lucide-react";
+import { Plus, Image, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "草稿",
@@ -33,9 +32,9 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant="default">{label}</Badge>;
 }
 
-export default async function WorkspacePage() {
+export default async function ProductsPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) return null;
 
   const projects = await db.imageProject.findMany({
     where: { userId: session.user.id },
@@ -54,15 +53,15 @@ export default async function WorkspacePage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="section-title">工作台</h1>
-          <p className="section-subtitle">
+          <h1 className="text-2xl font-semibold tracking-tight">商品图</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {projects.length > 0
               ? `${projects.length} 个项目`
               : "创建你的第一个商品图项目"}
           </p>
         </div>
         <Link href="/products/new">
-          <Button variant="default" size="default">
+          <Button variant="default">
             <Plus className="w-4 h-4 mr-1.5" />
             新建项目
           </Button>
@@ -82,7 +81,7 @@ export default async function WorkspacePage() {
               </p>
             </div>
             <Link href="/products/new">
-              <Button variant="default" size="default">
+              <Button variant="default">
                 <Plus className="w-4 h-4 mr-1.5" />
                 创建第一个项目
               </Button>
@@ -92,7 +91,7 @@ export default async function WorkspacePage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (
-            <Link key={project.id} href={`/projects/${project.id}`}>
+            <Link key={project.id} href={`/products/${project.id}`}>
               <Card className="card-hover h-full cursor-pointer">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
@@ -141,7 +140,7 @@ export default async function WorkspacePage() {
                       <AlertCircle className="w-3.5 h-3.5 ml-auto text-destructive" />
                     )}
                     {project.status === "PUBLISHED" && (
-                      <CheckCircle className="w-3.5 h-3.5 ml-auto text-emerald-500" />
+                      <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-emerald-500" />
                     )}
                   </div>
                 </CardContent>

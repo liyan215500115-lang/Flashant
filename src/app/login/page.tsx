@@ -9,7 +9,6 @@ export default function LoginPage() {
         style={{ background: "linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)" }}
       >
         <div className="max-w-md">
-          {/* Logo */}
           <div
             className="flex items-center justify-center rounded-2xl mb-8"
             style={{
@@ -28,15 +27,14 @@ export default function LoginPage() {
             闪象
           </h1>
           <p className="text-white/80 mb-10" style={{ fontSize: 18, lineHeight: 1.6 }}>
-            一键闪象，万象更新
+            AI 商品图，一拍即发
           </p>
 
-          {/* Feature highlights */}
           <div className="flex flex-col gap-4">
             {[
-              "AI 智能生成电商短视频",
-              "一键发布到抖音、快手",
-              "团队协作审核流程",
+              "AI 智能生成多场景商品图",
+              "一键发布到 Shopify、TikTok Shop",
+              "中英文界面，全球电商通用",
             ].map((text) => (
               <div key={text} className="flex items-center gap-3 text-white/90" style={{ fontSize: 14 }}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
@@ -53,7 +51,6 @@ export default function LoginPage() {
       {/* Login form — right side */}
       <div className="flex items-center justify-center flex-1 p-8">
         <div className="w-full max-w-sm">
-          {/* Mobile-only brand header */}
           <div className="sm:hidden text-center mb-8">
             <div
               className="inline-flex items-center justify-center rounded-xl mb-4 mx-auto"
@@ -69,7 +66,7 @@ export default function LoginPage() {
               闪
             </div>
             <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>闪象</h1>
-            <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>一键闪象，万象更新</p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>AI 商品图，一拍即发</p>
           </div>
 
           <div
@@ -81,7 +78,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-xs mt-6" style={{ color: "var(--text-secondary)" }}>
-            闪象 AI 视频工厂 v0.1.0
+            闪象 AI 商品图管线 v0.1.0
           </p>
         </div>
       </div>

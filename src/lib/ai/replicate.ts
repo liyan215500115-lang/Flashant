@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { ImageProvider, ImageGenerationInput, ImageGenerationResult } from "./types";
 
 interface ReplicateConfig {

@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { LayoutDashboard, Clapperboard, Settings, Plus, LogOut } from "lucide-react";
+import { LayoutDashboard, Image, Settings, Plus, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NAV_ITEMS = [
   { href: "/", label: "工作台", icon: LayoutDashboard },
-  { href: "/projects", label: "项目", icon: Clapperboard },
+  { href: "/products", label: "商品图", icon: Image },
   { href: "/settings", label: "设置", icon: Settings },
 ];
 
@@ -44,7 +44,7 @@ export function Sidebar() {
           </div>
           <div>
             <div className="text-sm font-semibold leading-tight">闪象</div>
-            <div className="text-xs text-muted-foreground leading-tight">AI 视频工厂</div>
+            <div className="text-xs text-muted-foreground leading-tight">AI 商品图</div>
           </div>
         </Link>
       </div>
@@ -73,9 +73,8 @@ export function Sidebar() {
           );
         })}
 
-        {/* CTA button */}
         <div className="mt-3">
-          <Link href="/projects/new">
+          <Link href="/products/new">
             <Button variant="default" size="sm" className="w-full justify-start gap-2">
               <Plus size={16} />
               新建项目

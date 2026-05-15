@@ -23,6 +23,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true });
   }
 
+  // Sync task status if a task exists for this prediction
+  const task = await db.task.findFirst({
+    where: { predictionId },
+  });
+
   if (status === "succeeded") {
     const outputs: string[] = body.output as string[];
 
@@ -34,6 +39,12 @@ export async function POST(req: Request) {
           errorMessage: "No outputs from Replicate",
         },
       });
+      if (task) {
+        await db.task.update({
+          where: { id: task.id },
+          data: { status: "FAILED", errorMessage: "No outputs from Replicate" },
+        });
+      }
       return NextResponse.json({ received: true });
     }
 

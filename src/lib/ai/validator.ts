@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { ValidationResult } from "./types";
 
 const MIN_FILE_SIZE = 1024; // 1KB

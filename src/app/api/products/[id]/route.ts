@@ -23,6 +23,13 @@ export async function GET(
         orderBy: { createdAt: "desc" },
         take: 10,
       },
+      tasks: {
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        include: {
+          promptTemplate: { select: { name: true, nameZh: true } },
+        },
+      },
     },
   });
 
