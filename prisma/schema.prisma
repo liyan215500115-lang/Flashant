@@ -6,76 +6,208 @@ datasource db {
   provider = "postgresql"
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
-  role      String   @default("operator")
-  createdAt DateTime @default(now())
+  id            String       @id @default(cuid())
+  name          String?
+  email         String?      @unique
+  emailVerified DateTime?
+  image         String?
+  role          String       @default("user")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  accounts            Account[]
+  imageProjects       ImageProject[]
+  platformConnections PlatformConnection[]
+  subscription        Subscription?
+  brandPresets        BrandPreset[]
 }
 
-model VideoProject {
-  id                 String         @id @default(cuid())
-  userId             String
-  productUrl         String
-  productTitle       String         @default("")
-  productImage       String         @default("")
-  script             Json?
-  status             PipelineStatus @default(PARSING)
-  stageProgress      Int            @default(0)
-  estimatedRemaining Int            @default(0)
-  errorMessage       String?
-  outputUrl          String?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  mediaAssets        MediaAsset[]
-  publishRecords     PublishRecord[]
+// ── Image Pipeline ────────────────────────────────────────────────────
+
+model ImageProject {
+  id               String        @id @default(cuid())
+  userId           String
+  title            String        @default("")
+  promptTemplateId String?
+  brandPresetId    String?
+  status           ProjectStatus @default(DRAFT)
+  errorMessage     String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptTemplate  PromptTemplate? @relation(fields: [promptTemplateId], references: [id])
+  brandPreset     BrandPreset?    @relation(fields: [brandPresetId], references: [id])
+  productImages   ProductImage[]
+  generatedImages GeneratedImage[]
+  publishRecords  PublishRecord[]
 }
 
-model MediaAsset {
+model ProductImage {
   id             String   @id @default(cuid())
-  videoProjectId String
-  type           AssetType
-  url            String
-  stageIndex     Int
-  aiProvider     String?
-  generationMeta Json?
+  imageProjectId String
+  originalUrl    String
+  thumbnailUrl   String?
+  s3Key          String
+  fileName       String
+  fileSize       Int
+  mimeType       String
+  width          Int?
+  height         Int?
+  sortOrder      Int      @default(0)
   createdAt      DateTime @default(now())
 
-  project VideoProject @relation(fields: [videoProjectId], references: [id], onDelete: Cascade)
+  project          ImageProject    @relation(fields: [imageProjectId], references: [id], onDelete: Cascade)
+  generatedImages  GeneratedImage[]
 }
+
+model GeneratedImage {
+  id              String           @id @default(cuid())
+  imageProjectId  String
+  productImageId  String?
+  s3Key           String
+  url             String
+  thumbnailUrl    String?
+  promptUsed      String?
+  aiProvider      String?          @default("replicate")
+  modelVersion    String?
+  generationMeta  Json?
+  fileSize        Int?
+  mimeType        String?
+  width           Int?
+  height          Int?
+  status          GenerationStatus @default(PENDING)
+  errorMessage    String?
+  webhookId       String?
+  createdAt       DateTime         @default(now())
+  completedAt     DateTime?
+
+  project       ImageProject @relation(fields: [imageProjectId], references: [id], onDelete: Cascade)
+  productImage  ProductImage? @relation(fields: [productImageId], references: [id])
+
+  publishRecords PublishRecord[]
+}
+
+// ── Platform Connections ──────────────────────────────────────────────
+
+model PlatformConnection {
+  id                     String   @id @default(cuid())
+  userId                 String
+  platform               Platform
+  accessTokenEncrypted   String
+  refreshTokenEncrypted  String?
+  tokenExpiresAt         DateTime?
+  scope                  String?
+  platformUserId         String?
+  platformStoreName      String?
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+}
+
+// ── Publishing ────────────────────────────────────────────────────────
 
 model PublishRecord {
-  id              String        @id @default(cuid())
-  videoProjectId  String
-  platform        String
-  status          PublishStatus @default(QUEUED)
-  platformPostId  String?
-  platformPostUrl String?
-  errorMessage    String?
-  aiLabelApplied  Boolean       @default(false)
-  publishedAt     DateTime?
-  createdAt       DateTime      @default(now())
+  id               String        @id @default(cuid())
+  imageProjectId   String
+  generatedImageId String?
+  platform         Platform
+  status           PublishStatus @default(QUEUED)
+  platformPostId   String?
+  platformPostUrl  String?
+  errorMessage     String?
+  publishedAt      DateTime?
+  createdAt        DateTime      @default(now())
 
-  project VideoProject @relation(fields: [videoProjectId], references: [id], onDelete: Cascade)
+  project        ImageProject    @relation(fields: [imageProjectId], references: [id], onDelete: Cascade)
+  generatedImage GeneratedImage? @relation(fields: [generatedImageId], references: [id])
 }
 
-model PlatformAccount {
-  id           String   @id @default(cuid())
-  platform     String
-  accessToken  String
-  refreshToken String
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+// ── Billing ───────────────────────────────────────────────────────────
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  planTier             PlanTier           @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-enum PipelineStatus {
-  PARSING
-  SCRIPTING
-  GENERATING_IMAGES
-  GENERATING_VIDEO
-  GENERATING_AUDIO
+// ── Brand Presets ─────────────────────────────────────────────────────
+
+model BrandPreset {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  logoUrl   String?
+  colors    Json?
+  fonts     Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageProjects ImageProject[]
+}
+
+// ── Prompt Templates ──────────────────────────────────────────────────
+
+model PromptTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  nameZh        String?
+  description   String?
+  descriptionZh String?
+  category      String   @default("general")
+  prompt        String
+  previewUrl    String?
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  imageProjects ImageProject[]
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────
+
+enum ProjectStatus {
+  DRAFT
+  GENERATING
+  GENERATED
   REVIEW
   APPROVED
   PUBLISHING
@@ -83,10 +215,18 @@ enum PipelineStatus {
   FAILED
 }
 
-enum AssetType {
-  IMAGE
-  VIDEO
-  AUDIO
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum Platform {
+  SHOPIFY
+  TIKTOK_SHOP
+  ETSY
+  MERCADO_LIBRE
 }
 
 enum PublishStatus {
@@ -95,4 +235,21 @@ enum PublishStatus {
   PROCESSING
   PUBLISHED
   FAILED
+}
+
+enum PlanTier {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  UNPAID
 }
