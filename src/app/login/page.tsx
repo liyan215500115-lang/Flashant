@@ -1,87 +1,77 @@
+import Link from "next/link";
+import { cookies } from "next/headers";
 import { LoginForm } from "./LoginForm";
+import { Logo } from "@/components/landing/logo";
+import zh from "../../../messages/zh.json";
+import en from "../../../messages/en.json";
 
-export default function LoginPage() {
+function resolve(path: string, messages: Record<string, unknown>): string {
+  const keys = path.split(".");
+  let val: unknown = messages;
+  for (const k of keys) {
+    if (val && typeof val === "object" && k in (val as Record<string, unknown>)) {
+      val = (val as Record<string, unknown>)[k];
+    } else {
+      return path;
+    }
+  }
+  return typeof val === "string" ? val : path;
+}
+
+async function getT() {
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("NEXT_LOCALE")?.value === "zh" ? "zh" : "en";
+  const messages = locale === "zh" ? zh : en;
+  return (key: string) => resolve(key, messages as unknown as Record<string, unknown>);
+}
+
+export default async function LoginPage() {
+  const t = await getT();
+
   return (
-    <main className="min-h-screen flex" style={{ background: "var(--bg)" }}>
-      {/* Brand panel — left side */}
-      <div
-        className="hidden sm:flex flex-col justify-center flex-1 p-12 lg:p-16"
-        style={{ background: "linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)" }}
-      >
-        <div className="max-w-md">
-          <div
-            className="flex items-center justify-center rounded-2xl mb-8"
-            style={{
-              width: 56,
-              height: 56,
-              background: "rgba(255,255,255,0.15)",
-              color: "#fff",
-              fontSize: 28,
-              fontWeight: 700,
-            }}
-          >
-            闪
-          </div>
-
-          <h1 className="text-white mb-4" style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            闪象
-          </h1>
-          <p className="text-white/80 mb-10" style={{ fontSize: 18, lineHeight: 1.6 }}>
-            AI 商品图，一拍即发
-          </p>
-
-          <div className="flex flex-col gap-4">
-            {[
-              "AI 智能生成多场景商品图",
-              "一键发布到 Shopify、TikTok Shop",
-              "中英文界面，全球电商通用",
-            ].map((text) => (
-              <div key={text} className="flex items-center gap-3 text-white/90" style={{ fontSize: 14 }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-                  <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {text}
-              </div>
-            ))}
-          </div>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-zinc-50">
+      <div className="w-full max-w-[368px]">
+        {/* Brand */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex flex-col items-center gap-3">
+            <Logo size={40} />
+            <p className="text-xs text-zinc-400">{t("auth.brandSlogan")}</p>
+          </Link>
         </div>
-      </div>
 
-      {/* Login form — right side */}
-      <div className="flex items-center justify-center flex-1 p-8">
-        <div className="w-full max-w-sm">
-          <div className="sm:hidden text-center mb-8">
-            <div
-              className="inline-flex items-center justify-center rounded-xl mb-4 mx-auto"
-              style={{
-                width: 48,
-                height: 48,
-                background: "var(--accent)",
-                color: "#fff",
-                fontSize: 22,
-                fontWeight: 700,
-              }}
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 p-8">
+          <div className="mb-6">
+            <h1 className="text-xl font-semibold text-zinc-900">
+              {t("auth.loginTitle")}
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1">
+              {t("auth.loginDesc")}
+            </p>
+          </div>
+
+          <LoginForm />
+
+          <div className="mt-5 pt-5 border-t border-zinc-100 text-center flex items-center justify-between">
+            <Link
+              href="/"
+              className="text-xs text-zinc-400 hover:text-brand-700 transition-colors"
             >
-              闪
-            </div>
-            <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>闪象</h1>
-            <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>AI 商品图，一拍即发</p>
+              {t("auth.backHome")}
+            </Link>
+            <Link
+              href="/register"
+              className="text-xs text-brand-700 hover:text-brand-900 font-medium transition-colors"
+            >
+              {t("auth.noAccount")} {t("auth.goRegister")}
+            </Link>
           </div>
-
-          <div
-            className="p-6 sm:p-8 rounded-xl shadow-sm"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-          >
-            <h2 className="text-lg font-semibold mb-5" style={{ color: "var(--text-primary)" }}>登录</h2>
-            <LoginForm />
-          </div>
-
-          <p className="text-center text-xs mt-6" style={{ color: "var(--text-secondary)" }}>
-            闪象 AI 商品图管线 v0.1.0
-          </p>
         </div>
+
+        <p className="text-center text-[11px] text-zinc-400 mt-6">
+          {t("auth.brandSlogan")}
+        </p>
       </div>
-    </main>
+    </div>
   );
 }

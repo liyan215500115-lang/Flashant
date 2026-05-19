@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
+import { useT } from "@/components/i18n-provider";
 
 export function LoginForm() {
-  const [username, setUsername] = useState("");
+  const { t } = useT();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ export function LoginForm() {
     setLoading(true);
 
     const result = await signIn("credentials", {
-      username,
+      email,
       password,
       redirect: false,
     });
@@ -27,48 +28,64 @@ export function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      setError("用户名或密码错误");
+      setError(t("auth.errorEmailPassword"));
     } else {
-      router.push("/");
+      router.push("/dashboard");
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
           {error}
         </div>
       )}
+
       <div>
-        <label htmlFor="username" className="block mb-1.5 text-sm font-medium">
-          用户名
+        <label htmlFor="email" className="block mb-1.5 text-sm font-medium text-zinc-700">
+          {t("auth.email")}
         </label>
-        <Input
-          id="username"
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
-          placeholder="请输入用户名"
+          placeholder={t("auth.emailPlaceholder")}
+          className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10 transition-colors"
         />
       </div>
+
       <div>
-        <label htmlFor="password" className="block mb-1.5 text-sm font-medium">
-          密码
+        <label htmlFor="password" className="block mb-1.5 text-sm font-medium text-zinc-700">
+          {t("auth.password")}
         </label>
-        <Input
+        <input
           id="password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          placeholder="请输入密码"
+          placeholder={t("auth.passwordPlaceholder")}
+          className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10 transition-colors"
         />
       </div>
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? "登录中..." : "登录"}
-      </Button>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="inline-flex items-center justify-center gap-2 h-10 w-full rounded-lg bg-brand-900 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-70 transition-colors mt-1 cursor-pointer"
+      >
+        {loading ? (
+          <>
+            <Loader2 size={15} className="animate-spin" />
+            {t("auth.loggingIn")}
+          </>
+        ) : (
+          t("auth.loginBtn")
+        )}
+      </button>
     </form>
   );
 }

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { GenerateTab } from "@/components/product/generate-tab";
 import {
   ArrowLeft,
   Sparkles,
@@ -15,14 +17,17 @@ import {
   AlertCircle,
   CheckCircle2,
   Image,
+  Trash2,
 } from "lucide-react";
-
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "草稿",
-  GENERATING: "生成中",
-  GENERATED: "已生成",
-  FAILED: "失败",
-};
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useT } from "@/components/i18n-provider";
 
 interface ProductImage {
   id: string;
@@ -67,7 +72,12 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
+  const [quota, setQuota] = useState({ used: 0, limit: 200 });
   const pollTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+  const { t, locale } = useT();
 
   const fetchProject = useCallback(async () => {
     try {
@@ -77,7 +87,7 @@ export default function ProductDetailPage() {
       setProject(data.project);
       setLoading(false);
     } catch {
-      setError("加载项目失败");
+      setError(t("error.loadFailed"));
       setLoading(false);
     }
   }, [params.id]);
@@ -85,6 +95,18 @@ export default function ProductDetailPage() {
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  // Fetch quota
+  useEffect(() => {
+    fetch("/api/quota")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.used !== undefined) {
+          setQuota({ used: data.used, limit: data.limit === -1 ? Infinity : data.limit });
+        }
+      })
+      .catch(() => {});
+  }, [project?.id]);
 
   // Resume polling for in-progress tasks on mount
   useEffect(() => {
@@ -143,6 +165,57 @@ export default function ProductDetailPage() {
     pollTimers.current.set(taskId, setTimeout(poll, initialDelay));
   }
 
+  async function handleGenerateExtended(params: {
+    productImageId: string;
+    prompt?: string;
+    numOutputs?: number;
+  }) {
+    const { productImageId, prompt, numOutputs } = params;
+    if (generatingIds.has(productImageId)) return;
+    setError("");
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageProjectId: project!.id,
+          productImageId,
+          promptTemplateId: project!.promptTemplate?.id ?? null,
+          prompt: prompt ?? undefined,
+          numOutputs: numOutputs ?? undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (data.error === "quota_exceeded") {
+          setError(data.message || t("error.quotaExceeded"));
+        } else if (data.error === "already_generating") {
+          startPolling(data.taskId, productImageId);
+          return;
+        } else {
+          throw new Error(data.error || t("error.generateFailed"));
+        }
+      } else {
+        const data = await res.json();
+        startPolling(data.taskId, productImageId);
+        fetchProject();
+        // Refresh quota after generation
+        fetch("/api/quota")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.used !== undefined) {
+              setQuota({ used: data.used, limit: data.limit === -1 ? Infinity : data.limit });
+            }
+          })
+          .catch(() => {});
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("error.generateFailed"));
+    }
+  }
+
   async function handleGenerate(productImageId: string) {
     if (generatingIds.has(productImageId)) return;
     setError("");
@@ -161,13 +234,13 @@ export default function ProductDetailPage() {
       if (!res.ok) {
         const data = await res.json();
         if (data.error === "quota_exceeded") {
-          setError(data.message || "额度已用完，请升级套餐");
+          setError(data.message || t("error.quotaExceeded"));
         } else if (data.error === "already_generating") {
           // Already in progress, start polling
           startPolling(data.taskId, productImageId);
           return;
         } else {
-          throw new Error(data.error || "生成失败");
+          throw new Error(data.error || t("error.generateFailed"));
         }
       } else {
         const data = await res.json();
@@ -175,7 +248,18 @@ export default function ProductDetailPage() {
         fetchProject(); // Refresh to show updated status
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "生成失败，请重试");
+      setError(e instanceof Error ? e.message : t("error.generateFailed"));
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await fetch(`/api/products/${params.id}`, { method: "DELETE" });
+      router.push("/products");
+    } catch {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
     }
   }
 
@@ -192,19 +276,19 @@ export default function ProductDetailPage() {
     );
   }
 
-  if (!project || error === "加载项目失败") {
+  if (!project || error === t("error.loadFailed")) {
     return (
       <div className="max-w-[960px] mx-auto py-8">
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="p-6">
-            <p className="text-sm text-destructive font-medium">项目未找到</p>
+            <p className="text-sm text-destructive font-medium">{t("detail.projectNotFound")}</p>
           </CardContent>
         </Card>
         <div className="mt-4">
-          <Link href="/">
+          <Link href="/dashboard">
             <Button variant="outline" size="sm">
               <ArrowLeft size={14} className="mr-1" />
-              返回工作台
+              {t("detail.backToWorkspace")}
             </Button>
           </Link>
         </div>
@@ -223,18 +307,18 @@ export default function ProductDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link
-            href="/"
+            href="/dashboard"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 mb-2"
           >
             <ArrowLeft size={14} />
-            返回工作台
+            {t("detail.backToWorkspace")}
           </Link>
-          <h1 className="text-xl font-semibold">{project.title || "未命名"}</h1>
+          <h1 className="text-xl font-semibold">{project.title || t("workspace.noName")}</h1>
           <div className="flex items-center gap-2 mt-1">
             <StatusBadge status={project.status} />
             {project.promptTemplate && (
               <span className="text-xs text-muted-foreground">
-                {project.promptTemplate.nameZh || project.promptTemplate.name} · {category}
+                {locale === "zh" && project.promptTemplate.nameZh ? project.promptTemplate.nameZh : project.promptTemplate.name} · {category}
               </span>
             )}
           </div>
@@ -242,11 +326,20 @@ export default function ProductDetailPage() {
         <div className="flex items-center gap-2">
           {project.status === "GENERATED" && (
             <Link href={`/products/${project.id}/publish`}>
-              <Button variant="default" size="sm">
-                发布到平台
+              <Button variant="default" size="sm" className="cursor-pointer">
+                {t("detail.publishToPlatform")}
               </Button>
             </Link>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDeleteDialogOpen(true)}
+            className="gap-1.5 text-zinc-500 hover:text-red-600 hover:border-red-200 cursor-pointer"
+          >
+            <Trash2 size={14} />
+            {t("detail.delete")}
+          </Button>
         </div>
       </div>
 
@@ -257,8 +350,15 @@ export default function ProductDetailPage() {
         </div>
       )}
 
-      {/* Product Images + Generate Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Tabs defaultValue="images" className="flex flex-col gap-6">
+        <TabsList>
+          <TabsTrigger value="images">{t("generate.imagesTabLabel")}</TabsTrigger>
+          <TabsTrigger value="generate">{t("generate.tabLabel")}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="images">
+          {/* Product Images + Generate Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {project.productImages.map((pi) => {
           const isGenerating = generatingIds.has(pi.id);
           const imageResults = succeededImages.filter(
@@ -290,7 +390,7 @@ export default function ProductDetailPage() {
                     onClick={() => handleGenerate(pi.id)}
                   >
                     <Sparkles size={14} />
-                    生成场景图
+                    {t("detail.generateScene")}
                   </Button>
                 )}
 
@@ -298,7 +398,7 @@ export default function ProductDetailPage() {
                   <div className="flex flex-col gap-3">
                     <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1">
                       <RefreshCw size={12} className="animate-spin" />
-                      AI 正在生成中...
+                      {t("detail.generating")}
                     </p>
                     <Skeleton className="h-40 rounded-lg" />
                   </div>
@@ -310,7 +410,7 @@ export default function ProductDetailPage() {
                       <div className="mb-3">
                         <div className="flex items-center gap-2 mb-2">
                           <RefreshCw size={12} className="animate-spin text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">更多生成中...</span>
+                          <span className="text-xs text-muted-foreground">{t("detail.moreGenerating")}</span>
                         </div>
                         <Skeleton className="h-32 rounded-lg" />
                       </div>
@@ -352,7 +452,7 @@ export default function ProductDetailPage() {
                       disabled={isGenerating}
                     >
                       <RefreshCw size={14} />
-                      重新生成
+                      {t("detail.regenerate")}
                     </Button>
                   </div>
                 )}
@@ -367,9 +467,9 @@ export default function ProductDetailPage() {
             <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
               <Image size={40} className="text-muted-foreground" />
               <div>
-                <h3 className="text-lg font-semibold">暂无产品图片</h3>
+                <h3 className="text-lg font-semibold">{t("detail.noImages")}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  请先上传产品图片以开始生成
+                  {t("detail.noImagesDesc")}
                 </p>
               </div>
             </CardContent>
@@ -377,19 +477,69 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-      {/* Completed badge */}
-      {project.status === "GENERATED" && succeededImages.length > 0 && (
-        <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600">
-          <CheckCircle2 size={16} />
-          全部生成完成 — {succeededImages.length} 张商品图已就绪
-        </div>
-      )}
+          {/* Completed badge */}
+          {project.status === "GENERATED" && succeededImages.length > 0 && (
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600">
+              <CheckCircle2 size={16} />
+              {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="generate">
+          <GenerateTab
+            projectId={project.id}
+            productImages={project.productImages}
+            generatedImages={project.generatedImages}
+            quotaUsed={quota.used}
+            quotaLimit={quota.limit}
+            onGenerate={handleGenerateExtended}
+            isGenerating={generatingIds.size > 0}
+            onImageUploaded={() => {
+              fetchProject();
+            }}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("detail.confirmDeleteTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("detail.confirmDeleteDesc")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+              className="cursor-pointer"
+            >
+              {t("detail.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="cursor-pointer"
+            >
+              {deleting ? t("detail.deleting") : t("detail.confirmDeleteBtn")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const label = STATUS_LABELS[status] || status;
+  const { t } = useT();
+  const label = t(`status.${status}`);
   if (status === "FAILED")
     return <Badge variant="destructive">{label}</Badge>;
   if (status === "GENERATED")

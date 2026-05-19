@@ -12,8 +12,14 @@ export async function POST(req: Request) {
 
   const userId = session.user.id;
 
-  const { imageProjectId, productImageId, promptTemplateId } =
-    await req.json();
+  const {
+    imageProjectId,
+    productImageId,
+    promptTemplateId,
+    prompt: customPrompt,
+    numOutputs: customNumOutputs,
+    engineType = "flux",
+  } = await req.json();
 
   if (!imageProjectId || !productImageId) {
     return NextResponse.json(
@@ -43,7 +49,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // Double-click guard: check for existing in-progress task
+  // Double-click guard
   const existing = await db.task.findFirst({
     where: {
       imageProjectId,
@@ -69,21 +75,37 @@ export async function POST(req: Request) {
     );
   }
 
-  // Get prompt
+  // Prompt resolution
   let prompt = "Professional product photography, studio lighting, high quality";
-  if (promptTemplateId) {
+  if (customPrompt) {
+    prompt = customPrompt;
+  } else if (promptTemplateId) {
     const template = await db.promptTemplate.findUnique({
       where: { id: promptTemplateId },
     });
     if (template) prompt = template.prompt;
   }
 
-  // Step 1: Create Task with PENDING status
+  const numOutputs = customNumOutputs ?? 2;
+
+  // Resolve provider
+  let provider;
+  try {
+    provider = getProvider(engineType);
+  } catch {
+    return NextResponse.json(
+      { error: `AI engine "${engineType}" is not available` },
+      { status: 400 }
+    );
+  }
+
+  // Create task
   const task = await db.task.create({
     data: {
       imageProjectId,
       productImageId,
       promptTemplateId: promptTemplateId ?? null,
+      engineType,
       status: "PENDING",
     },
   });
@@ -94,16 +116,96 @@ export async function POST(req: Request) {
     data: { status: "GENERATING" },
   });
 
-  // Step 2: Fire Replicate prediction (async — don't await result)
-  const provider = getProvider("replicate");
+  if (engineType === "openai") {
+    // ── OpenAI synchronous path ──
+    try {
+      const result = await provider.createPrediction({
+        prompt,
+        productImageUrl: productImage.originalUrl,
+        numOutputs,
+      });
+
+      const openaiUrl = (result as { openaiUrl?: string }).openaiUrl;
+      const imageUrl = openaiUrl ?? "";
+
+      // Fetch the image to get file metadata
+      let fileSize = 0;
+      let mimeType = "image/png";
+      try {
+        const headRes = await fetch(imageUrl, { method: "HEAD" });
+        fileSize = Number(headRes.headers.get("content-length") ?? 0);
+        mimeType = headRes.headers.get("content-type") ?? "image/png";
+      } catch {
+        // Metadata fetch is best-effort
+      }
+
+      const generatedImage = await db.generatedImage.create({
+        data: {
+          imageProjectId,
+          productImageId,
+          s3Key: imageUrl,
+          url: imageUrl,
+          promptUsed: prompt,
+          aiProvider: "openai",
+          modelVersion: "gpt-image-2",
+          fileSize,
+          mimeType,
+          width: 1024,
+          height: 1024,
+          status: "SUCCEEDED",
+          completedAt: new Date(),
+        },
+      });
+
+      await db.task.update({
+        where: { id: task.id },
+        data: { predictionId: result.predictionId, status: "SUCCEEDED", resultUrl: imageUrl },
+      });
+
+      // Check if all tasks for this project are done
+      const pendingCount = await db.task.count({
+        where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
+      });
+      if (pendingCount === 0) {
+        await db.imageProject.update({
+          where: { id: imageProjectId },
+          data: { status: "GENERATED" },
+        });
+      }
+
+      return NextResponse.json({
+        taskId: task.id,
+        status: "succeeded",
+        generatedImageId: generatedImage.id,
+        url: imageUrl,
+      });
+    } catch (error) {
+      await db.task.update({
+        where: { id: task.id },
+        data: {
+          status: "FAILED",
+          errorMessage: error instanceof Error ? error.message : "Unknown error",
+        },
+      });
+      await db.imageProject.update({
+        where: { id: imageProjectId },
+        data: { status: "FAILED" },
+      });
+      return NextResponse.json(
+        { error: "generation_failed", message: error instanceof Error ? error.message : "Unknown error" },
+        { status: 500 }
+      );
+    }
+  }
+
+  // ── Flux (Replicate) async path ──
   provider
     .createPrediction({
       prompt,
       productImageUrl: productImage.originalUrl,
-      numOutputs: 2,
+      numOutputs,
     })
     .then(async (result) => {
-      // Update task with prediction ID → PROCESSING
       await db.task.update({
         where: { id: task.id },
         data: {
@@ -112,7 +214,6 @@ export async function POST(req: Request) {
         },
       });
 
-      // Also create a GeneratedImage placeholder for the webhook path
       await db.generatedImage.create({
         data: {
           imageProjectId,
@@ -120,7 +221,7 @@ export async function POST(req: Request) {
           s3Key: "pending",
           url: "",
           promptUsed: prompt,
-          aiProvider: "replicate",
+          aiProvider: engineType,
           status: "PROCESSING",
           webhookId: result.predictionId,
         },
@@ -140,10 +241,10 @@ export async function POST(req: Request) {
       });
     });
 
-  // Step 3: Return task immediately — don't wait for Replicate
   return NextResponse.json({
     taskId: task.id,
     status: "pending",
+    engineType,
     message: "任务已创建，请通过 /api/tasks/[id] 查询进度",
   });
 }

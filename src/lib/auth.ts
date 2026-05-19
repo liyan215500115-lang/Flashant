@@ -3,6 +3,7 @@ import "server-only";
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -18,19 +19,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        // Credentials fallback for development/testing
-        if (
-          process.env.NODE_ENV === "development" &&
-          credentials.email === "demo@shanxiang.ai" &&
-          credentials.password === "demo123"
-        ) {
-          const user = await db.user.findUnique({
-            where: { email: credentials.email as string },
-          });
-          if (!user) return null;
-          return { id: user.id, name: user.name, email: user.email, role: user.role };
-        }
-        return null;
+
+        const user = await db.user.findUnique({
+          where: { email: credentials.email as string },
+        });
+        if (!user?.password) return null;
+
+        const valid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        );
+        if (!valid) return null;
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        };
       },
     }),
   ],
@@ -97,9 +103,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
     async jwt({ token, user }) {
-      if (user) {
+      if (user?.email) {
         const dbUser = await db.user.findUnique({
-          where: { email: user.email! },
+          where: { email: user.email },
         });
         if (dbUser) {
           token.id = dbUser.id;
@@ -109,9 +115,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        (session.user as unknown as { role: string }).role = token.role as string;
+      if (session.user && token.id) {
+        // Verify the user still exists — guard against stale tokens
+        const dbUser = await db.user.findUnique({
+          where: { id: token.id as string },
+          select: { id: true, role: true },
+        });
+        if (dbUser) {
+          session.user.id = dbUser.id;
+          (session.user as unknown as { role: string }).role = dbUser.role ?? "user";
+        }
       }
       return session;
     },

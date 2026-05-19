@@ -5,22 +5,33 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/api/webhooks"];
+const PUBLIC_PATHS = ["/login", "/register", "/api/auth", "/api/webhooks"];
 const API_AUTH_PATTERNS = [
   "/api/products",
   "/api/generate",
   "/api/publish",
   "/api/tasks",
   "/api/stripe",
+  "/api/upload-url",
+  "/api/quota",
+  "/api/prompts",
+  "/api/assets",
+  "/api/listings",
 ];
 const QUOTA_GATED_PATTERNS = ["/api/generate"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ── i18n: apply locale from cookie ──
+  const localeCookie = request.cookies.get("NEXT_LOCALE")?.value;
+  const locale = localeCookie && ["en", "zh"].includes(localeCookie) ? localeCookie : "zh";
+
   // Public paths — no auth needed
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+  if (pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    const res = NextResponse.next();
+    res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 31536000 });
+    return res;
   }
 
   // ── Layer 1: Auth protection for API routes ──
@@ -56,7 +67,7 @@ export async function proxy(request: NextRequest) {
             {
               error: "quota_exceeded",
               message:
-                "免费额度已用完 (10/10)。请升级套餐继续使用。",
+                "Monthly quota exhausted (10/10). Please upgrade to continue.",
               tier: "FREE",
             },
             { status: 402 }
@@ -65,7 +76,9 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 31536000 });
+    return res;
   }
 
   // ── Page routes: redirect to login if no session ──
@@ -76,7 +89,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 31536000 });
+  return res;
 }
 
 export const config = {

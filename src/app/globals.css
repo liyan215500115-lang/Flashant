@@ -4,6 +4,23 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --color-brand-950: #0F1D3D;
+  --color-brand-900: #1E3A8A;
+  --color-brand-800: #1E40AF;
+  --color-brand-700: #2563EB;
+  --color-brand-600: #3B82F6;
+
+  --color-holo-500: #06B6D4;
+  --color-holo-400: #22D3EE;
+  --color-holo-300: #67E8F9;
+  --color-holo-50: #ECFEFF;
+
+  --color-gold-500: #F59E0B;
+  --color-gold-400: #FBBF24;
+  --color-gold-50: #FFFBEB;
+}
+
 :root {
   --bg: #F8F9FA;
   --surface: #FFFFFF;

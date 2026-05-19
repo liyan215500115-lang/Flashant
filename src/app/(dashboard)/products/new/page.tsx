@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, Sparkles, ShoppingBag, Check } from "lucide-react";
+import { useT } from "@/components/i18n-provider";
 
 interface PromptTemplate {
   id: string;
@@ -18,6 +19,7 @@ interface PromptTemplate {
 }
 
 export default function NewProductPage() {
+  const { t, locale } = useT();
   const router = useRouter();
 
   // Upload state
@@ -31,6 +33,7 @@ export default function NewProductPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -50,11 +53,11 @@ export default function NewProductPage() {
 
   function handleFile(f: File) {
     if (!f.type.startsWith("image/")) {
-      setError("请上传图片文件");
+      setError(t("error.unsupportedFile"));
       return;
     }
     if (f.size > 10 * 1024 * 1024) {
-      setError("图片大小不能超过 10MB");
+      setError(t("error.fileTooLarge"));
       return;
     }
     setError("");
@@ -74,45 +77,88 @@ export default function NewProductPage() {
     setError("");
 
     if (!file) {
-      setError("请上传商品图片");
+      setError(t("error.uploadFailed"));
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const formData = new FormData();
-      formData.append("image", file);
-      formData.append("title", title || file.name);
-      if (selectedTemplateId) {
-        formData.append("promptTemplateId", selectedTemplateId);
+      // Step 1: Get upload config (S3 pre-signed URL or local mode)
+      setUploading(true);
+      const urlRes = await fetch(
+        `/api/upload-url?fileName=${encodeURIComponent(file.name)}&mimeType=${encodeURIComponent(file.type)}`
+      );
+      if (!urlRes.ok) {
+        const data = await urlRes.json();
+        throw new Error(data.message || t("error.uploadFailed"));
       }
+      const config = await urlRes.json();
 
+      let s3Key: string;
+      let publicUrl: string;
+
+      if (config.mode === "local") {
+        // Step 2a: Local storage — POST file directly
+        const formData = new FormData();
+        formData.append("file", file);
+        const localRes = await fetch("/api/upload-url", {
+          method: "POST",
+          body: formData,
+        });
+        if (!localRes.ok) throw new Error(t("error.uploadFailed"));
+        const localData = await localRes.json();
+        s3Key = localData.s3Key;
+        publicUrl = localData.publicUrl;
+      } else {
+        // Step 2b: S3 — PUT to pre-signed URL
+        const uploadRes = await fetch(config.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!uploadRes.ok) throw new Error(t("error.uploadFailed"));
+        s3Key = config.s3Key;
+        publicUrl = config.publicUrl;
+      }
+      setUploading(false);
+
+      // Step 3: Create project in DB
       const res = await fetch("/api/products", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title || file.name,
+          promptTemplateId: selectedTemplateId,
+          s3Key,
+          originalUrl: publicUrl,
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+        }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "创建失败");
+        throw new Error(data.error || t("error.createFailed"));
       }
 
       const project = await res.json();
       router.push(`/products/${project.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "创建失败，请重试");
+      setError(err instanceof Error ? err.message : t("error.createFailed"));
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   }
 
   return (
     <div className="max-w-[720px] mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">新建商品图</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("products.newTitle")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          上传产品图片，选择场景模板，AI 自动生成多场景商品图
+          {t("products.newDesc")}
         </p>
       </div>
 
@@ -133,7 +179,7 @@ export default function NewProductPage() {
               >
                 1
               </span>
-              <h2 className="text-sm font-semibold">上传产品图片</h2>
+              <h2 className="text-sm font-semibold">{t("products.uploadStep")}</h2>
             </div>
 
             <div
@@ -161,23 +207,23 @@ export default function NewProductPage() {
                 <div className="relative w-full h-full p-3">
                   <img
                     src={preview}
-                    alt="预览"
+                    alt="Preview"
                     className="max-w-full max-h-[260px] object-contain rounded-md mx-auto"
                   />
                   <div className="flex items-center justify-center gap-1 mt-2">
                     <Check size={14} className="text-emerald-500" />
-                    <span className="text-xs text-emerald-600 font-medium">已上传</span>
+                    <span className="text-xs text-emerald-600 font-medium">{t("products.uploaded")}</span>
                     <span className="text-xs text-muted-foreground ml-1">
-                      · 点击更换
+                      · {t("products.clickToChange")}
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="text-center p-6">
                   <Upload size={32} className="mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-sm font-medium mb-1">拖拽或点击上传产品图片</p>
+                  <p className="text-sm font-medium mb-1">{t("products.dragOrClick")}</p>
                   <p className="text-xs text-muted-foreground">
-                    支持 JPG、PNG、WebP，最大 10MB
+                    {t("products.uploadHint")}
                   </p>
                 </div>
               )}
@@ -199,14 +245,14 @@ export default function NewProductPage() {
                 htmlFor="product-title"
                 className="block mb-1.5 text-xs font-medium text-muted-foreground"
               >
-                商品名称（可选）
+                {t("products.productName")}
               </label>
               <Input
                 id="product-title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="如：无线蓝牙耳机、有机绿茶..."
+                placeholder={t("products.productNamePlaceholder")}
               />
             </div>
           </CardContent>
@@ -222,7 +268,7 @@ export default function NewProductPage() {
               >
                 2
               </span>
-              <h2 className="text-sm font-semibold">选择场景模板</h2>
+              <h2 className="text-sm font-semibold">{t("products.templateStep")}</h2>
             </div>
 
             {templatesLoading ? (
@@ -264,7 +310,7 @@ export default function NewProductPage() {
                         className="text-sm font-medium"
                         style={{ color: "var(--text-primary)" }}
                       >
-                        {tpl.nameZh || tpl.name}
+                        {locale === "zh" ? tpl.nameZh || tpl.name : tpl.name}
                       </span>
                     </div>
                     <p
@@ -289,11 +335,11 @@ export default function NewProductPage() {
           className="w-full justify-center gap-2"
         >
           <ShoppingBag size={16} />
-          {submitting ? "创建中..." : "开始生成商品图"}
+          {uploading ? t("products.uploading") : submitting ? t("products.creating") : t("products.startGenerate")}
         </Button>
 
         <p className="text-xs text-center text-muted-foreground">
-          预计耗时 15-30 秒，AI 将为每张产品图生成 2 个场景图
+          {t("products.estimatedTime")}
         </p>
       </form>
     </div>

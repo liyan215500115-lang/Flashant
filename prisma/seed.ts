@@ -80,12 +80,16 @@ async function main() {
   console.log(`Seeded ${templates.length} prompt templates`);
 
   // ── Demo User ─────────────────────────────────────────────────────
+  const bcrypt = await import("bcryptjs");
+  const demoPassword = await bcrypt.hash("demo123", 10);
+
   const demoUser = await prisma.user.upsert({
     where: { email: "demo@shanxiang.ai" },
-    update: {},
+    update: { password: demoPassword },
     create: {
       email: "demo@shanxiang.ai",
       name: "Demo User",
+      password: demoPassword,
       role: "user",
     },
   });

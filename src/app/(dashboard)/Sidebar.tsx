@@ -3,113 +3,120 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { LayoutDashboard, Image, Settings, Plus, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Sparkles,
+  Plug,
+  FolderOpen,
+  Settings,
+  Plus,
+  LogOut,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const NAV_ITEMS = [
-  { href: "/", label: "工作台", icon: LayoutDashboard },
-  { href: "/products", label: "商品图", icon: Image },
-  { href: "/settings", label: "设置", icon: Settings },
-];
+import { Logo } from "@/components/landing/logo";
+import { useT } from "@/components/i18n-provider";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user as { name?: string; role?: string } | undefined;
+  const { t } = useT();
+
+  const navGroups = [
+    {
+      label: t("sidebar.production"),
+      items: [
+        { href: "/dashboard", label: t("sidebar.dashboard"), icon: LayoutDashboard },
+        { href: "/studio", label: t("sidebar.studio"), icon: Sparkles },
+      ],
+    },
+    {
+      label: t("sidebar.assets"),
+      items: [
+        { href: "/integrations", label: t("sidebar.integrations"), icon: Plug },
+        { href: "/assets", label: t("sidebar.assetsCenter"), icon: FolderOpen },
+      ],
+    },
+    {
+      label: t("sidebar.management"),
+      items: [{ href: "/settings", label: t("sidebar.settings"), icon: Settings }],
+    },
+  ];
 
   return (
-    <aside
-      className="flex flex-col h-screen flex-shrink-0 border-r"
-      style={{
-        width: "var(--sidebar-width)",
-        background: "var(--surface)",
-        borderColor: "var(--border)",
-      }}
-    >
-      {/* Brand header */}
+    <aside className="flex flex-col h-screen flex-shrink-0 w-[232px] bg-white border-r border-zinc-200/80">
+      {/* Brand */}
       <div className="px-4 pt-5 pb-4">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div
-            className="flex items-center justify-center rounded-lg flex-shrink-0"
-            style={{
-              width: 28,
-              height: 28,
-              background: "var(--accent)",
-              color: "#fff",
-              fontSize: 15,
-              fontWeight: 700,
-            }}
-          >
-            闪
-          </div>
-          <div>
-            <div className="text-sm font-semibold leading-tight">闪象</div>
-            <div className="text-xs text-muted-foreground leading-tight">AI 商品图</div>
-          </div>
+        <Link href="/" className="inline-block">
+          <Logo size={26} showTagline tagline={t("sidebar.tagline")} />
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="px-3 flex flex-col gap-0.5 flex-1">
-        {NAV_ITEMS.map((item) => {
-          const active =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              style={{
-                background: active ? "var(--accent-subtle)" : "transparent",
-                color: active ? "var(--accent)" : "var(--text-primary)",
-              }}
-            >
-              <Icon size={16} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+      <nav className="px-3 flex flex-col gap-0.5 flex-1 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.label} className="mb-3">
+            <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              {group.label}
+            </div>
+            {group.items.map((item) => {
+              const active =
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname.startsWith(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-brand-50 text-brand-700"
+                      : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50"
+                  }`}
+                >
+                  <Icon size={16} strokeWidth={1.5} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
 
-        <div className="mt-3">
+        <div className="mt-2">
           <Link href="/products/new">
-            <Button variant="default" size="sm" className="w-full justify-start gap-2">
-              <Plus size={16} />
-              新建项目
+            <Button
+              className="w-full justify-start gap-2 bg-brand-900 hover:bg-brand-800 text-white cursor-pointer shadow-sm"
+              size="sm"
+            >
+              <Plus size={15} strokeWidth={2} />
+              {t("sidebar.newProject")}
             </Button>
           </Link>
         </div>
       </nav>
 
       {/* User footer */}
-      <div className="p-3 border-t" style={{ borderColor: "var(--border)" }}>
+      <div className="p-3 border-t border-zinc-200/80">
         <div className="flex items-center gap-2.5 mb-2 px-1">
-          <div
-            className="flex items-center justify-center rounded-full flex-shrink-0 text-xs font-medium"
-            style={{
-              width: 24,
-              height: 24,
-              background: "var(--accent-subtle)",
-              color: "var(--accent)",
-            }}
-          >
+          <div className="flex items-center justify-center rounded-full flex-shrink-0 text-xs font-semibold w-7 h-7 bg-brand-50 text-brand-700">
             {user?.name?.charAt(0) || "U"}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium truncate">{user?.name || "用户"}</div>
-            <div className="text-xs text-muted-foreground">
-              {user?.role === "admin" ? "管理员" : "操作员"}
+            <div className="text-xs font-medium truncate text-zinc-700">
+              {user?.name || "User"}
+            </div>
+            <div className="text-[10px] text-zinc-400">
+              {user?.role === "admin" ? t("sidebar.admin") : t("sidebar.operator")}
             </div>
           </div>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left rounded-md transition-colors hover:bg-muted text-muted-foreground"
+          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors hover:bg-zinc-50 text-zinc-500 cursor-pointer"
         >
-          <LogOut size={14} />
-          退出登录
+          <LogOut size={13} strokeWidth={1.5} />
+          {t("sidebar.signOut")}
         </button>
       </div>
     </aside>

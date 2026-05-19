@@ -1,0 +1,391 @@
+{
+  "common": {
+    "appName": "Flashant",
+    "tagline": "AI Product Images",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back"
+  },
+  "nav": {
+    "workspace": "Workspace",
+    "products": "Products",
+    "settings": "Settings",
+    "newProject": "New Project",
+    "signOut": "Sign Out"
+  },
+  "auth": {
+    "loginTitle": "Welcome Back",
+    "loginDesc": "Sign in to continue using Flashant",
+    "loginBtn": "Sign In",
+    "loggingIn": "Signing in...",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "confirmPassword": "Confirm Password",
+    "emailPlaceholder": "demo@flashant.ai",
+    "passwordPlaceholder": "••••••••",
+    "namePlaceholder": "Your name",
+    "registerTitle": "Create Account",
+    "registerDesc": "Sign up for Flashant and start creating",
+    "registerBtn": "Create Account",
+    "registering": "Creating account...",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "goRegister": "Sign up",
+    "goLogin": "Sign in",
+    "backHome": "← Back to home",
+    "brandSlogan": "Flashant · Stunning Visuals. Generated in a Flash.",
+    "errorEmailPassword": "Invalid email or password",
+    "errorPasswordMismatch": "Passwords do not match",
+    "errorWeakPassword": "Password must be at least 6 characters",
+    "errorEmailExists": "This email is already registered",
+    "errorRegisterFailed": "Registration failed, please try again",
+    "registerSuccess": "Account created, redirecting..."
+  },
+  "sidebar": {
+    "production": "Production",
+    "assets": "Assets",
+    "management": "Manage",
+    "dashboard": "Dashboard",
+    "studio": "AI Create",
+    "integrations": "Integrations",
+    "assetsCenter": "Asset Center",
+    "settings": "Settings",
+    "newProject": "New Project",
+    "operator": "Operator",
+    "admin": "Admin",
+    "signOut": "Sign Out",
+    "tagline": "Stunning Visuals. Generated in a Flash."
+  },
+  "dashboard": {
+    "hello": "Hello",
+    "tagline": "Stunning Visuals. Generated in a Flash.",
+    "totalProjects": "Total Projects",
+    "generatedImages": "Generated",
+    "currentPlan": "Current Plan",
+    "free": "Free",
+    "enterStudio": "Enter AI Create",
+    "viewAllProjects": "View All Projects",
+    "recentProjects": "Recent Projects",
+    "noProjects": "No projects yet",
+    "noProjectsDesc": "Head to AI Create, upload product images to start generating",
+    "startFirstProject": "Start First Project"
+  },
+  "batch": {
+    "selectAll": "Select All",
+    "deselect": "Deselect All",
+    "selected": "selected",
+    "regenerate": "Regenerate",
+    "publish": "Publish",
+    "delete": "Delete",
+    "publishSingle": "Publish",
+    "regenerateSingle": "Regenerate",
+    "deleteSingle": "Delete",
+    "noTemplate": "No template",
+    "confirmDeleteTitle": "Confirm Delete",
+    "confirmDeleteDescSingle": "? This action cannot be undone. Generated images and task data will be permanently deleted.",
+    "confirmDeleteDescMulti": "This action cannot be undone. Generated images and task data will be permanently deleted.",
+    "deleting": "Deleting...",
+    "confirmDeleteBtn": "Confirm Delete",
+    "cancel": "Cancel"
+  },
+  "workspace": {
+    "title": "Workspace",
+    "emptyTitle": "No projects yet",
+    "emptyDesc": "Upload product images, AI generates multi-scene product photos, one-click publish to Shopify",
+    "createFirst": "Create your first project",
+    "noName": "Untitled",
+    "images": "product images",
+    "results": "results"
+  },
+  "products": {
+    "title": "Products",
+    "total": "{count} projects",
+    "createPrompt": "Upload product images, AI auto-generates scene photos & publish to e-commerce",
+    "newTitle": "New Product Image",
+    "newDesc": "Upload a product photo, select a scene template, AI auto-generates multi-scene images",
+    "newProject": "New Project",
+    "imagesCount": "{count} images",
+    "resultsCount": "{count} results",
+    "uploadStep": "Upload Product Image",
+    "templateStep": "Select Scene Template",
+    "dragOrClick": "Drag and drop or click to upload",
+    "uploadHint": "Supports JPG, PNG, WebP, max 10MB",
+    "productName": "Product name (optional)",
+    "productNamePlaceholder": "e.g. Wireless Earbuds, Organic Green Tea...",
+    "uploaded": "Uploaded",
+    "clickToChange": "Click to change",
+    "startGenerate": "Generate Product Images",
+    "estimatedTime": "Estimated 15-30s, AI will generate 2 scenes per product image",
+    "uploading": "Uploading...",
+    "creating": "Creating..."
+  },
+  "detail": {
+    "generateScene": "Generate Scene",
+    "generating": "AI is generating...",
+    "moreGenerating": "More in progress...",
+    "regenerate": "Regenerate",
+    "publishToPlatform": "Publish to Platform",
+    "allDone": "All generations complete",
+    "imagesReady": "product images ready",
+    "noImages": "No product images",
+    "noImagesDesc": "Upload a product image to start generating",
+    "projectNotFound": "Project not found",
+    "backToWorkspace": "Back to Workspace",
+    "delete": "Delete",
+    "confirmDeleteTitle": "Confirm Delete",
+    "confirmDeleteDesc": "? This action cannot be undone. Generated images and task data will be permanently deleted.",
+    "cancel": "Cancel",
+    "confirmDeleteBtn": "Confirm Delete",
+    "deleting": "Deleting..."
+  },
+  "publish": {
+    "title": "Publish Images",
+    "desc": "Select images and platforms, publish to your store with one click",
+    "selectImages": "Select Images",
+    "selectPlatforms": "Select Platforms",
+    "noImages": "No generated images yet. Generate product images first.",
+    "publishBtn": "Publish",
+    "publishing": "Publishing...",
+    "published": "Published successfully",
+    "failed": "Publish failed",
+    "viewProduct": "View Product",
+    "backToProject": "Back to Project",
+    "comingSoon": "Coming Soon"
+  },
+  "settings": {
+    "title": "Settings",
+    "desc": "Account info, platform connections, and brand presets",
+    "accountInfo": "Account Info",
+    "accountDesc": "Basic information for your account",
+    "email": "Email",
+    "username": "Username",
+    "platformConnections": "Platform Connections",
+    "platformDesc": "Connect e-commerce platforms for publishing",
+    "connected": "Connected",
+    "connectShopify": "Connect Shopify",
+    "brandPresets": "Brand Presets",
+    "brandDesc": "Save brand info to auto-fill during generation",
+    "noBrands": "No brand presets",
+    "noBrandsDesc": "Add brand logo and colors to auto-apply during generation",
+    "billing": "Plan & Usage",
+    "billingDesc": "Current plan and monthly usage",
+    "manageBilling": "Manage Plan →",
+    "managePlatform": "Manage Platform Connections →"
+  },
+  "billing": {
+    "title": "Plan & Usage",
+    "desc": "Manage subscription and view usage",
+    "currentTier": "Current Plan",
+    "monthlyUsage": "Monthly Usage",
+    "quotaExhausted": "Monthly quota exhausted. Upgrade to continue.",
+    "cancelAtPeriodEnd": "Subscription will cancel at the end of the current billing period",
+    "availablePlans": "Available Plans",
+    "current": "Current",
+    "contactDowngrade": "Contact support to downgrade",
+    "upgradeToPro": "Upgrade to Pro",
+    "upgradeToBusiness": "Upgrade to Business",
+    "unavailable": "Temporarily unavailable, contact support",
+    "redirecting": "Redirecting...",
+    "billingCycle": "Billing cycle"
+  },
+  "status": {
+    "DRAFT": "Draft",
+    "GENERATING": "Generating",
+    "GENERATED": "Generated",
+    "FAILED": "Failed",
+    "PUBLISHING": "Publishing",
+    "PUBLISHED": "Published",
+    "REVIEW": "Review",
+    "APPROVED": "Approved"
+  },
+  "studio": {
+    "title": "AI Create",
+    "desc": "Upload product images, AI generates multi-scene e-commerce photos",
+    "preparing": "Preparing...",
+    "retry": "Retry",
+    "projectError": "Failed to create project"
+  },
+  "error": {
+    "unauthorized": "Please sign in first",
+    "projectNotFound": "Project not found",
+    "quotaExceeded": "Free quota exhausted. Please upgrade to continue.",
+    "uploadFailed": "Image upload failed, please retry",
+    "createFailed": "Creation failed, please retry",
+    "generateFailed": "Generation failed, please retry",
+    "publishFailed": "Publish failed, please retry",
+    "loadFailed": "Load failed",
+    "unsupportedFile": "Please upload an image file",
+    "fileTooLarge": "Image size must not exceed 10MB"
+  },
+  "templates": {
+    "white_bg": "White Background",
+    "marble": "Marble Texture",
+    "outdoor": "Outdoor Natural Light",
+    "studio": "Studio Lighting",
+    "lifestyle": "Lifestyle Scene"
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "styles": "Styles",
+      "pricing": "Pricing",
+      "signIn": "Sign In",
+      "startFree": "Start Free"
+    },
+    "hero": {
+      "headline": "Stunning Product Visuals.",
+      "headlineHighlight": "Generated in a Flash.",
+      "subheadline": "Meet Flashant, your smart, friendly AI visual assistant. Turn ordinary product photos into high-converting, studio-quality masterpieces for Amazon, Shopify, and TikTok Shop — in seconds.",
+      "cta": "Start Creating for Free",
+      "ctaSub": "No credit card required. 10 free credits monthly."
+    },
+    "trustCloud": {
+      "title": "Built for Cross-Border Sellers",
+      "subtitle": "Images auto-locked to platform compliance rules out of the box"
+    },
+    "styleShowcase": {
+      "title": "Four Signature Styles.",
+      "subtitle": "Pick your aesthetic. Click. Generate. It's that simple.",
+      "tabs": {
+        "cosmetics": "Nordic Minimalist",
+        "luxury": "Luxury Marble",
+        "cyber": "Cyberpunk Tech",
+        "whiteBg": "Pure White BG"
+      },
+      "tooltips": {
+        "cosmetics": "Breathe elegance into your brand. Soft shadows, airy tones.",
+        "luxury": "Elevate your perceived value instantly with premium textures.",
+        "cyber": "Stop the scroll with futuristic energy. Engineered for Gen-Z.",
+        "whiteBg": "100% Amazon SP-API Guideline Compliant. Locked 1:1."
+      }
+    },
+    "beforeAfter": {
+      "title": "From Phone Snap to Studio Masterpiece",
+      "desc": "Drag the slider to see the Flashant difference",
+      "beforeLabel": "Raw Smartphone Photo",
+      "afterLabel": "Flashant Magic Generated"
+    },
+    "workflow": {
+      "title": "Three Steps. Infinite Content.",
+      "subtitle": "Your industrial-grade visual pipeline, simplified.",
+      "step1": {
+        "title": "Drag & Drop",
+        "desc": "Drop your raw product image. Our system instantly isolates the subject without losing a single edge detail."
+      },
+      "step2": {
+        "title": "Wave the Magic Wand",
+        "desc": "Speak in your native language. Click the Magic Wand to instantly upgrade your text into highly descriptive, conversion-optimized English prompts."
+      },
+      "step3": {
+        "title": "Batch Harvest",
+        "desc": "Run multiple style concepts together. Stash them in your Asset Grid and download the entire e-commerce launch kit in one .zip file."
+      }
+    },
+    "roi": {
+      "title": "The Numbers Don't Lie.",
+      "subtitle": "A real cost comparison for a single product listing shoot.",
+      "col1": "Traditional Agency / Studio",
+      "col2": "Flashant AI Helper",
+      "rows": {
+        "cost": {
+          "label": "Cost",
+          "old": "$50–$100 per photo",
+          "new": "$0.02 per photo"
+        },
+        "speed": {
+          "label": "Speed",
+          "old": "3–5 Days turnaround",
+          "new": "10 Seconds instant delivery"
+        },
+        "revision": {
+          "label": "Revision",
+          "old": "Limited rounds, extra fees",
+          "new": "Infinite variations in a flash"
+        },
+        "compliance": {
+          "label": "Compliance",
+          "old": "Manual checking",
+          "new": "Auto-locked to platform rules"
+        }
+      },
+      "winner": "Flashant wins on every metric."
+    },
+    "bottomCta": {
+      "title": "Ready to Transform Your Product Images?",
+      "subtitle": "Join 5,000+ cross-border sellers who ship studio-quality visuals in seconds, not days.",
+      "cta": "Start Creating for Free",
+      "ctaSub": "No credit card required. 10 free credits monthly."
+    },
+    "pricing": {
+      "title": "Simple Pricing",
+      "desc": "Start free, upgrade as you grow",
+      "currentPlanPrefix": "You are on the ",
+      "currentPlanSuffix": " plan",
+      "freePlan": "Free",
+      "popular": "Popular",
+      "currentPlan": "Current Plan",
+      "getStarted": "Get Started",
+      "learnMore": "Learn More",
+      "goToWorkspace": "Go to Workspace",
+      "plans": {
+        "free": {
+          "name": "Free",
+          "desc": "For individual sellers getting started",
+          "feature1": "10 generations / month",
+          "feature2": "Shopify publishing",
+          "feature3": "5 scene templates",
+          "feature4": "Standard resolution"
+        },
+        "pro": {
+          "name": "Pro",
+          "desc": "For growing brands",
+          "feature1": "100 generations / month",
+          "feature2": "Shopify + TikTok Shop",
+          "feature3": "All scene templates",
+          "feature4": "HD resolution",
+          "feature5": "Brand presets"
+        },
+        "business": {
+          "name": "Business",
+          "desc": "For brand teams",
+          "feature1": "500 generations / month",
+          "feature2": "All 4 platforms",
+          "feature3": "Custom templates",
+          "feature4": "UHD resolution",
+          "feature5": "API access",
+          "feature6": "Priority support"
+        }
+      }
+    },
+    "footer": {
+      "copyright": "© 2026 Flashant. All rights reserved."
+    }
+  },
+  "generate": {
+    "tabLabel": "Generate",
+    "imagesTabLabel": "Product Images",
+    "uploadZone": "Drag & drop or click to upload a product image",
+    "changeImage": "Change Image",
+    "uploading": "Uploading...",
+    "modeScene": "Scene",
+    "modeWhiteBg": "White BG",
+    "modeModel": "Model",
+    "promptPlaceholder": "e.g. White marble desk, soft natural lighting, premium shadows...",
+    "quantityLabel": "Quantity",
+    "generateCta": "Generate",
+    "generatingCta": "Generating...",
+    "canvasTitle": "Preview Canvas",
+    "quotaLabel": "Credits remaining this month",
+    "generatingOverlay": "Flashant is composing your scene, estimated 5–8 seconds...",
+    "emptyPreview": "Upload an image and click generate",
+    "downloadImage": "Download",
+    "syncToShopify": "Sync to Shopify",
+    "slogan": "Stunning Visuals. Generated in a Flash. 一键闪象，万象更新",
+    "modeLabel": "Generation Mode",
+    "promptLabel": "Scene Description",
+    "uploadHint": "PNG / JPG / WebP"
+  }
+}

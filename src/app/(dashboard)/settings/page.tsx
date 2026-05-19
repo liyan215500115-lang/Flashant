@@ -1,9 +1,12 @@
+import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Shield, Store } from "lucide-react";
+import zh from "../../../../messages/zh.json";
+import en from "../../../../messages/en.json";
 
 const PLATFORM_INFO: Record<string, { name: string; status: "active" | "coming_soon" }> = {
   SHOPIFY: { name: "Shopify", status: "active" },
@@ -15,6 +18,18 @@ const PLATFORM_INFO: Record<string, { name: string; status: "active" | "coming_s
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
+
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("NEXT_LOCALE")?.value === "zh" ? "zh" : "en";
+  const messages = locale === "zh" ? zh : en;
+  const t = (key: string): string => {
+    let val: unknown = messages;
+    for (const k of key.split(".")) {
+      if (val && typeof val === "object") val = (val as Record<string, unknown>)[k];
+      else return "";
+    }
+    return typeof val === "string" ? val : "";
+  };
 
   const userId = session.user.id;
 
@@ -29,24 +44,24 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-[640px] mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">设置</h1>
-        <p className="text-sm text-muted-foreground mt-1">账号信息、平台连接和品牌预设</p>
+        <h1 className="text-2xl font-bold text-brand-900 tracking-tight">{t("settings.title")}</h1>
+        <p className="text-sm text-zinc-500 mt-1">{t("settings.desc")}</p>
       </div>
 
       <div className="flex flex-col gap-5">
         {/* Account Info */}
         <Card>
           <CardHeader>
-            <CardTitle>账号信息</CardTitle>
-            <CardDescription>当前登录账号的基本信息</CardDescription>
+            <CardTitle>{t("settings.accountInfo")}</CardTitle>
+            <CardDescription>{t("settings.accountDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">邮箱</span>
+              <span className="text-sm text-muted-foreground">{t("settings.email")}</span>
               <span className="text-sm font-medium">{session.user.email || "-"}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">用户名</span>
+              <span className="text-sm text-muted-foreground">{t("settings.username")}</span>
               <span className="text-sm font-medium">{session.user.name || "-"}</span>
             </div>
           </CardContent>
@@ -55,65 +70,37 @@ export default async function SettingsPage() {
         {/* Platform Connections */}
         <Card>
           <CardHeader>
-            <CardTitle>平台连接</CardTitle>
-            <CardDescription>绑定电商平台以发布商品图</CardDescription>
+            <CardTitle>{t("settings.platformConnections")}</CardTitle>
+            <CardDescription>{t("settings.platformDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-3">
-              {Object.entries(PLATFORM_INFO).map(([key, info]) => {
-                const platformKey = key as import("@prisma/client").Platform;
-                const conn = connections.find((c) => c.platform === platformKey);
-                const isConnected = connectedPlatforms.has(platformKey);
-
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Store size={16} className="text-muted-foreground" />
-                      <span className="text-sm">{info.name}</span>
-                    </div>
-
-                    {info.status === "coming_soon" ? (
-                      <Badge variant="secondary" className="text-xs">即将上线</Badge>
-                    ) : isConnected && conn ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {conn.platformStoreName || "已连接"}
-                        </span>
-                        <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                      </div>
-                    ) : (
-                      <Link
-                        href={`/api/auth/shopify?userId=${userId}`}
-                        className="text-xs font-medium hover:underline"
-                        style={{ color: "var(--accent)" }}
-                      >
-                        连接 Shopify
-                      </Link>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              {t("settings.platformDesc")}
+            </p>
+            <Link
+              href="/integrations"
+              className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-900 transition-colors"
+            >
+              <Store size={14} />
+              {t("settings.managePlatform")}
+            </Link>
           </CardContent>
         </Card>
 
         {/* Brand Presets */}
         <Card>
           <CardHeader>
-            <CardTitle>品牌预设</CardTitle>
-            <CardDescription>保存品牌信息，生成时自动填充</CardDescription>
+            <CardTitle>{t("settings.brandPresets")}</CardTitle>
+            <CardDescription>{t("settings.brandDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             {brandPresets.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-8 text-center">
                 <Shield size={32} className="text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">暂无品牌预设</p>
+                  <p className="text-sm font-medium">{t("settings.noBrands")}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    添加品牌 Logo 和配色，生成时自动应用
+                    {t("settings.noBrandsDesc")}
                   </p>
                 </div>
               </div>
@@ -160,12 +147,12 @@ export default async function SettingsPage() {
         {/* Billing */}
         <Card>
           <CardHeader>
-            <CardTitle>套餐与用量</CardTitle>
-            <CardDescription>当前套餐和本月使用情况</CardDescription>
+            <CardTitle>{t("settings.billing")}</CardTitle>
+            <CardDescription>{t("settings.billingDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">当前套餐</span>
+              <span className="text-sm text-muted-foreground">{t("billing.currentTier")}</span>
               <Badge variant="default">
                 {subscription?.planTier === "PRO"
                   ? "Pro"
@@ -176,10 +163,9 @@ export default async function SettingsPage() {
             </div>
             <Link
               href="/settings/billing"
-              className="text-xs font-medium hover:underline"
-              style={{ color: "var(--accent)" }}
+              className="text-xs font-medium text-brand-700 hover:text-brand-900 transition-colors"
             >
-              管理套餐 →
+              {t("settings.manageBilling")}
             </Link>
           </CardContent>
         </Card>

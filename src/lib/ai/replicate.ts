@@ -31,7 +31,6 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
         version: modelVersion,
         input: {
           prompt: input.prompt,
-          image: input.productImageUrl,
           num_outputs: input.numOutputs ?? 2,
           width: input.width ?? 1024,
           height: input.height ?? 1024,

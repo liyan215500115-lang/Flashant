@@ -38,6 +38,7 @@ export async function POST(req: Request) {
   let title = "";
   let promptTemplateId: string | null = null;
   let imageUrl: string | null = null;
+  let s3Key: string | null = null;
   let fileName = "product.png";
   let fileSize = 0;
   let mimeType = "image/png";
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
   const contentType = req.headers.get("content-type") ?? "";
 
   if (contentType.includes("multipart/form-data")) {
+    // Legacy: direct upload via server (dev fallback)
     const formData = await req.formData();
     title = (formData.get("title") as string) ?? "";
     promptTemplateId = formData.get("promptTemplateId") as string | null;
@@ -62,11 +64,18 @@ export async function POST(req: Request) {
       await mkdir(uploadDir, { recursive: true });
       await writeFile(path.join(uploadDir, uniqueName), buffer);
       imageUrl = `/uploads/${uniqueName}`;
+      s3Key = imageUrl;
     }
   } else {
+    // S3 pre-signed upload path (production)
     const body = await req.json();
     title = body.title ?? "";
     promptTemplateId = body.promptTemplateId ?? null;
+    fileName = body.fileName ?? "product.png";
+    fileSize = body.fileSize ?? 0;
+    mimeType = body.mimeType ?? "image/png";
+    s3Key = body.s3Key ?? null;
+    imageUrl = body.originalUrl ?? s3Key ?? null;
   }
 
   const project = await db.imageProject.create({
@@ -83,7 +92,7 @@ export async function POST(req: Request) {
       data: {
         imageProjectId: project.id,
         originalUrl: imageUrl,
-        s3Key: imageUrl,
+        s3Key: s3Key ?? imageUrl,
         fileName,
         fileSize,
         mimeType,

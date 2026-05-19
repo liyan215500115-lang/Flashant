@@ -1,0 +1,391 @@
+{
+  "common": {
+    "appName": "闪象",
+    "tagline": "AI 商品图",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "confirm": "确认",
+    "back": "返回"
+  },
+  "nav": {
+    "workspace": "工作台",
+    "products": "商品图",
+    "settings": "设置",
+    "newProject": "新建项目",
+    "signOut": "退出登录"
+  },
+  "auth": {
+    "loginTitle": "欢迎回来",
+    "loginDesc": "登录以继续使用闪象 AI 商品图",
+    "loginBtn": "登录",
+    "loggingIn": "登录中...",
+    "email": "邮箱",
+    "password": "密码",
+    "name": "姓名",
+    "confirmPassword": "确认密码",
+    "emailPlaceholder": "demo@shanxiang.ai",
+    "passwordPlaceholder": "••••••••",
+    "namePlaceholder": "你的姓名",
+    "registerTitle": "创建账号",
+    "registerDesc": "注册闪象，开始 AI 商品图创作",
+    "registerBtn": "注册",
+    "registering": "注册中...",
+    "noAccount": "还没有账号？",
+    "hasAccount": "已有账号？",
+    "goRegister": "立即注册",
+    "goLogin": "去登录",
+    "backHome": "← 返回首页",
+    "brandSlogan": "闪象 Flashant · 一键闪象，万象更新",
+    "errorEmailPassword": "邮箱或密码错误",
+    "errorPasswordMismatch": "两次密码不一致",
+    "errorWeakPassword": "密码至少 6 位",
+    "errorEmailExists": "该邮箱已注册",
+    "errorRegisterFailed": "注册失败，请重试",
+    "registerSuccess": "注册成功，正在跳转..."
+  },
+  "sidebar": {
+    "production": "生产",
+    "assets": "资产",
+    "management": "管理",
+    "dashboard": "控制台",
+    "studio": "AI 创作",
+    "integrations": "渠道连接",
+    "assetsCenter": "素材中心",
+    "settings": "系统设置",
+    "newProject": "新建项目",
+    "operator": "操作员",
+    "admin": "管理员",
+    "signOut": "退出登录",
+    "tagline": "一键闪象，万象更新"
+  },
+  "dashboard": {
+    "hello": "你好",
+    "tagline": "一键闪象，万象更新",
+    "totalProjects": "项目总数",
+    "generatedImages": "已生成图片",
+    "currentPlan": "当前套餐",
+    "free": "免费",
+    "enterStudio": "进入 AI 创作",
+    "viewAllProjects": "查看所有项目",
+    "recentProjects": "最近项目",
+    "noProjects": "还没有项目",
+    "noProjectsDesc": "前往 AI 创作，上传产品图开始 AI 生成",
+    "startFirstProject": "开始第一个项目"
+  },
+  "batch": {
+    "selectAll": "全选",
+    "deselect": "取消全选",
+    "selected": "项",
+    "regenerate": "重新生成",
+    "publish": "批量发布",
+    "delete": "删除",
+    "publishSingle": "发布",
+    "regenerateSingle": "重新生成",
+    "deleteSingle": "删除",
+    "noTemplate": "未选择模板",
+    "confirmDeleteTitle": "确认删除",
+    "confirmDeleteDescSingle": "？此操作不可撤销，关联的生成图片和任务数据将被永久删除。",
+    "confirmDeleteDescMulti": "此操作不可撤销，关联的生成图片和任务数据将被永久删除。",
+    "deleting": "删除中...",
+    "confirmDeleteBtn": "确认删除",
+    "cancel": "取消"
+  },
+  "workspace": {
+    "title": "工作台",
+    "emptyTitle": "还没有项目",
+    "emptyDesc": "上传产品图，AI 自动生成多场景商品图，一键发布到 Shopify",
+    "createFirst": "创建第一个项目",
+    "noName": "未命名项目",
+    "images": "张产品图",
+    "results": "个生成结果"
+  },
+  "products": {
+    "title": "商品图",
+    "total": "共 {count} 个项目",
+    "createPrompt": "上传产品图，AI 自动生成场景图并发布到电商平台",
+    "newTitle": "新建商品图",
+    "newDesc": "上传产品图片，选择场景模板，AI 自动生成多场景商品图",
+    "newProject": "新建项目",
+    "imagesCount": "{count} 张产品图",
+    "resultsCount": "{count} 个结果",
+    "uploadStep": "上传产品图片",
+    "templateStep": "选择场景模板",
+    "dragOrClick": "拖拽或点击上传产品图片",
+    "uploadHint": "支持 JPG、PNG、WebP，最大 10MB",
+    "productName": "商品名称（可选）",
+    "productNamePlaceholder": "如：无线蓝牙耳机、有机绿茶...",
+    "uploaded": "已上传",
+    "clickToChange": "点击更换",
+    "startGenerate": "开始生成商品图",
+    "estimatedTime": "预计耗时 15-30 秒，AI 将为每张产品图生成 2 个场景图",
+    "uploading": "上传中...",
+    "creating": "创建中..."
+  },
+  "detail": {
+    "generateScene": "生成场景图",
+    "generating": "AI 正在生成中...",
+    "moreGenerating": "更多生成中...",
+    "regenerate": "重新生成",
+    "publishToPlatform": "发布到平台",
+    "allDone": "全部生成完成",
+    "imagesReady": "张商品图已就绪",
+    "noImages": "暂无产品图片",
+    "noImagesDesc": "请先上传产品图片以开始生成",
+    "projectNotFound": "项目未找到",
+    "backToWorkspace": "返回工作台",
+    "delete": "删除",
+    "confirmDeleteTitle": "确认删除",
+    "confirmDeleteDesc": "？此操作不可撤销，相关生成图片和任务数据将被永久删除。",
+    "cancel": "取消",
+    "confirmDeleteBtn": "确认删除",
+    "deleting": "删除中..."
+  },
+  "publish": {
+    "title": "发布商品图",
+    "desc": "选择图片和平台，一键发布到电商店铺",
+    "selectImages": "选择图片",
+    "selectPlatforms": "选择平台",
+    "noImages": "暂无已生成的图片。请先生成商品图。",
+    "publishBtn": "发布",
+    "publishing": "发布中...",
+    "published": "发布成功",
+    "failed": "发布失败",
+    "viewProduct": "查看商品",
+    "backToProject": "返回项目",
+    "comingSoon": "即将上线"
+  },
+  "settings": {
+    "title": "设置",
+    "desc": "账号信息、平台连接和品牌预设",
+    "accountInfo": "账号信息",
+    "accountDesc": "当前登录账号的基本信息",
+    "email": "邮箱",
+    "username": "用户名",
+    "platformConnections": "平台连接",
+    "platformDesc": "绑定电商平台以发布商品图",
+    "connected": "已连接",
+    "connectShopify": "连接 Shopify",
+    "brandPresets": "品牌预设",
+    "brandDesc": "保存品牌信息，生成时自动填充",
+    "noBrands": "暂无品牌预设",
+    "noBrandsDesc": "添加品牌 Logo 和配色，生成时自动应用",
+    "billing": "套餐与用量",
+    "billingDesc": "当前套餐和本月使用情况",
+    "manageBilling": "管理套餐 →",
+    "managePlatform": "管理平台连接 →"
+  },
+  "billing": {
+    "title": "套餐与用量",
+    "desc": "管理订阅套餐和查看使用情况",
+    "currentTier": "当前套餐",
+    "monthlyUsage": "本月使用量",
+    "quotaExhausted": "本月额度已用完。升级套餐以继续使用。",
+    "cancelAtPeriodEnd": "订阅将在当前计费周期结束后取消",
+    "availablePlans": "可用套餐",
+    "current": "当前",
+    "contactDowngrade": "联系客服降级",
+    "upgradeToPro": "升级到 Pro",
+    "upgradeToBusiness": "升级到 Business",
+    "unavailable": "暂不可用，请联系客服",
+    "redirecting": "跳转中...",
+    "billingCycle": "计费周期"
+  },
+  "status": {
+    "DRAFT": "草稿",
+    "GENERATING": "生成中",
+    "GENERATED": "已生成",
+    "FAILED": "失败",
+    "PUBLISHING": "发布中",
+    "PUBLISHED": "已发布",
+    "REVIEW": "待审核",
+    "APPROVED": "已审核"
+  },
+  "studio": {
+    "title": "AI 创作",
+    "desc": "上传产品图，AI 智能生成多场景商品图",
+    "preparing": "正在准备...",
+    "retry": "重试",
+    "projectError": "创建项目失败"
+  },
+  "error": {
+    "unauthorized": "请先登录",
+    "projectNotFound": "项目未找到",
+    "quotaExceeded": "免费额度已用完，请升级套餐继续使用",
+    "uploadFailed": "图片上传失败，请重试",
+    "createFailed": "创建失败，请重试",
+    "generateFailed": "生成失败，请重试",
+    "publishFailed": "发布失败，请重试",
+    "loadFailed": "加载失败",
+    "unsupportedFile": "请上传图片文件",
+    "fileTooLarge": "图片大小不能超过 10MB"
+  },
+  "templates": {
+    "white_bg": "白色背景",
+    "marble": "大理石纹理",
+    "outdoor": "户外自然光",
+    "studio": "影棚灯光",
+    "lifestyle": "生活场景"
+  },
+  "landing": {
+    "nav": {
+      "features": "功能",
+      "styles": "风格",
+      "pricing": "价格",
+      "signIn": "登录",
+      "startFree": "免费开始"
+    },
+    "hero": {
+      "headline": "惊艳产品视觉。",
+      "headlineHighlight": "一键闪象。",
+      "subheadline": "认识闪象，你聪明又软萌的 AI 视觉助手。把普通产品照变成高转化、影棚级的精品图，覆盖 Amazon、Shopify、TikTok Shop —— 只需几秒。",
+      "cta": "免费开始创作",
+      "ctaSub": "无需信用卡。每月 10 次免费额度。"
+    },
+    "trustCloud": {
+      "title": "为跨境卖家而生",
+      "subtitle": "出图自动锁定平台合规规则，开箱即用"
+    },
+    "styleShowcase": {
+      "title": "四种标志性风格。",
+      "subtitle": "选定美学。点击。生成。就这么简单。",
+      "tabs": {
+        "cosmetics": "北欧极简",
+        "luxury": "奢华大理石",
+        "cyber": "赛博科技",
+        "whiteBg": "纯白底图"
+      },
+      "tooltips": {
+        "cosmetics": "柔影轻氛，为品牌注入呼吸感。",
+        "luxury": "瞬间拉高品牌溢价，质感立现。",
+        "cyber": "未来主义能量流，为 Gen-Z 打造。",
+        "whiteBg": "100% 符合亚马逊 SP-API 规范。锁定 1:1。"
+      }
+    },
+    "beforeAfter": {
+      "title": "从手机烂图到影棚大片",
+      "desc": "拖动滑块，感受闪象魔法",
+      "beforeLabel": "手机实拍原图",
+      "afterLabel": "闪象 AI 生成"
+    },
+    "workflow": {
+      "title": "三步走。无限产出。",
+      "subtitle": "你的工业级视觉流水线，化繁为简。",
+      "step1": {
+        "title": "拖拽上传",
+        "desc": "丢入原始产品图。系统瞬间分离主体，不丢失任何边缘细节。"
+      },
+      "step2": {
+        "title": "轻挥魔杖",
+        "desc": "用你的母语描述场景。点击魔杖，即时升级为高转化英文 Prompt。"
+      },
+      "step3": {
+        "title": "批量收割",
+        "desc": "多风格并行生成。存入素材库，一键打包下载整套电商启动物料。"
+      }
+    },
+    "roi": {
+      "title": "数字不会说谎。",
+      "subtitle": "单个产品上架拍摄的真实成本对比。",
+      "col1": "传统影棚 / 外包",
+      "col2": "闪象 AI 助手",
+      "rows": {
+        "cost": {
+          "label": "成本",
+          "old": "$50–$100 / 张",
+          "new": "$0.02 / 张"
+        },
+        "speed": {
+          "label": "速度",
+          "old": "3–5 个工作日",
+          "new": "10 秒即时出图"
+        },
+        "revision": {
+          "label": "修改",
+          "old": "有限次数，额外收费",
+          "new": "无限次即时生成"
+        },
+        "compliance": {
+          "label": "合规",
+          "old": "人工逐张检查",
+          "new": "自动锁定平台规则"
+        }
+      },
+      "winner": "闪象碾压式胜出。"
+    },
+    "bottomCta": {
+      "title": "准备好升级你的产品图了吗？",
+      "subtitle": "加入 5,000+ 跨境卖家，用秒级速度产出影棚级视觉。",
+      "cta": "免费开始创作",
+      "ctaSub": "无需信用卡。每月 10 次免费额度。"
+    },
+    "pricing": {
+      "title": "简单定价",
+      "desc": "从免费开始，随业务增长灵活升级",
+      "currentPlanPrefix": "你当前正在使用 ",
+      "currentPlanSuffix": " 套餐",
+      "freePlan": "免费版",
+      "popular": "热门",
+      "currentPlan": "当前套餐",
+      "getStarted": "开始使用",
+      "learnMore": "了解更多",
+      "goToWorkspace": "前往工作台",
+      "plans": {
+        "free": {
+          "name": "免费版",
+          "desc": "适合个人卖家入门使用",
+          "feature1": "10 次生成 / 月",
+          "feature2": "Shopify 发布",
+          "feature3": "5 种场景模板",
+          "feature4": "标准分辨率"
+        },
+        "pro": {
+          "name": "Pro",
+          "desc": "适合成长型品牌",
+          "feature1": "100 次生成 / 月",
+          "feature2": "Shopify + TikTok Shop",
+          "feature3": "所有场景模板",
+          "feature4": "HD 高清分辨率",
+          "feature5": "品牌预设"
+        },
+        "business": {
+          "name": "Business",
+          "desc": "适合品牌团队",
+          "feature1": "500 次生成 / 月",
+          "feature2": "全部 4 个平台",
+          "feature3": "自定义模板",
+          "feature4": "UHD 超高清分辨率",
+          "feature5": "API 接口",
+          "feature6": "优先客服支持"
+        }
+      }
+    },
+    "footer": {
+      "copyright": "© 2026 闪象 AI. 保留所有权利。"
+    }
+  },
+  "generate": {
+    "tabLabel": "生成图片",
+    "imagesTabLabel": "产品图片",
+    "uploadZone": "拖拽或点击上传产品图片",
+    "changeImage": "更换图片",
+    "uploading": "上传中...",
+    "modeScene": "场景图",
+    "modeWhiteBg": "白底图",
+    "modeModel": "模特上身",
+    "promptPlaceholder": "例如：白色大理石桌面，自然柔和光，背景带有高档植物阴影...",
+    "quantityLabel": "生成数量",
+    "generateCta": "一键闪象",
+    "generatingCta": "闪象生成中...",
+    "canvasTitle": "画布预演",
+    "quotaLabel": "本月剩余额度",
+    "generatingOverlay": "闪象正在为你重构画面，预计需要 5-8 秒...",
+    "emptyPreview": "上传图片并点击生成",
+    "downloadImage": "下载",
+    "syncToShopify": "同步至 Shopify",
+    "slogan": "一键闪象，万象更新 · Stunning Visuals. Generated in a Flash.",
+    "modeLabel": "生成模式",
+    "promptLabel": "场景描述",
+    "uploadHint": "PNG / JPG / WebP"
+  }
+}
