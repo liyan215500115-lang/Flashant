@@ -47,10 +47,10 @@ export default async function LandingPage() {
       label: t("landing.styleShowcase.tabs.cosmetics"),
       tooltip: t("landing.styleShowcase.tooltips.cosmetics"),
       images: [
-        "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=450&fit=crop&q=85",
         "https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=600&h=450&fit=crop&q=85",
       ],
     },
     {
@@ -58,10 +58,10 @@ export default async function LandingPage() {
       label: t("landing.styleShowcase.tabs.luxury"),
       tooltip: t("landing.styleShowcase.tooltips.luxury"),
       images: [
+        "https://images.unsplash.com/photo-1618220178548-1b4e1c7c2b06?w=600&h=450&fit=crop&q=85",
         "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1603561596112-0a132b757442?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1616486029423-aaa4789e8c9a?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1586105251261-72a756497a11?w=600&h=450&fit=crop&q=85",
       ],
     },
     {
@@ -70,9 +70,9 @@ export default async function LandingPage() {
       tooltip: t("landing.styleShowcase.tooltips.cyber"),
       images: [
         "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=450&fit=crop&q=85",
         "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=450&fit=crop&q=85",
       ],
     },
     {
@@ -80,10 +80,10 @@ export default async function LandingPage() {
       label: t("landing.styleShowcase.tabs.whiteBg"),
       tooltip: t("landing.styleShowcase.tooltips.whiteBg"),
       images: [
-        "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=600&h=450&fit=crop&q=85",
         "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1546865611-2cb84010f5a5?w=600&h=450&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&h=450&fit=crop&q=85",
       ],
     },
   ];
@@ -152,9 +152,9 @@ export default async function LandingPage() {
             <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden group/card">
               <div className="aspect-[3/4] relative">
                 <img
-                  src="https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=533&fit=crop&q=85"
+                  src="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&h=533&fit=crop&q=60"
                   alt="Raw product photo"
-                  className="absolute inset-0 w-full h-full object-cover grayscale-[15%] brightness-90 saturate-50"
+                  className="absolute inset-0 w-full h-full object-cover grayscale-[30%] brightness-75 saturate-30"
                 />
                 <div className="absolute inset-0 bg-zinc-900/5" />
                 {/* Label */}
