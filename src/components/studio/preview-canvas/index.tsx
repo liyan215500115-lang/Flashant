@@ -1,7 +1,9 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles } from "lucide-react";
+import { Sparkles, AlertTriangle, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n-provider";
 import { SecondaryTabs } from "./secondary-tabs";
 import { AssetGrid } from "./asset-grid";
 
@@ -14,6 +16,8 @@ interface PreviewImage {
 interface StudioPreviewCanvasProps {
   isGenerating: boolean;
   latestImage: PreviewImage | null;
+  generationHistory?: PreviewImage[];
+  onHistorySelect?: (image: PreviewImage) => void;
   assetImages: PreviewImage[];
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -21,11 +25,15 @@ interface StudioPreviewCanvasProps {
   onBatchDownload?: () => void;
   quotaUsed: number;
   quotaLimit: number;
+  generationError?: string;
+  onDismissError?: () => void;
 }
 
 export function StudioPreviewCanvas({
   isGenerating,
   latestImage,
+  generationHistory = [],
+  onHistorySelect,
   assetImages,
   activeTab,
   onTabChange,
@@ -33,11 +41,38 @@ export function StudioPreviewCanvas({
   onBatchDownload,
   quotaUsed,
   quotaLimit,
+  generationError,
+  onDismissError,
 }: StudioPreviewCanvasProps) {
+  const { t } = useT();
+
+  const quotaText = quotaLimit === -1
+    ? t("generate.unlimited")
+    : `${quotaLimit - quotaUsed}/${quotaLimit}`;
+
   return (
     <div className="flex flex-col gap-4">
       {/* Secondary tabs */}
       <SecondaryTabs value={activeTab} onChange={onTabChange} />
+
+      {/* Error banner */}
+      {generationError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-red-800">{t("error.generateFailed")}</p>
+            <p className="text-sm text-red-600 mt-0.5">{generationError}</p>
+          </div>
+          {onDismissError && (
+            <button
+              onClick={onDismissError}
+              className="text-red-400 hover:text-red-600 shrink-0"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main preview area */}
       <div className="relative aspect-square rounded-xl bg-zinc-50 border border-zinc-100 overflow-hidden">
@@ -55,31 +90,58 @@ export function StudioPreviewCanvas({
                     />
                   ))}
                 </div>
-                <p className="text-sm font-medium text-zinc-700">闪象正在为你重构画面</p>
-                <p className="text-xs text-zinc-400 mt-0.5">预计需要 5-8 秒...</p>
+                <p className="text-sm font-medium text-zinc-700">{t("generate.generatingOverlay")}</p>
               </div>
             </div>
           </div>
         ) : latestImage ? (
           <img
             src={latestImage.url}
-            alt={latestImage.promptUsed ?? "生成图"}
+            alt={latestImage.promptUsed ?? t("generate.generatedAlt")}
             className="w-full h-full object-cover"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <Sparkles size={32} className="mx-auto mb-3 text-zinc-300" />
-              <p className="text-sm text-zinc-400">上传图片并点击生成</p>
+              <div className="w-16 h-16 mx-auto mb-3 rounded-xl bg-zinc-100 flex items-center justify-center">
+                <Sparkles size={28} className="text-zinc-300" />
+              </div>
+              <p className="text-sm font-medium text-zinc-400">{t("generate.emptyPreview")}</p>
+              <p className="text-xs text-zinc-300 mt-1">{t("generate.uploadHint")}</p>
             </div>
           </div>
         )}
       </div>
 
+      {/* Generation history thumbnails */}
+      {generationHistory.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {generationHistory.map((img) => (
+            <button
+              key={img.id}
+              type="button"
+              onClick={() => onHistorySelect?.(img)}
+              className={cn(
+                "shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all",
+                latestImage?.id === img.id
+                  ? "border-brand-600 ring-1 ring-brand-600/20"
+                  : "border-zinc-200 hover:border-zinc-300 opacity-60 hover:opacity-100"
+              )}
+            >
+              <img
+                src={img.url}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Quota badge */}
       <div className="flex items-center justify-end">
         <span className="text-xs text-zinc-400">
-          本月剩余额度：{quotaLimit === -1 ? "无限" : `${quotaLimit - quotaUsed}/${quotaLimit}`}
+          {t("generate.quotaLabel")}：{quotaText}
         </span>
       </div>
 

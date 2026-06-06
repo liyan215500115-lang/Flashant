@@ -2,12 +2,7 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-
-const SECONDARY_TABS = [
-  { value: "main", label: "📦 主图筹备" },
-  { value: "long", label: "📝 详情页长图" },
-  { value: "listing", label: "✍️ Listing 文案" },
-];
+import { useT } from "@/components/i18n-provider";
 
 interface SecondaryTabsProps {
   value: string;
@@ -16,10 +11,18 @@ interface SecondaryTabsProps {
 }
 
 export function SecondaryTabs({ value, onChange, className }: SecondaryTabsProps) {
+  const { t } = useT();
+
+  const tabs = [
+    { value: "main", label: t("generate.tabMain") },
+    { value: "long", label: t("generate.tabLong") },
+    { value: "listing", label: t("generate.tabListing") },
+  ];
+
   return (
     <Tabs value={value} onValueChange={onChange} className={cn("w-full", className)}>
       <TabsList className="w-full">
-        {SECONDARY_TABS.map((tab) => (
+        {tabs.map((tab) => (
           <TabsTrigger key={tab.value} value={tab.value} className="flex-1 text-xs">
             {tab.label}
           </TabsTrigger>

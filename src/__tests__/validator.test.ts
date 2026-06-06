@@ -155,9 +155,9 @@ describe("validateUploadedFile", () => {
     expect(result.reason).toContain("not supported");
   });
 
-  it("rejects files over 10MB", () => {
+  it("rejects files over 20MB", () => {
     const result = validateUploadedFile({
-      size: 11 * 1024 * 1024,
+      size: 21 * 1024 * 1024,
       type: "image/png",
     });
     expect(result.valid).toBe(false);

@@ -42,7 +42,26 @@
     "errorWeakPassword": "密码至少 6 位",
     "errorEmailExists": "该邮箱已注册",
     "errorRegisterFailed": "注册失败，请重试",
-    "registerSuccess": "注册成功，正在跳转..."
+    "registerSuccess": "注册成功，正在跳转...",
+    "forgotPassword": "忘记密码？",
+    "forgotTitle": "找回密码",
+    "forgotDesc": "输入注册邮箱，我们会发送重置链接",
+    "sendReset": "发送重置链接",
+    "sending": "发送中...",
+    "forgotSent": "重置链接已发送",
+    "forgotSentDesc": "请检查邮箱并点击链接重置密码。链接有效期为 1 小时。",
+    "forgotError": "发送失败，请稍后重试",
+    "goReset": "前往重置密码",
+    "backToLogin": "返回登录",
+    "resetTitle": "重置密码",
+    "resetDesc": "请设置你的新密码",
+    "resetNewPassword": "新密码",
+    "resetBtn": "重置密码",
+    "resetting": "重置中...",
+    "resetSuccess": "密码重置成功",
+    "resetSuccessDesc": "即将跳转到登录页面...",
+    "resetError": "重置失败，请重新申请重置链接",
+    "resetInvalidToken": "无效或过期的重置链接，请重新申请"
   },
   "sidebar": {
     "production": "生产",
@@ -50,7 +69,8 @@
     "management": "管理",
     "dashboard": "控制台",
     "studio": "AI 创作",
-    "integrations": "渠道连接",
+    "products": "项目库",
+    "integrations": "平台链接",
     "assetsCenter": "素材中心",
     "settings": "系统设置",
     "newProject": "新建项目",
@@ -109,10 +129,16 @@
     "newProject": "新建项目",
     "imagesCount": "{count} 张产品图",
     "resultsCount": "{count} 个结果",
+    "searchPlaceholder": "搜索项目...",
+    "allStatus": "全部状态",
+    "sortNewest": "最近更新",
+    "sortOldest": "最早更新",
+    "filterCount": "筛选 {filtered}/{total} 个项目",
+    "noResults": "没有匹配的项目",
     "uploadStep": "上传产品图片",
     "templateStep": "选择场景模板",
     "dragOrClick": "拖拽或点击上传产品图片",
-    "uploadHint": "支持 JPG、PNG、WebP，最大 10MB",
+    "uploadHint": "支持 JPG、PNG、WebP，最大 20MB",
     "productName": "商品名称（可选）",
     "productNamePlaceholder": "如：无线蓝牙耳机、有机绿茶...",
     "uploaded": "已上传",
@@ -153,7 +179,17 @@
     "failed": "发布失败",
     "viewProduct": "查看商品",
     "backToProject": "返回项目",
-    "comingSoon": "即将上线"
+    "comingSoon": "即将上线",
+    "publishAndDownload": "发布与下载",
+    "downloading": "下载中...",
+    "downloadImages": "下载 {count} 张图片",
+    "publishToPlatforms": "一键发布到 {platforms}",
+    "results": "发布结果",
+    "publishSucceeded": "发布成功",
+    "loadProjectFailed": "加载项目失败",
+    "selectImagesCount": "选择图片 ({selected}/{total})",
+    "selectPlatform": "选择平台",
+    "backToDashboard": "返回工作台"
   },
   "settings": {
     "title": "设置",
@@ -170,10 +206,33 @@
     "brandDesc": "保存品牌信息，生成时自动填充",
     "noBrands": "暂无品牌预设",
     "noBrandsDesc": "添加品牌 Logo 和配色，生成时自动应用",
+    "createBrand": "新建品牌",
+    "editBrand": "编辑品牌",
+    "deleteBrand": "删除",
+    "brandFormTitle": "新建品牌预设",
+    "brandFormDesc": "设置品牌 Logo、配色方案，生图时自动应用",
+    "brandFormEditTitle": "编辑品牌预设",
+    "brandFormEditDesc": "修改品牌 Logo 和配色方案",
+    "brandNamePlaceholder": "品牌名称",
+    "brandLogoLabel": "品牌 Logo",
+    "brandColorsLabel": "品牌配色",
+    "brandSaveBtn": "保存品牌",
+    "brandSaving": "保存中...",
+    "brandSelectLabel": "品牌预设",
+    "brandSelectNone": "不使用品牌预设",
     "billing": "套餐与用量",
     "billingDesc": "当前套餐和本月使用情况",
     "manageBilling": "管理套餐 →",
-    "managePlatform": "管理平台连接 →"
+    "managePlatform": "管理平台连接 →",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "changeName": "修改",
+    "changePassword": "修改密码",
+    "saved": "已保存",
+    "nameRequired": "请输入用户名",
+    "passwordRequired": "请输入密码",
+    "wrongPassword": "当前密码错误",
+    "updateError": "更新失败，请重试"
   },
   "billing": {
     "title": "套餐与用量",
@@ -189,7 +248,11 @@
     "upgradeToBusiness": "升级到 Business",
     "unavailable": "暂不可用，请联系客服",
     "redirecting": "跳转中...",
-    "billingCycle": "计费周期"
+    "billingCycle": "计费周期",
+    "monthly": "月付",
+    "annual": "年付",
+    "savePercent": "省 17%",
+    "saved": "已省"
   },
   "status": {
     "DRAFT": "草稿",
@@ -208,6 +271,24 @@
     "retry": "重试",
     "projectError": "创建项目失败"
   },
+  "onboarding": {
+    "welcome": "欢迎使用闪象",
+    "subtitle": "AI 电商商品图，三步上手",
+    "skip": "跳过",
+    "prev": "上一步",
+    "next": "下一步",
+    "start": "开始使用",
+    "stepTitle": "第 {current}/{total} 步",
+    "step1Title": "上传商品图片",
+    "step1Desc": "拖拽或点击上传产品原图，支持 JPG / PNG / WebP，单张不超过 20MB",
+    "step1Tip": "上传清晰的正面产品照效果最佳",
+    "step2Title": "AI 智能生成",
+    "step2Desc": "选择目标平台和场景模式，AI 会自动匹配各平台的图片规格，生成符合要求的产品图",
+    "step2Tip": "支持 14 个主流电商平台，自动适配尺寸和背景",
+    "step3Title": "一键发布或下载",
+    "step3Desc": "生成的图片可直接发布到 Shopify / TikTok Shop，也可以一键下载到本地手动上传",
+    "step3Tip": "可发布的平台自动同步，其他平台一键下载"
+  },
   "error": {
     "unauthorized": "请先登录",
     "projectNotFound": "项目未找到",
@@ -217,8 +298,9 @@
     "generateFailed": "生成失败，请重试",
     "publishFailed": "发布失败，请重试",
     "loadFailed": "加载失败",
+    "networkFailed": "网络连接失败，请检查网络后重试",
     "unsupportedFile": "请上传图片文件",
-    "fileTooLarge": "图片大小不能超过 10MB"
+    "fileTooLarge": "图片大小不能超过 {size}"
   },
   "templates": {
     "white_bg": "白色背景",
@@ -333,30 +415,29 @@
       "plans": {
         "free": {
           "name": "免费版",
-          "desc": "适合个人卖家入门使用",
+          "desc": "适合个人卖家入门",
           "feature1": "10 次生成 / 月",
-          "feature2": "Shopify 发布",
+          "feature2": "14 平台规格下载",
           "feature3": "5 种场景模板",
           "feature4": "标准分辨率"
         },
         "pro": {
           "name": "Pro",
           "desc": "适合成长型品牌",
-          "feature1": "100 次生成 / 月",
-          "feature2": "Shopify + TikTok Shop",
-          "feature3": "所有场景模板",
-          "feature4": "HD 高清分辨率",
-          "feature5": "品牌预设"
+          "feature1": "200 次生成 / 月",
+          "feature2": "Shopify 一键发布",
+          "feature3": "14 平台规格下载",
+          "feature4": "全部场景模板",
+          "feature5": "HD 高清 + 品牌预设"
         },
         "business": {
           "name": "Business",
           "desc": "适合品牌团队",
-          "feature1": "500 次生成 / 月",
-          "feature2": "全部 4 个平台",
-          "feature3": "自定义模板",
+          "feature1": "1,500 次生成 / 月",
+          "feature2": "Shopify 一键发布",
+          "feature3": "14 平台规格下载",
           "feature4": "UHD 超高清分辨率",
-          "feature5": "API 接口",
-          "feature6": "优先客服支持"
+          "feature5": "自定义模板 + 品牌预设"
         }
       }
     },
@@ -386,6 +467,191 @@
     "slogan": "一键闪象，万象更新 · Stunning Visuals. Generated in a Flash.",
     "modeLabel": "生成模式",
     "promptLabel": "场景描述",
-    "uploadHint": "PNG / JPG / WebP"
+    "uploadHint": "PNG / JPG / WebP",
+    "noProject": "请先创建项目",
+    "publishGroup": "发布设置",
+    "generateGroup": "生成设置",
+    "exportLabel": "导出",
+    "enhancePrompt": "魔杖",
+    "enhancePromptDesc": "AI 自动优化场景描述，提升出图效果",
+    "success": "图片已成功生成",
+    "unlimited": "无限",
+    "historyLabel": "历史生成 ({count})",
+    "engineLabel": "AI 算力引擎",
+    "engineFlux": "标准 Flux (Replicate)",
+    "engineOpenai": "奢华 GPT (DALL·E 3)",
+    "platformLabel": "目标平台",
+    "platformNone": "不指定平台（仅生成）",
+    "brandLabel": "品牌预设",
+    "brandNone": "不使用品牌预设",
+    "imageSpec": "{name} 图片规格",
+    "backgroundLabel": "背景",
+    "maxImagesInfo": "最多 {max} 张，单张 ≤ {size}",
+    "generatedAlt": "生成结果",
+    "assetGridLabel": "留存资产 · {count} 张",
+    "batchDownload": "批量打包下载",
+    "saveToAssets": "留存入库",
+    "tabMain": "主图筹备",
+    "tabLong": "详情页长图",
+    "tabListing": "Listing 文案",
+    "quantityUnit": "{count} 张",
+    "sceneDefaultPrompt": "商品放置在干净明亮的场景中，自然光线，高级质感",
+    "whiteBgDefaultPrompt": "纯白色背景，专业产品摄影，柔和均匀布光，高细节清晰度",
+    "modelDefaultPrompt": "时尚模特展示商品，自然互动姿态，柔和自然光，生活化场景",
+    "uploadBtn": "上传图片",
+    "uploadingProgress": "上传中 {count}...",
+    "uploadHintBatch": "支持批量，最多 {max} 张 · PNG / JPG / WebP",
+    "languageLabel": "目标语种"
+  },
+  "assets": {
+    "title": "素材中心",
+    "subtitle": "所有已生成商品图",
+    "imageCount": "张",
+    "emptyTitle": "暂无素材",
+    "emptyDesc": "前往智能车间生成第一张商品图",
+    "download": "下载",
+    "unnamed": "未命名"
+  },
+  "integrations": {
+    "title": "平台链接",
+    "desc": "连接电商平台，一键发布到全球渠道",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "connectBtn": "连接",
+    "disconnectBtn": "断开",
+    "authorized": "已授权",
+    "reconnect": "重新连接",
+    "confirm": "确认",
+    "connectPlatform": "连接 {name}",
+    "helpTitle": "接入帮助",
+    "helpNoShopify": "还没有 Shopify 店铺？",
+    "helpNoShopifyDesc": "注册 Shopify 账户，创建你的独立站",
+    "helpFindDomain": "如何找到店铺域名？",
+    "helpFindDomainDesc": "登录后台 → 设置 → 域名，复制你的 myshopify.com 地址",
+    "helpNoTiktok": "还没有 TikTok Shop 店铺？",
+    "helpNoTiktokDesc": "注册 TikTok Shop 卖家账户，开通商品橱窗",
+    "helpTiktokGuide": "TikTok Shop 卖家入门指南",
+    "helpTiktokGuideDesc": "了解如何上架商品、管理订单"
+  },
+  "platforms": {
+    "SHOPIFY": {
+      "background": "纯色背景，推荐白底或浅灰底",
+      "notes": [
+        "建议压缩至 300 KB 以下以提升加载速度",
+        "所有图片统一 1:1 比例以保持页面整齐"
+      ]
+    },
+    "TIKTOK_SHOP": {
+      "background": "主图纯白背景 (RGB 255, 255, 255)",
+      "notes": [
+        "商品需占图片空间 60% 以上",
+        "禁止水印、文字、Logo、边框、拼贴",
+        "建议上传 5-9 张多角度图片",
+        "不得使用明显 AI 生成痕迹的图片"
+      ]
+    },
+    "AMAZON": {
+      "background": "必须纯白背景 (RGB 255, 255, 255)",
+      "notes": [
+        "主图必须纯白底，商品占画面 85% 以上",
+        "禁止水印、文字、Logo、促销信息",
+        "辅图可为场景图或细节图"
+      ]
+    },
+    "EBAY": {
+      "background": "白底或浅色背景，允许场景图",
+      "notes": [
+        "规则最宽松的平台之一",
+        "允许场景图直接作主图",
+        "最多可上传 12 张图片"
+      ]
+    },
+    "WALMART": {
+      "background": "必须纯白背景，无倒影",
+      "notes": [
+        "主图禁止出现模特（服装类除外）",
+        "图片需通过 AI 自动审核",
+        "服装类可用 3:4 竖图"
+      ]
+    },
+    "ETSY": {
+      "background": "风格化场景或干净背景",
+      "notes": [
+        "Etsy 买家偏爱生活化场景图",
+        "手工艺品适合展示细节纹理",
+        "避免过于商业化风格"
+      ]
+    },
+    "MERCADO_LIBRE": {
+      "background": "必须纯白背景",
+      "notes": [
+        "主图必须纯白底无阴影",
+        "商品必须占图片 65% 以上",
+        "禁止水印、Logo、文字"
+      ]
+    },
+    "LAZADA": {
+      "background": "纯白或浅色背景",
+      "notes": [
+        "商品需占图片空间 80% 以上",
+        "禁止边框、水印、倒影、文字",
+        "服装类可用 2:3 竖图"
+      ]
+    },
+    "SHOPEE": {
+      "background": "白底或浅色背景",
+      "notes": [
+        "商品需占图片空间 70% 以上",
+        "禁止拼贴图、水印、过多文字",
+        "东南亚最大电商平台"
+      ]
+    },
+    "TAOBAO": {
+      "name": "淘宝",
+      "background": "纯白背景，无水印无Logo",
+      "notes": [
+        "需要 1:1 主图 + 3:4 主图 + 白底图 + SKU图",
+        "单文件上限已提升至 20MB",
+        "2025年上线画质检测，低质图将被拦截"
+      ]
+    },
+    "TMALL": {
+      "name": "天猫",
+      "background": "纯白背景，无水印无Logo",
+      "notes": [
+        "必须提供 800×800 PNG 透明背景产品图",
+        "主图须为实拍图，禁止效果图",
+        "品质要求高于淘宝，偏品牌化"
+      ]
+    },
+    "JD": {
+      "name": "京东",
+      "background": "白底纯净，无大面积文字",
+      "notes": [
+        "最多 6 张主图",
+        "首张主图必须白底纯净",
+        "主图视频建议 1:1 (1080×1080)，≤30秒"
+      ]
+    },
+    "PINDUODUO": {
+      "name": "拼多多",
+      "background": "白底为主，可有适度场景",
+      "notes": [
+        "商品主体占比 ≥ 80%",
+        "主图文字占比 ≤ 20%，避免牛皮癣判定",
+        "支持适度促销文案，但不能遮挡商品"
+      ]
+    },
+    "DOUYIN": {
+      "name": "抖音小店",
+      "background": "纯白背景或干净场景图",
+      "notes": [
+        "首图必须为实物图，不得使用效果图",
+        "文字占图片比例 ≤ 10%",
+        "需多角度展示，不能同一角度",
+        "可上传 3:4 竖版主图 (750×1000)"
+      ]
+    },
+    "maxImagesLabel": "最多 {max} 张 · {background}"
   }
 }

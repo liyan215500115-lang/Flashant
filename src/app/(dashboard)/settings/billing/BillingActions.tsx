@@ -2,44 +2,44 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Zap } from "lucide-react";
 import { useT } from "@/components/i18n-provider";
+import { toast } from "sonner";
 
 interface BillingActionsProps {
   tier: string;
   isCurrent: boolean;
   userId: string;
+  annual?: boolean;
 }
 
-const STRIPE_PRICE_IDS: Record<string, string> = {
-  PRO: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? "",
-  BUSINESS: process.env.NEXT_PUBLIC_STRIPE_BUSINESS_PRICE_ID ?? "",
+const VARIANT_IDS: Record<string, string> = {
+  PRO: process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRO_VARIANT_ID ?? "",
+  BUSINESS: process.env.NEXT_PUBLIC_LEMONSQUEEZY_BUSINESS_VARIANT_ID ?? "",
 };
 
-export function BillingActions({ tier, isCurrent, userId }: BillingActionsProps) {
+export function BillingActions({ tier, isCurrent, userId, annual }: BillingActionsProps) {
   const { t } = useT();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  if (tier === "FREE" && isCurrent) {
-    return (
-      <Button variant="outline" size="sm" disabled className="w-full">
-        {t("billing.current")}
-      </Button>
-    );
-  }
-
   if (isCurrent) {
     return (
-      <Button variant="outline" size="sm" disabled className="w-full">
+      <Badge variant="default" className="w-full justify-center py-1.5 text-sm font-medium">
         {t("billing.current")}
-      </Button>
+      </Badge>
     );
   }
 
   if (tier === "FREE") {
     return (
-      <Button variant="outline" size="sm" className="w-full" disabled>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => toast.info(t("billing.contactDowngrade"))}
+      >
         {t("billing.contactDowngrade")}
       </Button>
     );
@@ -50,18 +50,18 @@ export function BillingActions({ tier, isCurrent, userId }: BillingActionsProps)
     setError("");
 
     try {
-      const priceId = STRIPE_PRICE_IDS[tier];
-      if (!priceId) {
+      const variantId = VARIANT_IDS[tier];
+      if (!variantId) {
         setError(t("billing.unavailable"));
         setLoading(false);
         return;
       }
 
-      const res = await fetch("/api/stripe/checkout", {
+      const res = await fetch("/api/lemonsqueezy/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          priceId,
+          variantId,
           planTier: tier,
         }),
       });

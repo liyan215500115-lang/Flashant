@@ -6,6 +6,7 @@ import { PromptTextarea } from "./prompt-textarea";
 import { QuantitySlider } from "./quantity-slider";
 import { FlashantButton } from "./flashant-button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n-provider";
 
 interface ProductImage {
   id: string;
@@ -45,12 +46,13 @@ export function ControlPanel({
   disabled,
   className,
 }: ControlPanelProps) {
+  const { t } = useT();
+
   return (
     <div className={cn("flex flex-col gap-6", className)}>
-      {/* Product slogan */}
       <div>
-        <h2 className="text-lg font-semibold text-zinc-900">一键闪象</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">万象更新</p>
+        <h2 className="text-lg font-semibold text-zinc-900">{t("generate.tabLabel")}</h2>
+        <p className="text-xs text-zinc-500 mt-0.5">{t("generate.uploadHint")}</p>
       </div>
 
       <ImageUploadZone
@@ -69,6 +71,8 @@ export function ControlPanel({
         onClick={onGenerate}
         disabled={disabled}
         loading={isGenerating}
+        label={t("generate.generateCta")}
+        loadingLabel={t("generate.generatingCta")}
       />
     </div>
   );

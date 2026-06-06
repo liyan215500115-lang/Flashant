@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { checkGenerationQuota } from "@/lib/stripe/billing";
+import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
 
 export async function GET() {
   const session = await auth();

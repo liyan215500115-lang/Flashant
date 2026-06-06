@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ControlPanel } from "./control-panel";
 import { PreviewCanvas } from "./preview-canvas";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n-provider";
 
 interface ProductImage {
   id: string;
@@ -19,12 +20,6 @@ interface GeneratedImage {
   promptUsed: string | null;
   createdAt: string;
 }
-
-const MODE_DEFAULT_PROMPTS: Record<string, string> = {
-  scene: "商品放置在干净明亮的场景中，自然光线，高级质感",
-  white_bg: "纯白色背景，专业产品摄影，柔和均匀布光，高细节清晰度",
-  model: "时尚模特展示商品，自然互动姿态，柔和自然光，生活化场景",
-};
 
 interface GenerateTabProps {
   projectId: string;
@@ -53,6 +48,14 @@ export function GenerateTab({
   onImageUploaded,
   className,
 }: GenerateTabProps) {
+  const { t } = useT();
+
+  const modeDefaultPrompts = useMemo<Record<string, string>>(() => ({
+    scene: t("generate.sceneDefaultPrompt"),
+    white_bg: t("generate.whiteBgDefaultPrompt"),
+    model: t("generate.modelDefaultPrompt"),
+  }), [t]);
+
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(
     productImages[0] ?? null
   );
@@ -60,23 +63,20 @@ export function GenerateTab({
   const [prompt, setPrompt] = useState("");
   const [quantity, setQuantity] = useState(2);
 
-  // Sync selected image when productImages changes
   useEffect(() => {
     if (!selectedImage && productImages.length > 0) {
       setSelectedImage(productImages[0]);
     }
   }, [productImages, selectedImage]);
 
-  // Update prompt when mode changes
   const handleModeChange = useCallback((newMode: string) => {
     setMode(newMode);
-    setPrompt(MODE_DEFAULT_PROMPTS[newMode] ?? "");
-  }, []);
+    setPrompt(modeDefaultPrompts[newMode] ?? "");
+  }, [modeDefaultPrompts]);
 
-  // Initialize prompt on first render
   useEffect(() => {
     if (!prompt) {
-      setPrompt(MODE_DEFAULT_PROMPTS[mode] ?? "");
+      setPrompt(modeDefaultPrompts[mode] ?? "");
     }
   }, []);
 
@@ -89,7 +89,7 @@ export function GenerateTab({
     if (!selectedImage || isGenerating) return;
     onGenerate({
       productImageId: selectedImage.id,
-      prompt: prompt || MODE_DEFAULT_PROMPTS[mode],
+      prompt: prompt || modeDefaultPrompts[mode],
       numOutputs: quantity,
     });
   }
@@ -122,6 +122,7 @@ export function GenerateTab({
         latestImage={latestImage}
         quotaUsed={quotaUsed}
         quotaLimit={quotaLimit}
+        projectId={projectId}
       />
     </div>
   );

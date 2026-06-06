@@ -1,5 +1,3 @@
-import "server-only";
-
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
@@ -11,7 +9,7 @@ const API_AUTH_PATTERNS = [
   "/api/generate",
   "/api/publish",
   "/api/tasks",
-  "/api/stripe",
+  "/api/lemonsqueezy",
   "/api/upload-url",
   "/api/quota",
   "/api/prompts",

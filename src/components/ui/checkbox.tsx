@@ -18,7 +18,7 @@ function Checkbox({
       checked={checked}
       onChange={(e) => onCheckedChange?.(e.target.checked)}
       className={cn(
-        "h-4 w-4 rounded border-zinc-300 text-brand-900 focus:ring-brand-500 cursor-pointer",
+        "h-4 w-4 rounded border-zinc-300 dark:border-zinc-500 text-brand-900 dark:text-brand-300 focus:ring-brand-500 cursor-pointer",
         className
       )}
       {...props}

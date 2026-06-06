@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Upload, RefreshCw, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n-provider";
 
 interface ProductImage {
   id: string;
@@ -15,6 +16,8 @@ interface ImageUploadZoneProps {
   projectId: string;
   currentImage: ProductImage | null;
   onImageChange: (image: ProductImage) => void;
+  allImages?: ProductImage[];
+  maxFiles?: number;
   className?: string;
 }
 
@@ -22,51 +25,53 @@ export function ImageUploadZone({
   projectId,
   currentImage,
   onImageChange,
+  allImages = [],
+  maxFiles = 10,
   className,
 }: ImageUploadZoneProps) {
+  const { t } = useT();
   const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [error, setError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
-  async function handleFile(file: File) {
-    if (!file.type.startsWith("image/")) return;
-    setUploading(true);
+  async function uploadFile(file: File): Promise<ProductImage | null> {
+    if (!file.type.startsWith("image/")) return null;
 
     try {
-      // Get upload config (S3 pre-signed URL or local mode)
       const urlRes = await fetch(
         `/api/upload-url?fileName=${encodeURIComponent(file.name)}&mimeType=${encodeURIComponent(file.type)}`
       );
-      if (!urlRes.ok) throw new Error("获取上传链接失败");
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
       const config = await urlRes.json();
 
       let s3Key: string;
       let publicUrl: string;
 
       if (config.mode === "local") {
-        // Local storage — POST file directly
         const formData = new FormData();
         formData.append("file", file);
         const localRes = await fetch("/api/upload-url", {
           method: "POST",
           body: formData,
         });
-        if (!localRes.ok) throw new Error("上传失败");
+        if (!localRes.ok) throw new Error("Upload failed");
         const localData = await localRes.json();
         s3Key = localData.s3Key;
         publicUrl = localData.publicUrl;
       } else {
-        // S3 mode — PUT to pre-signed URL
         const uploadRes = await fetch(config.uploadUrl, {
           method: "PUT",
           body: file,
           headers: { "Content-Type": file.type },
         });
-        if (!uploadRes.ok) throw new Error("上传失败");
+        if (!uploadRes.ok) throw new Error("Upload failed");
         s3Key = config.s3Key;
         publicUrl = config.publicUrl;
       }
 
-      // Register image with project
       const imgRes = await fetch(`/api/products/${projectId}/images`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -78,21 +83,88 @@ export function ImageUploadZone({
           mimeType: file.type,
         }),
       });
-      if (!imgRes.ok) throw new Error("关联图片失败");
+      if (!imgRes.ok) throw new Error("Failed to link image");
       const { productImage } = await imgRes.json();
-      onImageChange(productImage);
-    } catch (err) {
-      console.error("上传失败", err);
-    } finally {
-      setUploading(false);
+      return productImage as ProductImage;
+    } catch {
+      return null;
     }
   }
 
+  async function handleFiles(files: FileList) {
+    const fileArray = Array.from(files).slice(0, maxFiles);
+    setError("");
+
+    // Pre-check file sizes before any upload
+    const oversized = fileArray.find((f) => f.size > MAX_FILE_SIZE);
+    if (oversized) {
+      setError(
+        t("error.fileTooLarge").replace(
+          "{size}",
+          `${(oversized.size / 1024 / 1024).toFixed(1)}MB`
+        ) +
+          ` (${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB max)`
+      );
+      return;
+    }
+
+    setUploading(true);
+    setUploadCount(0);
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const image = await uploadFile(fileArray[i]);
+      if (image) {
+        setUploadCount((c) => c + 1);
+        onImageChange(image);
+      }
+    }
+
+    setUploading(false);
+  }
+
+  // ── Drag-and-drop handlers ──────────────────────────────────────────
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFiles(files);
+    }
+  }
+
+  const displayImages = allImages.length > 0 ? allImages : currentImage ? [currentImage] : [];
+
   return (
     <div className={cn("flex flex-col gap-3", className)}>
+      {/* Size limit error */}
+      {error && (
+        <div className="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-3 py-2 text-xs text-red-600 dark:text-red-400">
+          {error}
+        </div>
+      )}
+
       {currentImage ? (
-        /* Uploaded state */
-        <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100">
+        <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800">
           <img
             src={currentImage.originalUrl}
             alt={currentImage.fileName}
@@ -102,51 +174,94 @@ export function ImageUploadZone({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-white transition-colors shadow-sm"
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 dark:bg-zinc-700/90 backdrop-blur-sm border border-zinc-200 dark:border-zinc-600 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-600 transition-colors shadow-sm"
           >
             {uploading ? (
               <Loader2 size={12} className="animate-spin" />
             ) : (
               <RefreshCw size={12} />
             )}
-            更换图片
+            {uploading
+              ? t("generate.uploadingProgress").replace("{count}", String(uploadCount))
+              : t("generate.changeImage")}
           </button>
         </div>
       ) : (
-        /* Empty state */
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="flex flex-col items-center justify-center gap-3 aspect-square rounded-xl border-2 border-dashed border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 transition-colors"
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={cn(
+            "flex flex-col items-center justify-center gap-3 aspect-square rounded-xl border-2 border-dashed transition-all cursor-pointer",
+            dragOver
+              ? "border-zinc-400 dark:border-zinc-400 bg-zinc-100 dark:bg-zinc-700/50 scale-[1.02]"
+              : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+          )}
         >
           {uploading ? (
             <>
-              <Loader2 size={28} className="animate-spin text-zinc-400" />
-              <span className="text-sm text-zinc-400">上传中...</span>
+              <Loader2 size={28} className="animate-spin text-zinc-400 dark:text-zinc-500" />
+              <span className="text-sm text-zinc-400 dark:text-zinc-500">
+                {t("generate.uploadingProgress").replace("{count}", String(uploadCount))}
+              </span>
             </>
           ) : (
             <>
-              <Upload size={28} className="text-zinc-300" />
+              <Upload size={28} className={cn(
+                "transition-colors",
+                dragOver ? "text-zinc-500 dark:text-zinc-300" : "text-zinc-300 dark:text-zinc-600"
+              )} />
               <div className="text-center">
-                <p className="text-sm text-zinc-500">拖拽或点击上传产品图片</p>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  PNG / JPG / WebP
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {dragOver ? "松开以上传" : t("generate.uploadZone")}
+                </p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                  {t("generate.uploadHintBatch").replace("{max}", String(maxFiles))}
                 </p>
               </div>
             </>
           )}
-        </button>
+        </div>
+      )}
+
+      {displayImages.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {displayImages.map((img) => (
+            <button
+              key={img.id}
+              type="button"
+              onClick={() => onImageChange(img)}
+              className={cn(
+                "shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all",
+                currentImage?.id === img.id
+                  ? "border-brand-600 ring-1 ring-brand-600/20"
+                  : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
+              )}
+            >
+              <img
+                src={img.originalUrl}
+                alt={img.fileName}
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
       )}
 
       <input
         ref={inputRef}
         type="file"
         accept="image/png,image/jpeg,image/webp"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
+          const files = e.target.files;
+          if (files && files.length > 0) handleFiles(files);
           e.target.value = "";
         }}
       />

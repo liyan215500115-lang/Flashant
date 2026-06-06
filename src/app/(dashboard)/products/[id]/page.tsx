@@ -28,6 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useT } from "@/components/i18n-provider";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 interface ProductImage {
   id: string;
@@ -279,13 +280,14 @@ export default function ProductDetailPage() {
   if (!project || error === t("error.loadFailed")) {
     return (
       <div className="max-w-[960px] mx-auto py-8">
+        <Breadcrumb items={[{ label: t("products.title"), href: "/products" }]} />
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="p-6">
             <p className="text-sm text-destructive font-medium">{t("detail.projectNotFound")}</p>
           </CardContent>
         </Card>
         <div className="mt-4">
-          <Link href="/dashboard">
+          <Link href="/products">
             <Button variant="outline" size="sm">
               <ArrowLeft size={14} className="mr-1" />
               {t("detail.backToWorkspace")}
@@ -306,13 +308,10 @@ export default function ProductDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Link
-            href="/dashboard"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 mb-2"
-          >
-            <ArrowLeft size={14} />
-            {t("detail.backToWorkspace")}
-          </Link>
+          <Breadcrumb items={[
+            { label: t("products.title"), href: "/products" },
+            { label: project.title || t("workspace.noName") },
+          ]} />
           <h1 className="text-xl font-semibold">{project.title || t("workspace.noName")}</h1>
           <div className="flex items-center gap-2 mt-1">
             <StatusBadge status={project.status} />
@@ -335,7 +334,7 @@ export default function ProductDetailPage() {
             variant="outline"
             size="sm"
             onClick={() => setDeleteDialogOpen(true)}
-            className="gap-1.5 text-zinc-500 hover:text-red-600 hover:border-red-200 cursor-pointer"
+            className="gap-1.5 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 cursor-pointer"
           >
             <Trash2 size={14} />
             {t("detail.delete")}
@@ -372,7 +371,7 @@ export default function ProductDetailPage() {
                 {/* Source Image */}
                 <div
                   className="aspect-square rounded-lg mb-4 overflow-hidden"
-                  style={{ background: "var(--bg)" }}
+                  style={{ background: "var(--muted)" }}
                 >
                   <img
                     src={pi.originalUrl}
@@ -421,7 +420,7 @@ export default function ProductDetailPage() {
                         <div key={img.id} className="relative group">
                           <div
                             className="aspect-square rounded-lg overflow-hidden"
-                            style={{ background: "var(--bg)" }}
+                            style={{ background: "var(--muted)" }}
                           >
                             <img
                               src={img.url}
@@ -479,7 +478,7 @@ export default function ProductDetailPage() {
 
           {/* Completed badge */}
           {project.status === "GENERATED" && succeededImages.length > 0 && (
-            <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600">
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 size={16} />
               {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
             </div>

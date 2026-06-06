@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
-import { checkGenerationQuota } from "@/lib/stripe/billing";
+import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
+import { PLATFORM_SPECS } from "@/lib/platform-specs";
+import { serverT } from "@/lib/server-t";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -16,9 +18,11 @@ export async function POST(req: Request) {
     imageProjectId,
     productImageId,
     promptTemplateId,
+    brandPresetId,
     prompt: customPrompt,
     numOutputs: customNumOutputs,
     engineType = "flux",
+    targetPlatform,
   } = await req.json();
 
   if (!imageProjectId || !productImageId) {
@@ -42,7 +46,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error: "quota_exceeded",
-        message: `额度已用完 (${quota.used}/${quota.limit})。请升级套餐继续使用。`,
+        message: `${await serverT("error.quotaExceeded")} (${quota.used}/${quota.limit})`,
         tier: quota.tier,
       },
       { status: 402 }
@@ -84,6 +88,26 @@ export async function POST(req: Request) {
       where: { id: promptTemplateId },
     });
     if (template) prompt = template.prompt;
+  }
+
+  // Brand preset injection
+  let brandPreset = null;
+  if (brandPresetId) {
+    brandPreset = await db.brandPreset.findUnique({
+      where: { id: brandPresetId, userId },
+    });
+    if (brandPreset) {
+      const colors = (brandPreset.colors as string[]) ?? [];
+      const colorHint = colors.length > 0
+        ? `, brand colors: ${colors.slice(0, 3).join(", ")}`
+        : "";
+      prompt = `${prompt}, brand identity: "${brandPreset.name}"${colorHint}, consistent with brand visual style, professional product photography`;
+    }
+  }
+
+  // Platform-specific prompt injection
+  if (targetPlatform && PLATFORM_SPECS[targetPlatform]) {
+    prompt = `${prompt}, ${PLATFORM_SPECS[targetPlatform].promptSuffix}`;
   }
 
   const numOutputs = customNumOutputs ?? 2;
@@ -245,6 +269,6 @@ export async function POST(req: Request) {
     taskId: task.id,
     status: "pending",
     engineType,
-    message: "任务已创建，请通过 /api/tasks/[id] 查询进度",
+    message: await serverT("api.taskCreated"),
   });
 }

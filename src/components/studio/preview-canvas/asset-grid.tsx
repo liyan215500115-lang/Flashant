@@ -2,6 +2,7 @@
 
 import { Download, FolderDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n-provider";
 
 interface AssetImage {
   id: string;
@@ -17,13 +18,15 @@ interface AssetGridProps {
 }
 
 export function AssetGrid({ images, onSave, onBatchDownload, className }: AssetGridProps) {
+  const { t } = useT();
+
   if (images.length === 0) return null;
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-zinc-700">
-          留存资产 · {images.length} 张
+          {t("generate.assetGridLabel").replace("{count}", String(images.length))}
         </span>
         <button
           type="button"
@@ -31,7 +34,7 @@ export function AssetGrid({ images, onSave, onBatchDownload, className }: AssetG
           className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
         >
           <FolderDown size={13} />
-          批量打包下载
+          {t("generate.batchDownload")}
         </button>
       </div>
 
@@ -54,7 +57,7 @@ export function AssetGrid({ images, onSave, onBatchDownload, className }: AssetG
                     onClick={() => onSave(img.id)}
                     className="inline-flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-[10px] font-medium text-zinc-700 hover:bg-white transition-colors shadow-sm"
                   >
-                    留存入库
+                    {t("generate.saveToAssets")}
                   </button>
                 )}
                 <a

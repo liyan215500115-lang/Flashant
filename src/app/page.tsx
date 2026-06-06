@@ -329,7 +329,7 @@ export default async function LandingPage() {
               {
                 tier: "PRO" as const,
                 name: t("landing.pricing.plans.pro.name"),
-                price: "$29",
+                price: "$19",
                 period: "/mo",
                 desc: t("landing.pricing.plans.pro.desc"),
                 features: [
@@ -344,7 +344,7 @@ export default async function LandingPage() {
               {
                 tier: "BUSINESS" as const,
                 name: t("landing.pricing.plans.business.name"),
-                price: "$99",
+                price: "$49",
                 period: "/mo",
                 desc: t("landing.pricing.plans.business.desc"),
                 features: [

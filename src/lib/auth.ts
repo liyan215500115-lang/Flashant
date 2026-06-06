@@ -8,10 +8,14 @@ import { db } from "@/lib/db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
@@ -119,10 +123,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Verify the user still exists — guard against stale tokens
         const dbUser = await db.user.findUnique({
           where: { id: token.id as string },
-          select: { id: true, role: true },
+          select: { id: true, role: true, image: true, name: true },
         });
         if (dbUser) {
           session.user.id = dbUser.id;
+          session.user.name = dbUser.name ?? null;
+          session.user.image = dbUser.image ?? null;
           (session.user as unknown as { role: string }).role = dbUser.role ?? "user";
         }
       }

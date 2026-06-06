@@ -60,7 +60,7 @@ export default async function DashboardPage() {
     <div className="max-w-[1200px] mx-auto px-6 py-8">
       {/* ── Greeting ── */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-brand-900 tracking-tight">
+        <h1 className="text-2xl font-bold text-brand-900 dark:text-brand-300 tracking-tight">
           {t("dashboard.hello")}，{session.user?.name || "User"}
         </h1>
         <p className="text-sm text-zinc-500 mt-1">{t("dashboard.tagline")}</p>
@@ -68,38 +68,38 @@ export default async function DashboardPage() {
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <Card className="border-zinc-200/70 shadow-none">
+        <Card className="border-zinc-200/70 dark:border-zinc-700/70 shadow-sm hover:shadow-md transition-shadow border-t-2 border-t-brand-500 bg-white dark:bg-zinc-800/50">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50 text-brand-700">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 ring-1 ring-brand-100 dark:ring-brand-800">
               <Package size={18} strokeWidth={1.5} />
             </div>
             <div>
-              <div className="text-xl font-bold text-zinc-900 tabular-nums">{totalProjects}</div>
-              <div className="text-xs text-zinc-500">{t("dashboard.totalProjects")}</div>
+              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{totalProjects}</div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">{t("dashboard.totalProjects")}</div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-zinc-200/70 shadow-none">
+        <Card className="border-zinc-200/70 dark:border-zinc-700/70 shadow-sm hover:shadow-md transition-shadow border-t-2 border-t-holo-500 bg-white dark:bg-zinc-800/50">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-holo-50 text-holo-600">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-holo-50 dark:bg-holo-900/20 text-holo-600 dark:text-holo-400 ring-1 ring-holo-100 dark:ring-holo-800">
               <Image size={18} strokeWidth={1.5} />
             </div>
             <div>
-              <div className="text-xl font-bold text-zinc-900 tabular-nums">{generatedCount}</div>
-              <div className="text-xs text-zinc-500">{t("dashboard.generatedImages")}</div>
+              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{generatedCount}</div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">{t("dashboard.generatedImages")}</div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-zinc-200/70 shadow-none">
+        <Card className="border-zinc-200/70 dark:border-zinc-700/70 shadow-sm hover:shadow-md transition-shadow border-t-2 border-t-gold-500 bg-white dark:bg-zinc-800/50">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-50 text-gold-600">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-50 dark:bg-gold-900/20 text-gold-600 dark:text-gold-400 ring-1 ring-gold-100 dark:ring-gold-800">
               <Sparkles size={18} strokeWidth={1.5} />
             </div>
             <div>
-              <div className="text-xl font-bold text-zinc-900">
+              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                 {tier === "FREE" ? t("dashboard.free") : tier}
               </div>
-              <div className="text-xs text-zinc-500">{t("dashboard.currentPlan")}</div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">{t("dashboard.currentPlan")}</div>
             </div>
           </CardContent>
         </Card>
@@ -124,15 +124,15 @@ export default async function DashboardPage() {
       {/* ── Recent projects ── */}
       {projects.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold text-zinc-800 mb-4">
+          <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 mb-4">
             {t("dashboard.recentProjects")}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {projects.map((project) => (
               <Link key={project.id} href={`/products/${project.id}`}>
-                <Card className="group/card border-zinc-200/70 hover:border-zinc-300 hover:shadow-sm transition-all cursor-pointer h-full">
+                <Card className="group/card border-zinc-200/70 dark:border-zinc-700/70 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all cursor-pointer h-full bg-white dark:bg-zinc-800/50">
                   <CardContent className="p-3">
-                    <div className="aspect-[4/3] rounded-lg bg-zinc-50 mb-3 overflow-hidden">
+                    <div className="aspect-[4/3] rounded-lg bg-zinc-50 dark:bg-zinc-700/50 mb-3 overflow-hidden">
                       {project.productImages[0]?.originalUrl ? (
                         <img
                           src={project.productImages[0].originalUrl}
@@ -147,12 +147,12 @@ export default async function DashboardPage() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Image size={28} className="text-zinc-200" strokeWidth={1} />
+                          <Image size={28} className="text-zinc-200 dark:text-zinc-600" strokeWidth={1} />
                         </div>
                       )}
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-sm font-semibold text-zinc-900 truncate flex-1">
+                      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate flex-1">
                         {project.title || "Untitled"}
                       </h3>
                       <Badge variant="secondary" className="text-[10px] ml-2 font-medium">
@@ -160,15 +160,15 @@ export default async function DashboardPage() {
                       </Badge>
                     </div>
                     {project.promptTemplate && (
-                      <p className="text-[11px] text-zinc-400 truncate">
+                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate">
                         {project.promptTemplate.nameZh || project.promptTemplate.name}
                       </p>
                     )}
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-[11px] text-zinc-400">
+                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
                         {project.productImages.length} {t("workspace.images")} · {project.generatedImages.length} {t("workspace.results")}
                       </span>
-                      <ChevronRight size={14} className="text-zinc-300 group-hover/card:text-zinc-500 transition-colors" />
+                      <ChevronRight size={14} className="text-zinc-300 dark:text-zinc-600 group-hover/card:text-zinc-500 dark:group-hover/card:text-zinc-400 transition-colors" />
                     </div>
                   </CardContent>
                 </Card>
@@ -180,14 +180,14 @@ export default async function DashboardPage() {
 
       {/* ── Empty state ── */}
       {projects.length === 0 && (
-        <Card className="border-dashed border-zinc-300 rounded-2xl">
+        <Card className="border-dashed border-zinc-300 dark:border-zinc-600 rounded-2xl bg-white dark:bg-zinc-800/50">
           <CardContent className="flex flex-col items-center justify-center py-20 gap-5">
-            <Sparkles size={36} className="text-zinc-300" strokeWidth={1} />
+            <Sparkles size={36} className="text-zinc-300 dark:text-zinc-600" strokeWidth={1} />
             <div className="text-center">
-              <h3 className="text-base font-semibold text-zinc-600">
+              <h3 className="text-base font-semibold text-zinc-600 dark:text-zinc-300">
                 {t("dashboard.noProjects")}
               </h3>
-              <p className="text-sm text-zinc-400 mt-1">
+              <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
                 {t("dashboard.noProjectsDesc")}
               </p>
             </div>

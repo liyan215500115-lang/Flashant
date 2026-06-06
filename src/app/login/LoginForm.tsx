@@ -86,6 +86,15 @@ export function LoginForm() {
           t("auth.loginBtn")
         )}
       </button>
+
+      <div className="text-right mt-2">
+        <a
+          href="/forgot-password"
+          className="text-xs text-zinc-400 hover:text-brand-700 transition-colors"
+        >
+          {t("auth.forgotPassword")}
+        </a>
+      </div>
     </form>
   );
 }

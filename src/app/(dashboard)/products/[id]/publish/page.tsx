@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,15 @@ import {
   AlertCircle,
   ExternalLink,
   Store,
+  Download,
+  Ruler,
+  FileImage,
+  Send,
 } from "lucide-react";
+import { PLATFORM_SPECS, PLATFORM_LIST } from "@/lib/platform-specs";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { useT } from "@/components/i18n-provider";
+import { usePlatformSpec } from "@/lib/use-platform-specs";
 
 interface GeneratedImage {
   id: string;
@@ -30,19 +38,14 @@ interface Project {
   generatedImages: GeneratedImage[];
 }
 
-const PLATFORMS = [
-  { key: "SHOPIFY", name: "Shopify", available: true },
-  { key: "TIKTOK_SHOP", name: "TikTok Shop", available: false },
-  { key: "ETSY", name: "Etsy", available: false },
-];
-
 export default function PublishPage() {
+  const { t } = useT();
   const params = useParams<{ id: string }>();
-  const router = useRouter();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
@@ -51,6 +54,7 @@ export default function PublishPage() {
   const [results, setResults] = useState<
     { platform: string; status: string; postUrl?: string; error?: string }[]
   >([]);
+  const downloadRef = useRef<HTMLAnchorElement>(null);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -58,14 +62,13 @@ export default function PublishPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setProject(data.project);
-      // Auto-select all succeeded images
       const succeeded = data.project.generatedImages
         .filter((img: GeneratedImage) => img.status === "SUCCEEDED")
         .map((img: GeneratedImage) => img.id);
       setSelectedImages(new Set(succeeded));
       setLoading(false);
     } catch {
-      setError("加载项目失败");
+      setError(t("publish.loadProjectFailed"));
       setLoading(false);
     }
   }, [params.id]);
@@ -84,7 +87,6 @@ export default function PublishPage() {
   }
 
   function togglePlatform(key: string) {
-    if (!PLATFORMS.find((p) => p.key === key)?.available) return;
     setSelectedPlatforms((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -93,8 +95,77 @@ export default function PublishPage() {
     });
   }
 
+  const localizedSpecs = useMemo(
+    () => PLATFORM_LIST.map((spec) => ({
+      spec,
+      localized: {
+        name: t("platforms." + spec.platform + ".name"),
+        background: t("platforms." + spec.platform + ".background"),
+      },
+    })),
+    [t]
+  );
+
+  function getLocalizedName(spec: typeof PLATFORM_LIST[number]): string {
+    const key = "platforms." + spec.platform + ".name";
+    const entry = localizedSpecs.find((s) => s.spec.platform === spec.platform);
+    const name = entry?.localized.name;
+    return name && name !== key ? name : spec.name;
+  }
+
+  function getLocalizedBackground(spec: typeof PLATFORM_LIST[number]): string {
+    const key = "platforms." + spec.platform + ".background";
+    const entry = localizedSpecs.find((s) => s.spec.platform === spec.platform);
+    const bg = entry?.localized.background;
+    return bg && bg !== key ? bg : spec.background;
+  }
+
+  const publishableSelected = PLATFORM_LIST.filter(
+    (p) => p.publishable && selectedPlatforms.has(p.platform)
+  );
+  const downloadOnlySelected = PLATFORM_LIST.filter(
+    (p) => !p.publishable && selectedPlatforms.has(p.platform)
+  );
+
+  async function handleDownload() {
+    if (selectedImages.size === 0) return;
+    setDownloading(true);
+
+    const succeededImages = project!.generatedImages.filter(
+      (img) => img.status === "SUCCEEDED" && selectedImages.has(img.id)
+    );
+
+    // Build platform aware filename prefix
+    const platformNames = PLATFORM_LIST.filter((p) =>
+      selectedPlatforms.has(p.platform)
+    )
+      .map((p) => p.name)
+      .join("_");
+    const prefix = platformNames || "product";
+
+    for (let i = 0; i < succeededImages.length; i++) {
+      const img = succeededImages[i];
+      try {
+        const response = await fetch(img.url);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${prefix}_${i + 1}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch {
+        // skip failed downloads
+      }
+    }
+
+    setDownloading(false);
+  }
+
   async function handlePublish() {
-    if (selectedImages.size === 0 || selectedPlatforms.size === 0) return;
+    if (selectedImages.size === 0 || publishableSelected.length === 0) return;
     setPublishing(true);
     setError("");
 
@@ -105,19 +176,19 @@ export default function PublishPage() {
         body: JSON.stringify({
           imageProjectId: project!.id,
           generatedImageIds: Array.from(selectedImages),
-          platforms: Array.from(selectedPlatforms),
+          platforms: publishableSelected.map((p) => p.platform),
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "发布失败");
+        throw new Error(data.error || t("publish.failed"));
       }
 
       const data = await res.json();
       setResults(data.results || []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "发布失败，请重试");
+      setError(e instanceof Error ? e.message : t("error.publishFailed"));
     } finally {
       setPublishing(false);
     }
@@ -140,11 +211,11 @@ export default function PublishPage() {
   if (!project) {
     return (
       <div className="max-w-[720px] mx-auto py-8">
-        <p className="text-destructive">项目未找到</p>
+        <p className="text-destructive">{t("detail.projectNotFound")}</p>
         <Link href="/">
           <Button variant="outline" size="sm" className="mt-4">
             <ArrowLeft size={14} className="mr-1" />
-            返回工作台
+            {t("publish.backToDashboard")}
           </Button>
         </Link>
       </div>
@@ -160,16 +231,14 @@ export default function PublishPage() {
     <div className="max-w-[720px] mx-auto flex flex-col gap-6">
       {/* Header */}
       <div>
-        <Link
-          href={`/products/${project.id}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 mb-2"
-        >
-          <ArrowLeft size={14} />
-          返回项目
-        </Link>
-        <h1 className="text-xl font-semibold">发布商品图</h1>
+        <Breadcrumb items={[
+          { label: t("products.title"), href: "/products" },
+          { label: project.title || t("assets.unnamed"), href: `/products/${project.id}` },
+          { label: t("publish.publishAndDownload") },
+        ]} />
+        <h1 className="text-xl font-semibold">{t("publish.publishAndDownload")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          选择图片和平台，一键发布到电商店铺
+          {t("publish.desc")}
         </p>
       </div>
 
@@ -186,11 +255,11 @@ export default function PublishPage() {
           <Card>
             <CardContent className="p-5">
               <h2 className="text-sm font-semibold mb-3">
-                选择图片 ({selectedImages.size}/{succeededImages.length})
+                {t("publish.selectImagesCount").replace("{selected}", String(selectedImages.size)).replace("{total}", String(succeededImages.length))}
               </h2>
               {succeededImages.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  暂无已生成的图片。请先生成商品图。
+                  {t("publish.noImages")}
                 </p>
               ) : (
                 <div className="grid grid-cols-3 gap-3">
@@ -203,8 +272,8 @@ export default function PublishPage() {
                         onClick={() => toggleImage(img.id)}
                         className="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition-all"
                         style={{
-                          borderColor: isSelected ? "var(--accent)" : "transparent",
-                          background: "var(--bg)",
+                          borderColor: isSelected ? "#2563EB" : "transparent",
+                          background: "var(--muted)",
                         }}
                       >
                         <img
@@ -216,7 +285,7 @@ export default function PublishPage() {
                           <div className="absolute top-2 right-2">
                             <div
                               className="w-5 h-5 rounded-full flex items-center justify-center"
-                              style={{ background: "var(--accent)" }}
+                              style={{ background: "#2563EB" }}
                             >
                               <Check size={12} color="#fff" />
                             </div>
@@ -233,60 +302,97 @@ export default function PublishPage() {
           {/* Select Platforms */}
           <Card>
             <CardContent className="p-5">
-              <h2 className="text-sm font-semibold mb-3">选择平台</h2>
-              <div className="flex flex-col gap-2">
-                {PLATFORMS.map((platform) => {
-                  const isSelected = selectedPlatforms.has(platform.key);
+              <h2 className="text-sm font-semibold mb-3">{t("publish.selectPlatform")}</h2>
+              <div className="flex flex-col gap-3">
+                {PLATFORM_LIST.map((spec) => {
+                  const isSelected = selectedPlatforms.has(spec.platform);
                   return (
-                    <button
-                      key={platform.key}
-                      type="button"
-                      onClick={() => togglePlatform(platform.key)}
-                      disabled={!platform.available}
-                      className="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        borderColor: isSelected ? "var(--accent)" : "var(--border)",
-                        background: isSelected ? "var(--accent-subtle)" : "var(--surface)",
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Store size={18} className="text-muted-foreground" />
-                        <div className="text-left">
-                          <span className="text-sm font-medium">{platform.name}</span>
-                          {!platform.available && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              即将上线
+                    <div key={spec.platform}>
+                      <button
+                        type="button"
+                        onClick={() => togglePlatform(spec.platform)}
+                        className="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer w-full"
+                        style={{
+                          borderColor: isSelected ? "#2563EB" : "var(--border)",
+                          background: isSelected
+                            ? "var(--accent)"
+                            : "var(--card)",
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Store size={18} className="text-muted-foreground" />
+                          <div className="text-left">
+                            <span className="text-sm font-medium">
+                              {getLocalizedName(spec)}
                             </span>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                        {isSelected && (
+                          <Check size={16} style={{ color: "#2563EB" }} />
+                        )}
+                      </button>
                       {isSelected && (
-                        <Check size={16} style={{ color: "var(--accent)" }} />
+                        <div className="mt-2 ml-10 flex flex-wrap gap-1.5 text-[10px] text-zinc-500">
+                          <span className="inline-flex items-center gap-1 bg-zinc-100 dark:bg-zinc-700 rounded px-2 py-0.5">
+                            <Ruler size={9} />
+                            {spec.dimensions}
+                          </span>
+                          <span className="inline-flex items-center gap-1 bg-zinc-100 dark:bg-zinc-700 rounded px-2 py-0.5">
+                            <FileImage size={9} />
+                            {spec.formats.join(" / ")}
+                          </span>
+                          <span className="text-zinc-400 dark:text-zinc-500">
+                            {t("platforms.maxImagesLabel").replace("{max}", String(spec.maxImages)).replace("{background}", getLocalizedBackground(spec))}
+                          </span>
+                        </div>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             </CardContent>
           </Card>
 
-          {/* Submit */}
-          <Button
-            variant="default"
-            size="lg"
-            className="w-full gap-2"
-            onClick={handlePublish}
-            disabled={publishing || selectedImages.size === 0 || selectedPlatforms.size === 0}
-          >
-            <ShoppingBag size={16} />
-            {publishing ? "发布中..." : `发布 ${selectedImages.size} 张图片`}
-          </Button>
+          {/* Actions */}
+          <div className="flex flex-col gap-3">
+            {/* Download — always available */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full gap-2"
+              onClick={handleDownload}
+              disabled={downloading || selectedImages.size === 0}
+            >
+              <Download size={16} />
+              {downloading
+                ? t("publish.downloading")
+                : t("publish.downloadImages").replace("{count}", String(selectedImages.size))}
+            </Button>
+
+            {/* Publish — only for publishable platforms */}
+            {publishableSelected.length > 0 && (
+              <Button
+                variant="default"
+                size="lg"
+                className="w-full gap-2"
+                onClick={handlePublish}
+                disabled={
+                  publishing || selectedImages.size === 0
+                }
+              >
+                <Send size={16} />
+                {publishing
+                  ? t("publish.publishing")
+                  : t("publish.publishToPlatforms").replace("{platforms}", publishableSelected.map((p) => p.name).join(" + "))}
+              </Button>
+            )}
+          </div>
         </>
       ) : (
         /* Results */
         <Card>
           <CardContent className="p-5">
-            <h2 className="text-sm font-semibold mb-4">发布结果</h2>
+            <h2 className="text-sm font-semibold mb-4">{t("publish.results")}</h2>
             <div className="flex flex-col gap-3">
               {results.map((r, i) => (
                 <div
@@ -298,12 +404,12 @@ export default function PublishPage() {
                     {r.status === "published" ? (
                       <span className="text-sm text-emerald-600 flex items-center gap-1">
                         <Check size={14} />
-                        发布成功
+                        {t("publish.publishSucceeded")}
                       </span>
                     ) : (
                       <span className="text-sm text-destructive flex items-center gap-1">
                         <AlertCircle size={14} />
-                        {r.error || "发布失败"}
+                        {r.error || t("publish.failed")}
                       </span>
                     )}
                   </div>
@@ -313,9 +419,9 @@ export default function PublishPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs font-medium hover:underline inline-flex items-center gap-1"
-                      style={{ color: "var(--accent)" }}
+                      style={{ color: "#2563EB" }}
                     >
-                      查看商品 <ExternalLink size={12} />
+                      {t("publish.viewProduct")} <ExternalLink size={12} />
                     </a>
                   )}
                 </div>
@@ -324,18 +430,21 @@ export default function PublishPage() {
             <div className="flex gap-2 mt-5">
               <Link href={`/products/${project.id}`}>
                 <Button variant="outline" size="sm">
-                  返回项目
+                  {t("publish.backToProject")}
                 </Button>
               </Link>
-              <Link href="/">
+              <Link href="/dashboard">
                 <Button variant="default" size="sm">
-                  返回工作台
+                  {t("publish.backToDashboard")}
                 </Button>
               </Link>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Hidden anchor for download fallback */}
+      <a ref={downloadRef} className="hidden" />
     </div>
   );
 }

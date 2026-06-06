@@ -4,9 +4,9 @@ import {
   checkGenerationQuota,
   createCheckoutSession,
   handleSubscriptionEvent,
-} from "@/lib/stripe/billing";
+} from "@/lib/lemonsqueezy/billing";
 
-// ── Mock db (hoisted so vi.mock factory can reference it) ──────────────
+// ── Mock db ──────────────────────────────────────────────────────────────
 const { dbMock } = vi.hoisted(() => ({
   dbMock: {
     subscription: {
@@ -38,22 +38,21 @@ beforeEach(() => {
 
 // ── getQuota ─────────────────────────────────────────────────────────────
 describe("getQuota", () => {
-  it("returns FREE limits (10 generations, 1 platform)", () => {
+  it("returns FREE limits (10 generations, 0 platforms)", () => {
     const q = getQuota("FREE");
     expect(q.generationsPerMonth).toBe(10);
+    expect(q.platforms).toBe(0);
+  });
+
+  it("returns PRO limits (200 generations, 1 platform)", () => {
+    const q = getQuota("PRO");
+    expect(q.generationsPerMonth).toBe(200);
     expect(q.platforms).toBe(1);
   });
 
-  it("returns PRO limits", () => {
-    const q = getQuota("PRO");
-    expect(q.generationsPerMonth).toBeGreaterThan(10);
-  });
-
-  it("returns BUSINESS limits", () => {
+  it("returns BUSINESS limits (1500 generations, 1 platform)", () => {
     const q = getQuota("BUSINESS");
-    expect(q.generationsPerMonth).toBeGreaterThan(
-      getQuota("PRO").generationsPerMonth
-    );
+    expect(q.generationsPerMonth).toBe(1500);
   });
 
   it("returns ENTERPRISE limits (-1 = unlimited)", () => {
@@ -77,7 +76,6 @@ describe("checkGenerationQuota", () => {
     dbMock.generatedImage.count.mockResolvedValue(15);
 
     const result = await checkGenerationQuota("user_1");
-
     expect(result.allowed).toBe(true);
     expect(result.used).toBe(15);
   });
@@ -90,7 +88,6 @@ describe("checkGenerationQuota", () => {
     dbMock.generatedImage.count.mockResolvedValue(10);
 
     const result = await checkGenerationQuota("user_2");
-
     expect(result.allowed).toBe(false);
     expect(result.used).toBe(10);
     expect(result.limit).toBe(10);
@@ -104,7 +101,6 @@ describe("checkGenerationQuota", () => {
     });
 
     const result = await checkGenerationQuota("user_3");
-
     expect(result.allowed).toBe(true);
     expect(result.used).toBe(0);
     expect(result.limit).toBe(-1);
@@ -115,7 +111,6 @@ describe("checkGenerationQuota", () => {
     dbMock.generatedImage.count.mockResolvedValue(0);
 
     const result = await checkGenerationQuota("user_4");
-
     expect(result.tier).toBe("FREE");
     expect(result.limit).toBe(10);
     expect(result.allowed).toBe(true);
@@ -124,90 +119,115 @@ describe("checkGenerationQuota", () => {
 
 // ── createCheckoutSession ────────────────────────────────────────────────
 describe("createCheckoutSession", () => {
-  it("returns session URL and ID on success", async () => {
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    process.env.NEXT_PUBLIC_APP_URL = "https://example.com";
-    const mock = mockFetch(200, { url: "https://checkout.stripe.com/pay/cs_test", id: "cs_abc" });
+  it("returns checkout URL and ID on success", async () => {
+    process.env.LEMONSQUEEZY_API_KEY = "ls_key_123";
+    process.env.LEMONSQUEEZY_STORE_ID = "store_1";
+
+    const mock = mockFetch(201, {
+      data: {
+        id: "checkout_abc",
+        attributes: { url: "https://flashant.lemonsqueezy.com/checkout/abc" },
+      },
+    });
     vi.stubGlobal("fetch", mock);
 
     const result = await createCheckoutSession({
       userId: "user_1",
-      priceId: "price_abc",
+      variantId: "variant_pro",
       planTier: "PRO",
       successUrl: "https://example.com/success",
       cancelUrl: "https://example.com/cancel",
     });
 
-    expect(result.url).toBe("https://checkout.stripe.com/pay/cs_test");
-    expect(result.sessionId).toBe("cs_abc");
+    expect(result.url).toBe("https://flashant.lemonsqueezy.com/checkout/abc");
+    expect(result.sessionId).toBe("checkout_abc");
 
     const [url, init] = mock.mock.calls[0];
-    expect(url).toBe("https://api.stripe.com/v1/checkout/sessions");
+    expect(url).toBe("https://api.lemonsqueezy.com/v1/checkouts");
     expect(init.method).toBe("POST");
+    expect(init.headers.Authorization).toBe("Bearer ls_key_123");
+
+    const body = JSON.parse(init.body);
+    expect(body.data.type).toBe("checkouts");
+    expect(body.data.relationships.variant.data.id).toBe("variant_pro");
+    expect(body.data.relationships.store.data.id).toBe("store_1");
+
+    delete process.env.LEMONSQUEEZY_API_KEY;
+    delete process.env.LEMONSQUEEZY_STORE_ID;
   });
 
-  it("throws when STRIPE_SECRET_KEY is missing", async () => {
-    const original = process.env.STRIPE_SECRET_KEY;
-    delete process.env.STRIPE_SECRET_KEY;
+  it("throws when LEMONSQUEEZY_API_KEY is missing", async () => {
+    await expect(
+      createCheckoutSession({
+        userId: "user_1",
+        variantId: "v_1",
+        planTier: "PRO",
+        successUrl: "/success",
+        cancelUrl: "/cancel",
+      })
+    ).rejects.toThrow("LEMONSQUEEZY_API_KEY");
+  });
+
+  it("throws when LEMONSQUEEZY_STORE_ID is missing", async () => {
+    process.env.LEMONSQUEEZY_API_KEY = "ls_key_123";
+    await expect(
+      createCheckoutSession({
+        userId: "user_1",
+        variantId: "v_1",
+        planTier: "PRO",
+        successUrl: "/success",
+        cancelUrl: "/cancel",
+      })
+    ).rejects.toThrow("LEMONSQUEEZY_STORE_ID");
+    delete process.env.LEMONSQUEEZY_API_KEY;
+  });
+
+  it("throws on LS API error", async () => {
+    process.env.LEMONSQUEEZY_API_KEY = "ls_key_123";
+    process.env.LEMONSQUEEZY_STORE_ID = "store_1";
+    vi.stubGlobal("fetch", mockFetch(422, { errors: [{ detail: "Invalid variant" }] }));
 
     await expect(
       createCheckoutSession({
         userId: "user_1",
-        priceId: "price_abc",
+        variantId: "bad_variant",
         planTier: "PRO",
-        successUrl: "https://example.com/success",
-        cancelUrl: "https://example.com/cancel",
+        successUrl: "/success",
+        cancelUrl: "/cancel",
       })
-    ).rejects.toThrow("STRIPE_SECRET_KEY");
+    ).rejects.toThrow("Lemon Squeezy API error");
 
-    process.env.STRIPE_SECRET_KEY = original;
-  });
-
-  it("throws on Stripe API error", async () => {
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    vi.stubGlobal("fetch", mockFetch(400, { error: { message: "Bad request" } }));
-
-    await expect(
-      createCheckoutSession({
-        userId: "user_1",
-        priceId: "bad_price",
-        planTier: "PRO",
-        successUrl: "https://example.com/success",
-        cancelUrl: "https://example.com/cancel",
-      })
-    ).rejects.toThrow("Stripe API error");
+    delete process.env.LEMONSQUEEZY_API_KEY;
+    delete process.env.LEMONSQUEEZY_STORE_ID;
   });
 });
 
 // ── handleSubscriptionEvent ──────────────────────────────────────────────
 describe("handleSubscriptionEvent", () => {
-  it("skips event with no userId in metadata", async () => {
+  it("skips event with no userId in custom_data", async () => {
     const result = await handleSubscriptionEvent({
-      type: "checkout.session.completed",
-      data: {
-        object: {
-          id: "sub_123",
-          customer: "cus_123",
-          metadata: {},
-        },
-      },
+      meta: { event_name: "order_created", custom_data: {} },
+      data: { id: "sub_123", attributes: {} },
     });
 
     expect(result).toBe("skipped");
     expect(dbMock.subscription.upsert).not.toHaveBeenCalled();
   });
 
-  it("handles checkout.session.completed — upserts ACTIVE subscription", async () => {
+  it("handles order_created — upserts ACTIVE subscription", async () => {
     const result = await handleSubscriptionEvent({
-      type: "checkout.session.completed",
+      meta: {
+        event_name: "order_created",
+        custom_data: { user_id: "user_1" },
+      },
       data: {
-        object: {
-          id: "sub_abc",
-          customer: "cus_abc",
-          metadata: { userId: "user_1", planTier: "PRO" },
-          items: { data: [{ price: { id: "price_xyz" } }] },
-          current_period_start: 1715700000,
-          current_period_end: 1718380000,
+        id: "order_abc",
+        attributes: {
+          customer_id: 12345,
+          variant_id: 678,
+          first_subscription_item: { id: 200, price_id: 99 },
+          renewed_at: "2026-06-01T00:00:00Z",
+          ends_at: "2026-07-01T00:00:00Z",
         },
       },
     });
@@ -219,47 +239,28 @@ describe("handleSubscriptionEvent", () => {
         create: expect.objectContaining({
           planTier: "PRO",
           status: "ACTIVE",
-          stripeSubscriptionId: "sub_abc",
-          stripeCustomerId: "cus_abc",
-          stripePriceId: "price_xyz",
+          billingSubscriptionId: "200",
+          billingCustomerId: "12345",
+          billingPriceId: "99",
         }),
       })
     );
   });
 
-  it("handles checkout.session.completed — defaults planTier to PRO when missing", async () => {
-    await handleSubscriptionEvent({
-      type: "checkout.session.completed",
-      data: {
-        object: {
-          id: "sub_def",
-          customer: "cus_def",
-          metadata: { userId: "user_2" },
-          items: { data: [{ price: { id: "price_def" } }] },
-          current_period_start: 1715700000,
-          current_period_end: 1718380000,
-        },
-      },
-    });
-
-    expect(dbMock.subscription.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        create: expect.objectContaining({ planTier: "PRO" }),
-      })
-    );
-  });
-
-  it("handles customer.subscription.updated — sets ACTIVE status", async () => {
+  it("handles subscription_updated — sets status to ACTIVE", async () => {
     dbMock.subscription.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await handleSubscriptionEvent({
-      type: "customer.subscription.updated",
+      meta: {
+        event_name: "subscription_updated",
+        custom_data: { user_id: "user_2" },
+      },
       data: {
-        object: {
-          id: "sub_ghi",
-          customer: "cus_ghi",
-          metadata: { userId: "user_3" },
-          status: "active",
+        id: "sub_item_500",
+        attributes: {
+          cancelled: false,
+          renewed_at: "2026-06-01T00:00:00Z",
+          ends_at: "2026-07-01T00:00:00Z",
         },
       },
     });
@@ -267,52 +268,48 @@ describe("handleSubscriptionEvent", () => {
     expect(result).toBe("handled");
     expect(dbMock.subscription.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { stripeSubscriptionId: "sub_ghi" },
+        where: { billingSubscriptionId: "sub_item_500" },
         data: expect.objectContaining({ status: "ACTIVE" }),
       })
     );
   });
 
-  it("handles customer.subscription.updated — sets PAST_DUE status", async () => {
+  it("handles subscription_updated — sets CANCELLED when cancelled=true", async () => {
     dbMock.subscription.updateMany.mockResolvedValue({ count: 1 });
 
     await handleSubscriptionEvent({
-      type: "customer.subscription.updated",
+      meta: {
+        event_name: "subscription_updated",
+        custom_data: { user_id: "user_3" },
+      },
       data: {
-        object: {
-          id: "sub_past_due",
-          customer: "cus_pd",
-          metadata: { userId: "user_4" },
-          status: "past_due",
-        },
+        id: "sub_item_cancelling",
+        attributes: { cancelled: true },
       },
     });
 
     expect(dbMock.subscription.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: "PAST_DUE" }),
+        data: expect.objectContaining({ status: "CANCELED" }),
       })
     );
   });
 
-  it("handles customer.subscription.deleted — sets CANCELED + FREE", async () => {
+  it("handles subscription_cancelled — sets CANCELED + FREE", async () => {
     dbMock.subscription.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await handleSubscriptionEvent({
-      type: "customer.subscription.deleted",
-      data: {
-        object: {
-          id: "sub_del",
-          customer: "cus_del",
-          metadata: { userId: "user_5" },
-        },
+      meta: {
+        event_name: "subscription_cancelled",
+        custom_data: { user_id: "user_4" },
       },
+      data: { id: "sub_cancelled", attributes: {} },
     });
 
     expect(result).toBe("handled");
     expect(dbMock.subscription.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { stripeSubscriptionId: "sub_del" },
+        where: { billingSubscriptionId: "sub_cancelled" },
         data: { status: "CANCELED", planTier: "FREE" },
       })
     );
@@ -320,14 +317,11 @@ describe("handleSubscriptionEvent", () => {
 
   it("skips unknown event types", async () => {
     const result = await handleSubscriptionEvent({
-      type: "invoice.payment_succeeded",
-      data: {
-        object: {
-          id: "in_123",
-          customer: "cus_123",
-          metadata: { userId: "user_6" },
-        },
+      meta: {
+        event_name: "license_key_created",
+        custom_data: { user_id: "user_5" },
       },
+      data: { id: "ev_999", attributes: {} },
     });
 
     expect(result).toBe("skipped");

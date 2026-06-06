@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
+import { serverT } from "@/lib/server-t";
 
 export async function GET() {
   const session = await auth();
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
   const project = await db.imageProject.create({
     data: {
       userId: session.user.id,
-      title: title || "未命名",
+      title: title || await serverT("common.untitled"),
       promptTemplateId: promptTemplateId ?? null,
       status: "DRAFT",
     },

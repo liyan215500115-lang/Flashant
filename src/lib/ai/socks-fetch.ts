@@ -1,12 +1,15 @@
 import "server-only";
+import type { RequestOptions as HttpRequestOptions } from "http";
+import type { RequestOptions as HttpsRequestOptions } from "https";
 
-import { SocksProxyAgent } from "socks-proxy-agent";
-import * as https from "https";
-import * as http from "http";
+/**
+ * A fetch implementation that routes through a SOCKS5 proxy.
+ * On Vercel (serverless), always returns the native fetch.
+ * On local dev, loads proxy modules dynamically only when configured.
+ */
+export function createSocksFetch(): typeof globalThis.fetch {
+  if (process.env.VERCEL === "1") return globalThis.fetch;
 
-let _agent: SocksProxyAgent | null = null;
-
-function getAgent(): SocksProxyAgent | undefined {
   const proxyUrl =
     process.env.SOCKS_PROXY ||
     process.env.https_proxy ||
@@ -14,18 +17,15 @@ function getAgent(): SocksProxyAgent | undefined {
     "";
   const isSocks = proxyUrl.startsWith("socks");
 
-  if (!isSocks) return undefined;
-  if (!_agent) _agent = new SocksProxyAgent(proxyUrl);
-  return _agent;
-}
+  if (!isSocks) return globalThis.fetch;
 
-/**
- * A fetch implementation that routes through a SOCKS5 proxy.
- * Falls back to global fetch if no SOCKS proxy is configured.
- */
-export function createSocksFetch(): typeof globalThis.fetch {
-  const agent = getAgent();
-  if (!agent) return globalThis.fetch;
+  // Dynamic require — only loads Node.js modules when proxy is actually configured
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { SocksProxyAgent } = require("socks-proxy-agent");
+  const https = require("https") as typeof import("https");
+  const http = require("http") as typeof import("http");
+
+  const agent = new SocksProxyAgent(proxyUrl);
 
   return async function socksFetch(
     input: RequestInfo | URL,
@@ -34,7 +34,7 @@ export function createSocksFetch(): typeof globalThis.fetch {
     const url = typeof input === "string" ? new URL(input) : input instanceof URL ? input : new URL(input.url);
     const isHttps = url.protocol === "https:";
 
-    const options: http.RequestOptions & https.RequestOptions = {
+    const options: HttpRequestOptions & HttpsRequestOptions = {
       hostname: url.hostname,
       port: url.port || (isHttps ? 443 : 80),
       path: url.pathname + url.search,

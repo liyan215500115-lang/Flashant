@@ -43,6 +43,18 @@ model User {
   platformConnections PlatformConnection[]
   subscription        Subscription?
   brandPresets        BrandPreset[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ── Image Pipeline ────────────────────────────────────────────────────
@@ -160,9 +172,9 @@ model PublishRecord {
 model Subscription {
   id                   String             @id @default(cuid())
   userId               String             @unique
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
-  stripePriceId        String?
+  billingCustomerId     String?
+  billingSubscriptionId String?
+  billingPriceId        String?
   planTier             PlanTier           @default(FREE)
   status               SubscriptionStatus @default(ACTIVE)
   currentPeriodStart   DateTime?

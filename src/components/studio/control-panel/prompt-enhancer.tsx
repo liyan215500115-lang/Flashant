@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Wand2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n-provider";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface PromptEnhancerProps {
   currentPrompt: string;
@@ -11,6 +13,7 @@ interface PromptEnhancerProps {
 }
 
 export function PromptEnhancer({ currentPrompt, onEnhanced, className }: PromptEnhancerProps) {
+  const { t } = useT();
   const [loading, setLoading] = useState(false);
 
   async function handleEnhance() {
@@ -33,21 +36,24 @@ export function PromptEnhancer({ currentPrompt, onEnhanced, className }: PromptE
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleEnhance}
-      disabled={loading || !currentPrompt.trim()}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-zinc-50 disabled:opacity-50 disabled:pointer-events-none",
-        className
-      )}
-    >
-      {loading ? (
-        <Loader2 size={13} className="animate-spin text-violet-500" />
-      ) : (
-        <Wand2 size={13} className="text-violet-500" />
-      )}
-      魔杖
-    </button>
+    <Tooltip>
+      <TooltipTrigger
+        type="button"
+        onClick={handleEnhance}
+        disabled={loading || !currentPrompt.trim()}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
+          className
+        )}
+      >
+        {loading ? (
+          <Loader2 size={13} className="animate-spin text-violet-500" />
+        ) : (
+          <Wand2 size={13} className="text-violet-500" />
+        )}
+        {t("generate.enhancePrompt")}
+      </TooltipTrigger>
+      <TooltipContent>{t("generate.enhancePromptDesc")}</TooltipContent>
+    </Tooltip>
   );
 }

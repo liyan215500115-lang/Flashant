@@ -1,12 +1,8 @@
 "use client";
 
-import { Select } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectPopover, SelectItem } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-const ENGINES = [
-  { value: "flux", label: "标准 Flux (Replicate)" },
-  { value: "openai", label: "奢华 GPT (DALL·E 3)" },
-];
+import { useT } from "@/components/i18n-provider";
 
 interface EngineSelectorProps {
   value: string;
@@ -15,14 +11,24 @@ interface EngineSelectorProps {
 }
 
 export function EngineSelector({ value, onChange, className }: EngineSelectorProps) {
+  const { t } = useT();
+
+  const engines = [
+    { value: "flux", label: t("generate.engineFlux") },
+    { value: "openai", label: t("generate.engineOpenai") },
+  ];
+
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <span className="text-sm font-medium text-zinc-700">AI 算力引擎</span>
-      <Select
-        options={ENGINES}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("generate.engineLabel")}</span>
+      <Select value={value} onValueChange={(v) => { if (v !== null) onChange(v); }}>
+        <SelectTrigger />
+        <SelectPopover>
+          {engines.map((e) => (
+            <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+          ))}
+        </SelectPopover>
+      </Select>
     </div>
   );
 }

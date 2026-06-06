@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { validateImage } from "@/lib/ai/validator";
+import { uploadBuffer, saveBufferLocally, hasS3Config } from "@/lib/s3";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -77,16 +78,39 @@ export async function POST(req: Request) {
       console.warn(`Could not validate generated image ${genImage.id}`);
     }
 
-    // Update with real URL
+    // Download from Replicate and re-upload to R2 for persistent storage
+    const replicateUrl = outputs[0];
+    let imageUrl: string;
+    let imageKey: string;
+
+    try {
+      const imageRes = await fetch(replicateUrl);
+      if (!imageRes.ok) throw new Error(`Download failed: ${imageRes.status}`);
+      const imageBuffer = Buffer.from(await imageRes.arrayBuffer());
+      const imageType = imageRes.headers.get("content-type") ?? "image/png";
+
+      if (hasS3Config()) {
+        const uploaded = await uploadBuffer(imageBuffer, imageType, "generated/");
+        imageKey = uploaded.s3Key;
+        imageUrl = uploaded.publicUrl;
+      } else {
+        // Dev fallback: save locally
+        const saved = await saveBufferLocally(imageBuffer, imageType);
+        imageKey = saved.s3Key;
+        imageUrl = saved.publicUrl;
+      }
+    } catch (e) {
+      console.error("Failed to persist generated image:", e);
+      // Fall back to Replicate URL if upload fails
+      imageUrl = replicateUrl;
+      imageKey = replicateUrl;
+    }
+
     await db.generatedImage.update({
       where: { id: genImage.id },
       data: {
-        url: outputs[0],
-        s3Key: outputs[0],
-        fileSize: 0,
-        mimeType: "image/png",
-        width: 1024,
-        height: 1024,
+        url: imageUrl,
+        s3Key: imageKey,
         status: "SUCCEEDED",
         completedAt: new Date(),
       },

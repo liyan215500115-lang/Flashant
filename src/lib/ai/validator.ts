@@ -47,7 +47,7 @@ export function validateUploadedFile(file: {
     "image/webp",
     "image/jpg",
   ];
-  const maxSize = 10 * 1024 * 1024; // 10MB
+  const maxSize = 20 * 1024 * 1024; // 20MB
 
   if (!allowedTypes.includes(file.type)) {
     return {
@@ -59,7 +59,7 @@ export function validateUploadedFile(file: {
   if (file.size > maxSize) {
     return {
       valid: false,
-      reason: `File size ${(file.size / 1024 / 1024).toFixed(1)}MB exceeds maximum 10MB`,
+      reason: `File size ${(file.size / 1024 / 1024).toFixed(1)}MB exceeds maximum 20MB`,
     };
   }
 

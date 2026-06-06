@@ -4,16 +4,12 @@ import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Shield, Store } from "lucide-react";
+import { Store, User, Plug, Palette, CreditCard } from "lucide-react";
+import { BrandPresetsCard } from "@/components/settings/brand-presets-card";
+import { ProfileEditCard } from "@/components/settings/profile-edit-card";
+import { Suspense } from "react";
 import zh from "../../../../messages/zh.json";
 import en from "../../../../messages/en.json";
-
-const PLATFORM_INFO: Record<string, { name: string; status: "active" | "coming_soon" }> = {
-  SHOPIFY: { name: "Shopify", status: "active" },
-  TIKTOK_SHOP: { name: "TikTok Shop", status: "coming_soon" },
-  ETSY: { name: "Etsy", status: "coming_soon" },
-  MERCADO_LIBRE: { name: "Mercado Libre", status: "coming_soon" },
-};
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -33,45 +29,56 @@ export default async function SettingsPage() {
 
   const userId = session.user.id;
 
-  const [connections, subscription, brandPresets] = await Promise.all([
+  const [connections, subscription] = await Promise.all([
     db.platformConnection.findMany({ where: { userId } }),
     db.subscription.findUnique({ where: { userId } }),
-    db.brandPreset.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
   ]);
 
-  const connectedPlatforms = new Set(connections.map((c) => c.platform));
-
   return (
-    <div className="max-w-[640px] mx-auto">
+    <div className="max-w-[720px] mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-brand-900 tracking-tight">{t("settings.title")}</h1>
+        <h1 className="text-2xl font-bold text-brand-900 dark:text-brand-300 tracking-tight">{t("settings.title")}</h1>
         <p className="text-sm text-zinc-500 mt-1">{t("settings.desc")}</p>
       </div>
 
       <div className="flex flex-col gap-5">
-        {/* Account Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("settings.accountInfo")}</CardTitle>
-            <CardDescription>{t("settings.accountDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">{t("settings.email")}</span>
-              <span className="text-sm font-medium">{session.user.email || "-"}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">{t("settings.username")}</span>
-              <span className="text-sm font-medium">{session.user.name || "-"}</span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Account Info with editing */}
+        <ProfileEditCard
+          email={session.user.email ?? ""}
+          currentName={session.user.name ?? ""}
+          currentImage={session.user.image ?? null}
+          labels={{
+            accountInfo: t("settings.accountInfo"),
+            accountDesc: t("settings.accountDesc"),
+            email: t("settings.email"),
+            username: t("settings.username"),
+            currentPassword: t("settings.currentPassword"),
+            newPassword: t("settings.newPassword"),
+            changeName: t("settings.changeName"),
+            changePassword: t("settings.changePassword"),
+            saving: t("common.save"),
+            saved: t("settings.saved"),
+            namePlaceholder: t("auth.namePlaceholder"),
+            nameRequired: t("settings.nameRequired"),
+            passwordRequired: t("settings.passwordRequired"),
+            passwordMinLength: t("auth.errorWeakPassword"),
+            wrongPassword: t("settings.wrongPassword"),
+            updateError: t("settings.updateError"),
+          }}
+        />
 
         {/* Platform Connections */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("settings.platformConnections")}</CardTitle>
-            <CardDescription>{t("settings.platformDesc")}</CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-holo-50 dark:bg-holo-900/20">
+                <Plug size={18} className="text-holo-600 dark:text-holo-400" />
+              </div>
+              <div>
+                <CardTitle>{t("settings.platformConnections")}</CardTitle>
+                <CardDescription>{t("settings.platformDesc")}</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-3">
@@ -79,7 +86,7 @@ export default async function SettingsPage() {
             </p>
             <Link
               href="/integrations"
-              className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-900 transition-colors"
+              className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 dark:text-brand-300 hover:text-brand-900 dark:hover:text-brand-200 transition-colors"
             >
               <Store size={14} />
               {t("settings.managePlatform")}
@@ -88,67 +95,42 @@ export default async function SettingsPage() {
         </Card>
 
         {/* Brand Presets */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("settings.brandPresets")}</CardTitle>
-            <CardDescription>{t("settings.brandDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {brandPresets.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <Shield size={32} className="text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">{t("settings.noBrands")}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("settings.noBrandsDesc")}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {brandPresets.map((preset) => (
-                  <div
-                    key={preset.id}
-                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      {preset.logoUrl ? (
-                        <img
-                          src={preset.logoUrl}
-                          alt={preset.name}
-                          className="w-8 h-8 rounded object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="w-8 h-8 rounded flex items-center justify-center text-xs font-medium"
-                          style={{ background: "var(--bg)" }}
-                        >
-                          {preset.name.charAt(0)}
-                        </div>
-                      )}
-                      <span className="text-sm font-medium">{preset.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {((preset.colors as string[]) || []).slice(0, 3).map((color: string) => (
-                        <span
-                          key={color}
-                          className="inline-flex w-3 h-3 rounded-full border border-border"
-                          style={{ background: color }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Suspense fallback={null}>
+          <BrandPresetsCard
+            userId={userId}
+            labels={{
+              title: t("settings.brandPresets"),
+              desc: t("settings.brandDesc"),
+              noBrands: t("settings.noBrands"),
+              noBrandsDesc: t("settings.noBrandsDesc"),
+              createBtn: t("settings.createBrand"),
+              editBtn: t("settings.editBrand"),
+              deleteBtn: t("settings.deleteBrand"),
+              formTitle: t("settings.brandFormTitle"),
+              formDesc: t("settings.brandFormDesc"),
+              formEditTitle: t("settings.brandFormEditTitle"),
+              formEditDesc: t("settings.brandFormEditDesc"),
+              namePlaceholder: t("settings.brandNamePlaceholder"),
+              logoLabel: t("settings.brandLogoLabel"),
+              colorsLabel: t("settings.brandColorsLabel"),
+              saveBtn: t("settings.brandSaveBtn"),
+              saving: t("settings.brandSaving"),
+            }}
+          />
+        </Suspense>
 
         {/* Billing */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("settings.billing")}</CardTitle>
-            <CardDescription>{t("settings.billingDesc")}</CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gold-50 dark:bg-gold-900/20">
+                <CreditCard size={18} className="text-gold-600 dark:text-gold-400" />
+              </div>
+              <div>
+                <CardTitle>{t("settings.billing")}</CardTitle>
+                <CardDescription>{t("settings.billingDesc")}</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <div className="flex justify-between py-2 border-b border-border">
@@ -163,7 +145,7 @@ export default async function SettingsPage() {
             </div>
             <Link
               href="/settings/billing"
-              className="text-xs font-medium text-brand-700 hover:text-brand-900 transition-colors"
+              className="text-xs font-medium text-brand-700 dark:text-brand-300 hover:text-brand-900 dark:hover:text-brand-200 transition-colors"
             >
               {t("settings.manageBilling")}
             </Link>

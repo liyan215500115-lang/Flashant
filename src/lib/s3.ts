@@ -72,9 +72,67 @@ export async function createUploadUrl(
   return { uploadUrl, s3Key, publicUrl };
 }
 
+/** Upload a buffer to R2/S3 and return the key + URL */
+export async function uploadBuffer(
+  buffer: Buffer,
+  mimeType: string,
+  prefix?: string
+): Promise<{ s3Key: string; publicUrl: string }> {
+  const bucket = process.env.S3_BUCKET ?? "uploads";
+  const keyPrefix = prefix ?? process.env.S3_UPLOAD_PREFIX ?? "generated/";
+  const publicBaseUrl = process.env.S3_PUBLIC_URL ?? "";
+
+  const ext = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+  const s3Key = `${keyPrefix}${crypto.randomUUID()}.${ext}`;
+
+  const client = await getClient();
+  const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: s3Key,
+      Body: buffer,
+      ContentType: mimeType,
+      CacheControl: "public, max-age=31536000, immutable",
+    })
+  );
+
+  const publicUrl = publicBaseUrl
+    ? `${publicBaseUrl.replace(/\/+$/, "")}/${s3Key}`
+    : `${process.env.S3_ENDPOINT}/${bucket}/${s3Key}`;
+
+  return { s3Key, publicUrl };
+}
+
+/** Save a buffer locally (dev only). Throws in production. */
+export async function saveBufferLocally(
+  buffer: Buffer,
+  mimeType: string
+): Promise<{ s3Key: string; publicUrl: string }> {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Local file writes are not available in production. Configure S3_* variables for Cloudflare R2 or AWS S3."
+    );
+  }
+  const ext = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+  const uniqueName = `${crypto.randomUUID()}.${ext}`;
+  const uploadDir = path.join(process.cwd(), "public", "generated");
+  await mkdir(uploadDir, { recursive: true });
+  await writeFile(path.join(uploadDir, uniqueName), buffer);
+
+  const s3Key = `/generated/${uniqueName}`;
+  return { s3Key, publicUrl: s3Key };
+}
+
 export async function saveFileLocally(
   file: File
 ): Promise<{ s3Key: string; publicUrl: string }> {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Local file writes are not available in production. Configure S3_* environment variables for Cloudflare R2 or AWS S3."
+    );
+  }
   const ext = path.extname(file.name) || ".png";
   const uniqueName = `${crypto.randomUUID()}${ext}`;
   const uploadDir = path.join(process.cwd(), "public", "uploads");

@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createUploadUrl, hasS3Config, saveFileLocally } from "@/lib/s3";
+import { serverT } from "@/lib/server-t";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
 
     if (!file || !file.type.startsWith("image/")) {
       return NextResponse.json(
-        { error: "请上传有效的图片文件" },
+        { error: await serverT("error.invalidImage") },
         { status: 400 }
       );
     }
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error: "upload_error",
-        message: error instanceof Error ? error.message : "文件保存失败",
+        message: error instanceof Error ? error.message : await serverT("error.fileSaveFailed"),
       },
       { status: 500 }
     );

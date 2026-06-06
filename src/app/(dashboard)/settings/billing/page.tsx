@@ -1,33 +1,33 @@
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { checkGenerationQuota } from "@/lib/stripe/billing";
+import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { ArrowLeft, Check, Zap } from "lucide-react";
-import { BillingActions } from "./BillingActions";
+import { Zap } from "lucide-react";
+import { PlanComparison } from "@/components/settings/plan-comparison";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import zh from "../../../../../messages/zh.json";
 import en from "../../../../../messages/en.json";
 
 const PLANS = [
   {
     tier: "FREE" as const,
-    generations: 10,
-    platforms: 1,
+    monthlyPrice: 0,
+    annualPrice: 0,
     features: ["landing.pricing.plans.free.feature1", "landing.pricing.plans.free.feature2", "landing.pricing.plans.free.feature3", "landing.pricing.plans.free.feature4"],
   },
   {
     tier: "PRO" as const,
-    generations: 100,
-    platforms: 2,
+    monthlyPrice: 19,
+    annualPrice: 190,
     features: ["landing.pricing.plans.pro.feature1", "landing.pricing.plans.pro.feature2", "landing.pricing.plans.pro.feature3", "landing.pricing.plans.pro.feature4", "landing.pricing.plans.pro.feature5"],
   },
   {
     tier: "BUSINESS" as const,
-    generations: 500,
-    platforms: 4,
-    features: ["landing.pricing.plans.business.feature1", "landing.pricing.plans.business.feature2", "landing.pricing.plans.business.feature3", "landing.pricing.plans.business.feature4", "landing.pricing.plans.business.feature5", "landing.pricing.plans.business.feature6"],
+    monthlyPrice: 49,
+    annualPrice: 490,
+    features: ["landing.pricing.plans.business.feature1", "landing.pricing.plans.business.feature2", "landing.pricing.plans.business.feature3", "landing.pricing.plans.business.feature4", "landing.pricing.plans.business.feature5"],
   },
 ];
 
@@ -59,19 +59,14 @@ export default async function BillingPage() {
 
   return (
     <div className="max-w-[720px] mx-auto">
-      <div className="mb-6">
-        <Link
-          href="/settings"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
-        >
-          <ArrowLeft size={14} />
-          {t("common.back")}
-        </Link>
-      </div>
+      <Breadcrumb items={[
+        { label: t("settings.title"), href: "/settings" },
+        { label: t("billing.title") },
+      ]} />
 
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-brand-900 tracking-tight">{t("billing.title")}</h1>
-        <p className="text-sm text-zinc-500 mt-1">{t("billing.desc")}</p>
+        <h1 className="text-2xl font-bold text-brand-900 dark:text-brand-300 tracking-tight">{t("billing.title")}</h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("billing.desc")}</p>
       </div>
 
       {/* Current Usage */}
@@ -99,7 +94,7 @@ export default async function BillingPage() {
 
           {/* Progress bar */}
           {quota.limit > 0 && (
-            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--bg)" }}>
+            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--muted)" }}>
               <div
                 className="h-full rounded-full transition-all"
                 style={{
@@ -107,7 +102,7 @@ export default async function BillingPage() {
                   background:
                     quota.used / quota.limit > 0.8
                       ? "var(--destructive)"
-                      : "var(--accent)",
+                      : "#2563EB",
                 }}
               />
             </div>
@@ -130,57 +125,7 @@ export default async function BillingPage() {
 
       {/* Plans */}
       <h2 className="text-lg font-semibold mb-4">{t("billing.availablePlans")}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {PLANS.map((plan) => {
-          const isCurrent = currentTier === plan.tier;
-
-          return (
-            <Card
-              key={plan.tier}
-              style={{
-                borderColor: isCurrent ? "var(--accent)" : "var(--border)",
-              }}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold">{t(`landing.pricing.plans.${plan.tier.toLowerCase()}.name`)}</h3>
-                  {isCurrent && (
-                    <Badge
-                      variant="default"
-                      className="text-xs"
-                      style={{ background: "var(--accent)" }}
-                    >
-                      {t("billing.current")}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="mb-4">
-                  <span className="text-2xl font-bold">
-                    {plan.tier === "FREE" ? "$0" : plan.tier === "PRO" ? "$29" : "$99"}
-                    <span className="text-sm font-normal text-muted-foreground">/mo</span>
-                  </span>
-                </div>
-
-                <ul className="flex flex-col gap-2 mb-5">
-                  {plan.features.map((fKey) => (
-                    <li key={fKey} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check size={14} className="text-holo-500 flex-shrink-0" />
-                      {t(fKey)}
-                    </li>
-                  ))}
-                </ul>
-
-                <BillingActions
-                  tier={plan.tier}
-                  isCurrent={isCurrent}
-                  userId={userId}
-                />
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <PlanComparison plans={PLANS} currentTier={currentTier} userId={userId} />
     </div>
   );
 }

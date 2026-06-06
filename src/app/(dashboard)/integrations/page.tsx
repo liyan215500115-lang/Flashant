@@ -1,21 +1,52 @@
+import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { Store, ExternalLink } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Store, Globe, Truck, Package } from "lucide-react";
+import { ConnectButton } from "@/components/integrations/connect-button";
+import { HelpSection } from "@/components/integrations/help-section";
+import { PLATFORM_LIST } from "@/lib/platform-specs";
+import zh from "../../../../messages/zh.json";
+import en from "../../../../messages/en.json";
 
-const PLATFORM_INFO: Record<string, { name: string; status: "active" | "coming_soon"; desc: string }> = {
-  SHOPIFY: { name: "Shopify", status: "active", desc: "全球最大的独立站电商平台" },
-  AMAZON: { name: "Amazon", status: "coming_soon", desc: "全球最大电商平台，支持 SP API" },
-  TIKTOK_SHOP: { name: "TikTok Shop", status: "coming_soon", desc: "短视频电商，内容驱动成交" },
-  ETSY: { name: "Etsy", status: "coming_soon", desc: "手工艺品与创意商品平台" },
-  MERCADO_LIBRE: { name: "Mercado Libre", status: "coming_soon", desc: "拉丁美洲最大电商平台" },
+function resolve(path: string, messages: Record<string, unknown>): string {
+  const keys = path.split(".");
+  let val: unknown = messages;
+  for (const k of keys) {
+    if (val && typeof val === "object" && k in (val as Record<string, unknown>)) {
+      val = (val as Record<string, unknown>)[k];
+    } else { return path; }
+  }
+  return typeof val === "string" ? val : path;
+}
+
+function maybeT(path: string, fallback: string, messages: Record<string, unknown>): string {
+  const result = resolve(path, messages);
+  return result === path ? fallback : result;
+}
+
+const PLATFORM_ICONS: Record<string, typeof Store> = {
+  SHOPIFY: ShoppingCart,
+  AMAZON: Package,
+  TIKTOK_SHOP: ShoppingBag,
+  ETSY: Store,
+  MERCADO_LIBRE: Globe,
+  EBAY: ShoppingBag,
+  WALMART: Truck,
+  LAZADA: ShoppingBag,
+  SHOPEE: ShoppingBag,
 };
 
 export default async function IntegrationsPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
+
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("NEXT_LOCALE")?.value === "zh" ? "zh" : "en";
+  const messages = locale === "zh" ? zh : en;
+  const t = (key: string) => resolve(key, messages as unknown as Record<string, unknown>);
+  const mt = (key: string, fallback: string) => maybeT(key, fallback, messages as unknown as Record<string, unknown>);
 
   const userId = session.user.id;
   const connections = await db.platformConnection.findMany({ where: { userId } });
@@ -24,70 +55,59 @@ export default async function IntegrationsPage() {
   return (
     <div className="max-w-[720px] mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">渠道连接器</h1>
-        <p className="text-sm text-muted-foreground mt-1">绑定电商平台，一键发布到全球渠道</p>
+        <h1 className="text-2xl font-bold text-brand-900 dark:text-brand-300 tracking-tight">{t("integrations.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("integrations.desc")}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {Object.entries(PLATFORM_INFO).map(([key, info]) => {
-          const platformKey = key as import("@prisma/client").Platform;
-          const conn = connections.find((c) => c.platform === platformKey);
-          const isConnected = connectedPlatforms.has(platformKey);
+        {PLATFORM_LIST.map((spec) => {
+          const conn = connections.find((c) => c.platform === spec.platform);
+          const isConnected = connectedPlatforms.has(spec.platform as import("@prisma/client").Platform);
+          const Icon = PLATFORM_ICONS[spec.platform] || Store;
 
           return (
-            <Card key={key}>
+            <Card key={spec.platform} className="hover:shadow-sm dark:hover:shadow-zinc-900/50 transition-shadow">
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div
-                    className="flex items-center justify-center w-10 h-10 rounded-xl"
-                    style={{ background: "var(--bg)" }}
-                  >
-                    <Store size={20} className="text-muted-foreground" />
+                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-muted">
+                    <Icon size={20} className="text-muted-foreground" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold">{info.name}</h3>
-                      {info.status === "coming_soon" ? (
-                        <Badge variant="secondary" className="text-[10px]">即将上线</Badge>
-                      ) : isConnected ? (
-                        <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                      ) : null}
+                      <h3 className="text-sm font-semibold">{mt(`platforms.${spec.platform}.name`, spec.name)}</h3>
+                      {spec.publishable && isConnected && (
+                        <Badge variant="outline" className="gap-1.5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 text-[10px]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
+                          {t("integrations.connected")}
+                        </Badge>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{info.desc}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{mt(`platforms.${spec.platform}.background`, spec.background)}</p>
                     {isConnected && conn && (
-                      <p className="text-xs mt-1" style={{ color: "var(--accent)" }}>
-                        {conn.platformStoreName || "已连接"}
+                      <p className="text-xs mt-1 text-brand-700 dark:text-brand-300 font-medium">
+                        {conn.platformStoreName || t("integrations.connected")}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {info.status === "active" && (
-                  isConnected ? (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-[10px]">已授权</Badge>
-                      <Link
-                        href={`/api/auth/shopify?userId=${userId}`}
-                        className="text-xs text-muted-foreground hover:underline flex items-center gap-1"
-                      >
-                        重新连接 <ExternalLink size={10} />
-                      </Link>
-                    </div>
-                  ) : (
-                    <Link
-                      href={`/api/auth/shopify?userId=${userId}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors hover:opacity-90"
-                      style={{ background: "var(--accent)" }}
-                    >
-                      连接 Shopify
-                    </Link>
-                  )
+                {spec.publishable && (
+                  <ConnectButton
+                    platform={spec.platform}
+                    platformName={spec.name}
+                    userId={userId}
+                    isConnected={isConnected}
+                    needsShopName={spec.platform === "SHOPIFY"}
+                    connectedShopName={conn?.platformStoreName ?? undefined}
+                  />
                 )}
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      <HelpSection />
     </div>
   );
 }

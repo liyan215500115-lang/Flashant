@@ -175,7 +175,7 @@ export default function NewProductPage() {
             <div className="flex items-center gap-2 mb-4">
               <span
                 className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold"
-                style={{ background: "var(--accent)", color: "#fff" }}
+                style={{ background: "#2563EB", color: "#fff" }}
               >
                 1
               </span>
@@ -198,8 +198,8 @@ export default function NewProductPage() {
               className="rounded-lg border-2 border-dashed cursor-pointer flex flex-col items-center justify-center transition-all"
               style={{
                 minHeight: 220,
-                borderColor: dragOver ? "var(--accent)" : file ? "var(--border)" : "var(--border)",
-                background: dragOver ? "var(--accent-subtle)" : "var(--bg)",
+                borderColor: dragOver ? "#2563EB" : file ? "var(--border)" : "var(--border)",
+                background: dragOver ? "var(--accent)" : "var(--muted)",
                 borderRadius: "var(--radius-lg)",
               }}
             >
@@ -264,7 +264,7 @@ export default function NewProductPage() {
             <div className="flex items-center gap-2 mb-4">
               <span
                 className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold"
-                style={{ background: "var(--accent)", color: "#fff" }}
+                style={{ background: "#2563EB", color: "#fff" }}
               >
                 2
               </span>
@@ -288,12 +288,12 @@ export default function NewProductPage() {
                     style={{
                       borderColor:
                         selectedTemplateId === tpl.id
-                          ? "var(--accent)"
+                          ? "#2563EB"
                           : "var(--border)",
                       background:
                         selectedTemplateId === tpl.id
-                          ? "var(--accent-subtle)"
-                          : "var(--surface)",
+                          ? "var(--accent)"
+                          : "var(--card)",
                     }}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -302,20 +302,20 @@ export default function NewProductPage() {
                         style={{
                           color:
                             selectedTemplateId === tpl.id
-                              ? "var(--accent)"
-                              : "var(--text-secondary)",
+                              ? "#2563EB"
+                              : "var(--muted-foreground)",
                         }}
                       />
                       <span
                         className="text-sm font-medium"
-                        style={{ color: "var(--text-primary)" }}
+                        style={{ color: "var(--foreground)" }}
                       >
                         {locale === "zh" ? tpl.nameZh || tpl.name : tpl.name}
                       </span>
                     </div>
                     <p
                       className="text-xs"
-                      style={{ color: "var(--text-secondary)" }}
+                      style={{ color: "var(--muted-foreground)" }}
                     >
                       {tpl.description || tpl.category}
                     </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import zh from "../../messages/zh.json";
 import en from "../../messages/en.json";
 
@@ -19,7 +19,7 @@ function resolve(path: string, messages: Record<string, unknown>): string {
   return typeof val === "string" ? val : path;
 }
 
-function getCookieLocale(): string {
+function readCookieLocale(): string {
   if (typeof document === "undefined") return "zh";
   const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]*)/);
   return match?.[1] === "en" ? "en" : "zh";
@@ -37,7 +37,11 @@ function buildT(messages: Messages) {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const locale = typeof window !== "undefined" ? getCookieLocale() : "zh";
+  const [locale, setLocale] = useState("zh");
+
+  useEffect(() => {
+    setLocale(readCookieLocale());
+  }, []);
 
   const t = useMemo(() => buildT(locale === "zh" ? zh : en), [locale]);
 

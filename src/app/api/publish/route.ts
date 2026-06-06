@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { publishToShopify } from "@/lib/platform/shopify";
+import { publishToTikTokShop } from "@/lib/platform/tiktok";
 import type { Platform } from "@prisma/client";
 
 export async function POST(req: Request) {
@@ -56,52 +57,59 @@ export async function POST(req: Request) {
       if (!genImage || genImage.status !== "SUCCEEDED") continue;
 
       try {
+        let result: { postId: string; postUrl: string } | null = null;
+
         if (platform === "SHOPIFY") {
-          const result = await publishToShopify(userId, {
+          result = await publishToShopify(userId, {
             title: project.title || "Product Image",
             images: [{ url: genImage.url }],
           });
-
-          if (result) {
-            await db.publishRecord.create({
-              data: {
-                imageProjectId,
-                generatedImageId: genImage.id,
-                platform,
-                status: "PUBLISHED",
-                platformPostId: result.postId,
-                platformPostUrl: result.postUrl,
-                publishedAt: new Date(),
-              },
-            });
-            results.push({
-              platform,
-              status: "published",
-              postId: result.postId,
-              postUrl: result.postUrl,
-            });
-          } else {
-            await db.publishRecord.create({
-              data: {
-                imageProjectId,
-                generatedImageId: genImage.id,
-                platform,
-                status: "FAILED",
-                errorMessage: "Token expired or not connected",
-              },
-            });
-            results.push({
-              platform,
-              status: "failed",
-              error: "Token expired or not connected",
-            });
-          }
+        } else if (platform === "TIKTOK_SHOP") {
+          result = await publishToTikTokShop(userId, {
+            title: project.title || "Product Image",
+            images: [{ url: genImage.url }],
+          });
         } else {
-          // Other platforms not yet implemented in Phase 1a
           results.push({
             platform,
             status: "failed",
             error: `${platform} not supported in Phase 1a`,
+          });
+          continue;
+        }
+
+        if (result) {
+          await db.publishRecord.create({
+            data: {
+              imageProjectId,
+              generatedImageId: genImage.id,
+              platform,
+              status: "PUBLISHED",
+              platformPostId: result.postId,
+              platformPostUrl: result.postUrl,
+              publishedAt: new Date(),
+            },
+          });
+          results.push({
+            platform,
+            status: "published",
+            postId: result.postId,
+            postUrl: result.postUrl,
+          });
+        } else {
+          await db.publishRecord.create({
+            data: {
+              imageProjectId,
+              generatedImageId: genImage.id,
+              platform,
+              status: "FAILED",
+              errorMessage: "Token expired or not connected",
+            },
+          });
+          results.push({
+            platform,
+            status: "failed",
+            error: "Token expired or not connected",
           });
         }
       } catch (error) {
