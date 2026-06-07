@@ -98,7 +98,7 @@ export function Sidebar() {
         ))}
 
         <div className="mt-2">
-          <Link href="/products/new">
+          <Link href="/studio">
             <Button
               className="w-full justify-start gap-2 bg-brand-900 hover:bg-brand-800 text-white cursor-pointer shadow-sm"
               size="sm"

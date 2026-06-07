@@ -229,7 +229,7 @@ export default function ProductsPage() {
               : t("products.createPrompt")}
           </p>
         </div>
-        <Link href="/products/new">
+        <Link href="/studio">
           <Button className="bg-brand-900 hover:bg-brand-800 text-white cursor-pointer gap-2 shadow-sm">
             <Plus size={16} strokeWidth={2} />
             {t("products.newProject")}
@@ -356,7 +356,7 @@ export default function ProductsPage() {
                 {t("workspace.emptyDesc")}
               </p>
             </div>
-            <Link href="/products/new">
+            <Link href="/studio">
               <Button className="bg-brand-900 hover:bg-brand-800 text-white cursor-pointer gap-2 shadow-sm mt-1">
                 <Plus size={16} strokeWidth={2} />
                 {t("workspace.createFirst")}

@@ -135,7 +135,7 @@ export default async function LandingPage() {
 
           <div className="mt-8">
             <Link
-              href={user ? "/products/new" : "/register"}
+              href={user ? "/studio" : "/register"}
               className="inline-flex items-center gap-2 rounded-xl bg-brand-900 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 transition-all duration-200 active:scale-[0.98] shadow-lg shadow-brand-900/20 hover:shadow-xl hover:shadow-brand-900/25"
             >
               {t("landing.hero.cta")}

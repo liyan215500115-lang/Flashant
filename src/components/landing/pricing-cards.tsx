@@ -37,7 +37,7 @@ export function PricingCards({
   const isCurrentPlan = (tier: string) =>
     currentPlan?.toUpperCase() === tier.toUpperCase();
 
-  const linkHref = userLoggedIn ? "/products/new" : "/login";
+  const linkHref = userLoggedIn ? "/studio" : "/login";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
