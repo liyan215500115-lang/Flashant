@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Upload, RefreshCw, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
+import { toast } from "sonner";
 
 interface ProductImage {
   id: string;
@@ -83,10 +84,15 @@ export function ImageUploadZone({
           mimeType: file.type,
         }),
       });
-      if (!imgRes.ok) throw new Error("Failed to link image");
+      if (!imgRes.ok) {
+        const err = await imgRes.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || "Failed to link image");
+      }
       const { productImage } = await imgRes.json();
       return productImage as ProductImage;
-    } catch {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      toast.error(msg);
       return null;
     }
   }
