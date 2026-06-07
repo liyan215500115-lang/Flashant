@@ -298,34 +298,40 @@ const DETAIL_TYPES = [
 function DetailImageGenerator({ projectId, engineType }: { projectId: string | null; productName?: string; engineType: string }) {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
+  const [results, setResults] = useState<Array<{key:string; url:string; label:string}>>([]);
 
   async function handleGenerateDetails() {
     if (!projectId || selectedTypes.size === 0) return;
     setGenerating(true);
     const types = DETAIL_TYPES.filter((d) => selectedTypes.has(d.key));
+    const newResults: typeof results = [];
 
     for (const t of types) {
       try {
-        await fetch("/api/generate", {
+        const res = await fetch("/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageProjectId: projectId, prompt: t.prompt, numOutputs: 1, engineType }),
+          body: JSON.stringify({ imageProjectId: projectId, productImageId: "", prompt: t.prompt, numOutputs: 1, engineType }),
         });
-      } catch { /* continue */ }
+        const data = await res.json();
+        if (data.url) newResults.push({ key: t.key, url: data.url, label: t.label });
+      } catch { /* skip */ }
     }
+    setResults((prev) => [...newResults, ...prev]);
     setGenerating(false);
-    toast.success(`${types.length} detail images queued`);
+    toast.success(`${newResults.length} detail images ready`);
   }
 
   return (
-    <div className="rounded-2xl border border-brand-200 dark:border-brand-700 bg-brand-50/30 dark:bg-brand-900/10 p-5">
-      <h3 className="text-sm font-semibold text-brand-900 dark:text-brand-300 mb-1">📋 Generate Detail Images</h3>
-      <p className="text-xs text-zinc-500 mb-3">Select content types — AI generates each as a separate image</p>
+    <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-5">
+      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Detail Images</h3>
+      <p className="text-xs text-zinc-500 mb-3">Select types to generate product listing detail images</p>
       <div className="grid grid-cols-2 gap-1.5 mb-3">
         {DETAIL_TYPES.map((dt) => (
           <button key={dt.key} type="button"
             onClick={() => setSelectedTypes((prev) => { const n = new Set(prev); n.has(dt.key) ? n.delete(dt.key) : n.add(dt.key); return n; })}
-            className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${selectedTypes.has(dt.key) ? "bg-brand-100 border-brand-300 text-brand-800 dark:bg-brand-900/30 dark:border-brand-600 dark:text-brand-300" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400"}`}>
-            {dt.label}
+            className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors duration-200 cursor-pointer border ${selectedTypes.has(dt.key) ? "bg-brand-100 border-brand-300 text-brand-800 dark:bg-brand-900/30 dark:border-brand-600 dark:text-brand-300" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400"}`}>
+            <span className="block text-[11px] text-zinc-400 mb-0.5">{dt.label}</span>
+            <span className="block text-[10px] text-zinc-300 leading-tight line-clamp-2">{dt.prompt.slice(0, 80)}...</span>
           </button>
         ))}
       </div>
@@ -333,6 +339,19 @@ function DetailImageGenerator({ projectId, engineType }: { projectId: string | n
         className="w-full py-2.5 rounded-xl bg-brand-900 text-white text-sm font-semibold hover:bg-brand-800 disabled:opacity-40 transition-colors cursor-pointer">
         {generating ? "Generating..." : `Generate ${selectedTypes.size || 0} Detail Images`}
       </button>
+      {/* Results grid */}
+      {results.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-700/50">
+          {results.map((r,i) => (
+            <div key={i} className="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 group/img relative">
+              <img src={r.url} alt={r.label} className="w-full aspect-square object-cover" />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                <p className="text-[10px] text-white font-medium">{r.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
