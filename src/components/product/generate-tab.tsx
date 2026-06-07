@@ -60,8 +60,17 @@ export function GenerateTab({
     productImages[0] ?? null
   );
   const [mode, setMode] = useState("scene");
+  const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [quantity, setQuantity] = useState(2);
+
+  // Build full prompt: product name + scene description
+  const buildPrompt = useCallback((product: string, sceneMode: string) => {
+    const sceneDesc = modeDefaultPrompts[sceneMode] ?? modeDefaultPrompts.scene;
+    return product.trim()
+      ? `${product.trim()}, ${sceneDesc.charAt(0).toLowerCase() + sceneDesc.slice(1)}`
+      : sceneDesc;
+  }, [modeDefaultPrompts]);
 
   useEffect(() => {
     if (!selectedImage && productImages.length > 0) {
@@ -71,12 +80,17 @@ export function GenerateTab({
 
   const handleModeChange = useCallback((newMode: string) => {
     setMode(newMode);
-    setPrompt(modeDefaultPrompts[newMode] ?? "");
-  }, [modeDefaultPrompts]);
+    setPrompt(buildPrompt(productName, newMode));
+  }, [buildPrompt, productName]);
+
+  const handleProductChange = useCallback((product: string) => {
+    setProductName(product);
+    setPrompt(buildPrompt(product, mode));
+  }, [buildPrompt, mode]);
 
   useEffect(() => {
     if (!prompt) {
-      setPrompt(modeDefaultPrompts[mode] ?? "");
+      setPrompt(buildPrompt(productName, mode));
     }
   }, []);
 
@@ -107,6 +121,8 @@ export function GenerateTab({
         }}
         mode={mode}
         onModeChange={handleModeChange}
+        productName={productName}
+        onProductNameChange={handleProductChange}
         prompt={prompt}
         onPromptChange={setPrompt}
         quantity={quantity}

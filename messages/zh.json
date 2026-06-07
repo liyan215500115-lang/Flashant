@@ -501,7 +501,9 @@
     "uploadBtn": "上传图片",
     "uploadingProgress": "上传中 {count}...",
     "uploadHintBatch": "支持批量，最多 {max} 张 · PNG / JPG / WebP",
-    "languageLabel": "目标语种"
+    "languageLabel": "目标语种",
+    "productLabel": "产品名称",
+    "productPlaceholder": "如：银色耳环、无线耳机、有机绿茶..."
   },
   "assets": {
     "title": "素材中心",

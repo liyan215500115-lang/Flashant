@@ -21,6 +21,8 @@ interface ControlPanelProps {
   onImageChange: (image: ProductImage) => void;
   mode: string;
   onModeChange: (mode: string) => void;
+  productName: string;
+  onProductNameChange: (name: string) => void;
   prompt: string;
   onPromptChange: (prompt: string) => void;
   quantity: number;
@@ -37,6 +39,8 @@ export function ControlPanel({
   onImageChange,
   mode,
   onModeChange,
+  productName,
+  onProductNameChange,
   prompt,
   onPromptChange,
   quantity,
@@ -62,6 +66,18 @@ export function ControlPanel({
       />
 
       <ModeSelect value={mode} onChange={onModeChange} />
+
+      {/* Product name — injected into prompt for accurate generation */}
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("generate.productLabel")}</span>
+        <input
+          type="text"
+          value={productName}
+          onChange={(e) => onProductNameChange(e.target.value)}
+          placeholder={t("generate.productPlaceholder")}
+          className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-zinc-300 dark:focus:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-100 dark:focus:ring-zinc-700 transition-all"
+        />
+      </div>
 
       <PromptTextarea value={prompt} onChange={onPromptChange} />
 

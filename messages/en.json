@@ -501,7 +501,9 @@
     "uploadBtn": "Upload Image",
     "uploadingProgress": "Uploading {count}...",
     "uploadHintBatch": "Batch up to {max} · PNG / JPG / WebP",
-    "languageLabel": "Target Language"
+    "languageLabel": "Target Language",
+    "productLabel": "Product",
+    "productPlaceholder": "e.g. Silver Earrings, Wireless Earbuds..."
   },
   "assets": {
     "title": "Asset Center",
