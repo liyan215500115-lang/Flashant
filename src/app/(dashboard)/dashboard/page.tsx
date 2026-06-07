@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Package, Image, ArrowRight, ChevronRight } from "lucide-react";
+import { Sparkles, Package, Image, ArrowRight, ChevronRight, Zap, TrendingUp } from "lucide-react";
 import zh from "../../../../messages/zh.json";
 import en from "../../../../messages/en.json";
 
@@ -16,9 +16,7 @@ function resolve(path: string, messages: Record<string, unknown>): string {
   for (const k of keys) {
     if (val && typeof val === "object" && k in (val as Record<string, unknown>)) {
       val = (val as Record<string, unknown>)[k];
-    } else {
-      return path;
-    }
+    } else return path;
   }
   return typeof val === "string" ? val : path;
 }
@@ -29,6 +27,13 @@ async function getT() {
   const messages = locale === "zh" ? zh : en;
   return (key: string) => resolve(key, messages as unknown as Record<string, unknown>);
 }
+
+const STATUS_STYLE: Record<string, string> = {
+  DRAFT: "bg-zinc-100 text-zinc-600 border-zinc-200",
+  GENERATING: "bg-holo-50 text-holo-600 border-holo-200",
+  GENERATED: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  FAILED: "bg-red-50 text-red-600 border-red-200",
+};
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -48,16 +53,15 @@ export default async function DashboardPage() {
       orderBy: { updatedAt: "desc" },
       take: 6,
     }),
-    db.generatedImage.count({
-      where: { project: { userId }, status: "SUCCEEDED" },
-    }),
+    db.generatedImage.count({ where: { project: { userId }, status: "SUCCEEDED" } }),
     db.subscription.findUnique({ where: { userId } }),
     db.imageProject.count({ where: { userId } }),
   ]);
 
   const tier = subscription?.planTier ?? "FREE";
+  const usagePercent = tier === "FREE" ? Math.round((generatedCount / 10) * 100) : 0;
 
-  // Resolve presigned URLs for product images
+  // Resolve presigned URLs
   const resolvedProjects = await Promise.all(
     projects.map(async (p) => ({
       ...p,
@@ -75,147 +79,113 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
-      {/* ── Greeting ── */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-brand-900 dark:text-brand-300 tracking-tight">
-          {t("dashboard.hello")}，{session.user?.name || "User"}
-        </h1>
-        <p className="text-sm text-zinc-500 mt-1">{t("dashboard.tagline")}</p>
+      {/* Welcome banner */}
+      <div className="relative mb-8 rounded-2xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 p-6 text-white overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.08),transparent)]" />
+        <div className="relative z-10 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.hello")}, {session.user?.name || "User"} 👋</h1>
+            <p className="text-sm text-brand-200 mt-1">{t("dashboard.tagline")}</p>
+          </div>
+          <Link href="/studio">
+            <Button className="bg-white text-brand-900 hover:bg-brand-50 cursor-pointer gap-2 shadow-lg shadow-black/20">
+              <Sparkles size={16} strokeWidth={2} />
+              {t("dashboard.enterStudio")}
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <Card className="border-zinc-200/70 dark:border-zinc-700/70 shadow-sm hover:shadow-md transition-shadow border-t-2 border-t-brand-500 bg-white dark:bg-zinc-800/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 ring-1 ring-brand-100 dark:ring-brand-800">
-              <Package size={18} strokeWidth={1.5} />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{totalProjects}</div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400">{t("dashboard.totalProjects")}</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-zinc-200/70 dark:border-zinc-700/70 shadow-sm hover:shadow-md transition-shadow border-t-2 border-t-holo-500 bg-white dark:bg-zinc-800/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-holo-50 dark:bg-holo-900/20 text-holo-600 dark:text-holo-400 ring-1 ring-holo-100 dark:ring-holo-800">
-              <Image size={18} strokeWidth={1.5} />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{generatedCount}</div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400">{t("dashboard.generatedImages")}</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-zinc-200/70 dark:border-zinc-700/70 shadow-sm hover:shadow-md transition-shadow border-t-2 border-t-gold-500 bg-white dark:bg-zinc-800/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-50 dark:bg-gold-900/20 text-gold-600 dark:text-gold-400 ring-1 ring-gold-100 dark:ring-gold-800">
-              <Sparkles size={18} strokeWidth={1.5} />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                {tier === "FREE" ? t("dashboard.free") : tier}
-              </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400">{t("dashboard.currentPlan")}</div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
+          <Package size={18} className="text-brand-500 mb-3" strokeWidth={1.5} />
+          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{totalProjects}</div>
+          <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{t("dashboard.totalProjects")}</div>
+        </div>
+        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
+          <Image size={18} className="text-holo-500 mb-3" strokeWidth={1.5} />
+          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{generatedCount}</div>
+          <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{t("dashboard.generatedImages")}</div>
+        </div>
+        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <Zap size={18} className="text-gold-500" strokeWidth={1.5} />
+            {usagePercent > 80 && <TrendingUp size={14} className="text-amber-500" />}
+          </div>
+          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{tier === "FREE" ? t("dashboard.free") : tier}</div>
+          <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{t("dashboard.currentPlan")}</div>
+        </div>
       </div>
 
-      {/* ── Quick actions ── */}
-      <div className="flex items-center gap-3 mb-8">
-        <Link href="/studio">
-          <Button className="bg-brand-900 hover:bg-brand-800 text-white cursor-pointer gap-2 shadow-sm">
-            <Sparkles size={15} strokeWidth={2} />
-            {t("dashboard.enterStudio")}
-          </Button>
-        </Link>
-        <Link href="/products">
-          <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer">
-            {t("dashboard.viewAllProjects")}
-            <ArrowRight size={14} strokeWidth={1.5} />
-          </Button>
-        </Link>
+      {/* Quick actions + View all */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Link href="/products">
+            <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer rounded-xl">{t("dashboard.viewAllProjects")} <ArrowRight size={14} /></Button>
+          </Link>
+        </div>
       </div>
 
-      {/* ── Recent projects ── */}
+      {/* Recent projects */}
       {resolvedProjects.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 mb-4">
-            {t("dashboard.recentProjects")}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {resolvedProjects.map((project) => (
-              <Link key={project.id} href={`/products/${project.id}`}>
-                <Card className="group/card border-zinc-200/70 dark:border-zinc-700/70 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all cursor-pointer h-full bg-white dark:bg-zinc-800/50">
-                  <CardContent className="p-3">
-                    <div className="aspect-[4/3] rounded-lg bg-zinc-50 dark:bg-zinc-700/50 mb-3 overflow-hidden">
+          <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 mb-4">{t("dashboard.recentProjects")}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {resolvedProjects.map((project) => {
+              const statusClass = STATUS_STYLE[project.status] ?? STATUS_STYLE.DRAFT;
+              return (
+                <Link key={project.id} href={`/products/${project.id}`} className="group/card block">
+                  <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md transition-all overflow-hidden">
+                    <div className="aspect-[4/3] bg-zinc-50 dark:bg-zinc-700/30 relative overflow-hidden">
                       {project.productImages[0]?.originalUrl ? (
-                        <img
-                          src={project.productImages[0].originalUrl}
-                          alt={project.title}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover/card:scale-[1.03]"
-                        />
+                        <img src={project.productImages[0].originalUrl} alt={project.title} className="w-full h-full object-cover group-hover/card:scale-[1.04] transition-transform duration-500" />
                       ) : project.generatedImages[0]?.url ? (
-                        <img
-                          src={project.generatedImages[0].url}
-                          alt="Generated"
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover/card:scale-[1.03]"
-                        />
+                        <img src={project.generatedImages[0].url} alt="Generated" className="w-full h-full object-cover group-hover/card:scale-[1.04] transition-transform duration-500" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Image size={28} className="text-zinc-200 dark:text-zinc-600" strokeWidth={1} />
-                        </div>
+                        <div className="w-full h-full flex items-center justify-center"><Image size={32} className="text-zinc-200 dark:text-zinc-600" strokeWidth={1} /></div>
                       )}
+                      <div className="absolute top-3 left-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusClass}`}>{t(`status.${project.status}`)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate flex-1">
-                        {project.title || "Untitled"}
-                      </h3>
-                      <Badge variant="secondary" className="text-[10px] ml-2 font-medium">
-                        {t(`status.${project.status}`)}
-                      </Badge>
+                    <div className="p-3.5">
+                      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{project.title || "Untitled"}</h3>
+                      {project.promptTemplate ? (
+                        <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">{project.promptTemplate.nameZh || project.promptTemplate.name}</p>
+                      ) : (
+                        <p className="text-[11px] text-zinc-300 dark:text-zinc-600 mt-0.5">No template</p>
+                      )}
+                      <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-zinc-100 dark:border-zinc-700/50">
+                        <span className="text-[11px] text-zinc-400">{project.productImages.length} imgs · {project.generatedImages.length} generated</span>
+                        <ChevronRight size={14} className="text-zinc-300 dark:text-zinc-600 group-hover/card:translate-x-0.5 transition-transform" />
+                      </div>
                     </div>
-                    {project.promptTemplate && (
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate">
-                        {project.promptTemplate.nameZh || project.promptTemplate.name}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                        {project.productImages.length} {t("workspace.images")} · {project.generatedImages.length} {t("workspace.results")}
-                      </span>
-                      <ChevronRight size={14} className="text-zinc-300 dark:text-zinc-600 group-hover/card:text-zinc-500 dark:group-hover/card:text-zinc-400 transition-colors" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* ── Empty state ── */}
+      {/* Empty state */}
       {resolvedProjects.length === 0 && (
-        <Card className="border-dashed border-zinc-300 dark:border-zinc-600 rounded-2xl bg-white dark:bg-zinc-800/50">
-          <CardContent className="flex flex-col items-center justify-center py-20 gap-5">
-            <Sparkles size={36} className="text-zinc-300 dark:text-zinc-600" strokeWidth={1} />
-            <div className="text-center">
-              <h3 className="text-base font-semibold text-zinc-600 dark:text-zinc-300">
-                {t("dashboard.noProjects")}
-              </h3>
-              <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
-                {t("dashboard.noProjectsDesc")}
-              </p>
-            </div>
-            <Link href="/studio">
-              <Button className="bg-brand-900 hover:bg-brand-800 text-white cursor-pointer gap-2 shadow-sm mt-1">
-                <Sparkles size={15} strokeWidth={2} />
-                {t("dashboard.startFirstProject")}
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/40 flex flex-col items-center justify-center py-16 gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+            <Sparkles size={28} className="text-brand-500" strokeWidth={1} />
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-zinc-700 dark:text-zinc-300">{t("dashboard.noProjects")}</h3>
+            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1 max-w-sm">{t("dashboard.noProjectsDesc")}</p>
+          </div>
+          <Link href="/studio">
+            <Button className="bg-brand-900 hover:bg-brand-800 text-white cursor-pointer gap-2 shadow-sm mt-2 rounded-xl">
+              <Sparkles size={16} />
+              {t("dashboard.startFirstProject")}
+            </Button>
+          </Link>
+        </div>
       )}
     </div>
   );
