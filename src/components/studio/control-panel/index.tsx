@@ -1,35 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 import { ModeSelect } from "@/components/product/mode-select";
-import { PromptTextarea } from "@/components/product/prompt-textarea";
 import { QuantitySlider } from "@/components/product/quantity-slider";
 import { FlashantButton } from "@/components/product/flashant-button";
 import { PublishDestination } from "./publish-destination";
-import { PromptEnhancer } from "./prompt-enhancer";
-import { EngineSelector } from "./engine-selector";
 import { BrandPresetSelector } from "./brand-preset-selector";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useT } from "@/components/i18n-provider";
+import { toast } from "sonner";
 
 interface ProductImage {
-  id: string;
-  originalUrl: string;
-  fileName: string;
-  mimeType: string;
+  id: string; originalUrl: string; fileName: string; mimeType: string;
 }
 
 interface StudioControlPanelProps {
-  projectId: string | null;
-  selectedImage: ProductImage | null;
-  mode: string;
-  prompt: string;
-  quantity: number;
-  engineType: string;
-  targetPlatform: string;
-  targetLanguage: string;
-  brandPresetId: string | null;
-  isGenerating: boolean;
+  projectId: string | null; selectedImage: ProductImage | null;
+  mode: string; prompt: string; quantity: number;
+  engineType: string; targetPlatform: string; targetLanguage: string;
+  brandPresetId: string | null; isGenerating: boolean;
   onImageChange: (image: ProductImage) => void;
   onModeChange: (mode: string) => void;
   onPromptChange: (prompt: string) => void;
@@ -42,100 +31,123 @@ interface StudioControlPanelProps {
 }
 
 export function StudioControlPanel({
-  projectId,
-  selectedImage,
-  mode,
-  prompt,
-  quantity,
-  engineType,
-  targetPlatform,
-  targetLanguage,
-  brandPresetId,
-  isGenerating,
-  onImageChange,
-  onModeChange,
-  onPromptChange,
-  onQuantityChange,
-  onEngineChange,
-  onPlatformChange,
-  onLanguageChange,
-  onBrandPresetChange,
+  projectId, selectedImage, mode, prompt, quantity,
+  engineType, targetPlatform, targetLanguage, brandPresetId, isGenerating,
+  onImageChange, onModeChange, onPromptChange, onQuantityChange,
+  onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
   onGenerate,
 }: StudioControlPanelProps) {
   const { t } = useT();
   const isAmazon = targetPlatform === "AMAZON";
+  const [productName, setProductName] = useState("");
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [recipeName, setRecipeName] = useState("");
+
+  // Magic wand: call DeepSeek to enhance selling points
+  async function handleEnhance() {
+    if (!selectedImage) return;
+    setIsEnhancing(true);
+    try {
+      const res = await fetch("/api/prompts/enhance", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: mode }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGeneratedPrompt(data.enhanced);
+        onPromptChange(data.enhanced);
+      }
+    } catch { /* fallback to template */ }
+    finally { setIsEnhancing(false); }
+  }
+
+  // Recipe save
+  function saveRecipe() {
+    const recipe = { mode, prompt, productName, quantity, engineType, targetPlatform };
+    localStorage.setItem(`flashant-recipe-${recipeName || Date.now()}`, JSON.stringify(recipe));
+    toast.success("Recipe saved");
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{t("generate.tabLabel")}</h2>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("studio.desc")}</p>
+      {/* Upload */}
+      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4">
+        {projectId ? (
+          <ImageUploadZone projectId={projectId} currentImage={selectedImage} onImageChange={onImageChange} />
+        ) : (
+          <div className="aspect-square rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-sm text-zinc-400">
+            {t("generate.noProject")}
+          </div>
+        )}
       </div>
 
-      {/* Image Upload */}
-      {projectId ? (
-        <ImageUploadZone
-          projectId={projectId}
-          currentImage={selectedImage}
-          onImageChange={onImageChange}
-        />
-      ) : (
-        <div className="aspect-square rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
-          {t("generate.noProject")}
+      {/* Publish destination + Brand */}
+      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4 flex flex-col gap-3">
+        <PublishDestination value={targetPlatform} onChange={onPlatformChange} language={targetLanguage} onLanguageChange={onLanguageChange} />
+        <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
+      </div>
+
+      {/* Generation config */}
+      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4 flex flex-col gap-4">
+        {/* Engine */}
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("generate.engineLabel")}</span>
+          <select value={engineType} onChange={(e) => onEngineChange(e.target.value)}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all">
+            <option value="flux">{t("generate.engineFlux")}</option>
+            <option value="flux2">FLUX.2 Pro</option>
+            <option value="sdxl">{t("generate.engineSdxl")}</option>
+            <option value="playground">{t("generate.enginePlayground")}</option>
+          </select>
         </div>
-      )}
 
-      {/* Publish Settings */}
-      <Card className="shadow-none overflow-visible">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">{t("generate.publishGroup")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <PublishDestination
-            value={targetPlatform}
-            onChange={onPlatformChange}
-            language={targetLanguage}
-            onLanguageChange={onLanguageChange}
-          />
-          <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
-        </CardContent>
-      </Card>
+        {/* Mode */}
+        <ModeSelect value={isAmazon ? "white_bg" : mode} onChange={onModeChange} disabledModes={isAmazon ? ["scene", "model"] : []} />
 
-      {/* Generation Settings */}
-      <Card className="shadow-none">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">{t("generate.generateGroup")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <ModeSelect
-            value={isAmazon ? "white_bg" : mode}
-            onChange={onModeChange}
-            disabledModes={isAmazon ? ["scene", "model"] : []}
-          />
+        {/* Product name */}
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("generate.productLabel")}</span>
+          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)}
+            placeholder={t("generate.productPlaceholder")}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all" />
+        </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("generate.promptLabel")}</span>
-              <PromptEnhancer currentPrompt={prompt} onEnhanced={onPromptChange} />
-            </div>
-            <PromptTextarea value={prompt} onChange={onPromptChange} />
+        {/* Selling points + Magic wand */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("generate.sellingPointsLabel")}</span>
+            <button type="button" onClick={handleEnhance} disabled={isEnhancing || !selectedImage}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50 cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              {isEnhancing ? "..." : t("generate.enhancePrompt")}
+            </button>
           </div>
+          <textarea value={prompt} onChange={(e) => onPromptChange(e.target.value)} rows={2}
+            placeholder={t("generate.sellingPointsPlaceholder")}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all resize-y min-h-[60px]" />
+          {generatedPrompt && (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10 px-3 py-2.5">
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mb-0.5 font-medium">AI Generated</p>
+              <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">{generatedPrompt}</p>
+            </div>
+          )}
+        </div>
 
-          <QuantitySlider value={quantity} onChange={onQuantityChange} />
+        <QuantitySlider value={quantity} onChange={onQuantityChange} />
 
-          <EngineSelector value={engineType} onChange={onEngineChange} />
-        </CardContent>
-      </Card>
+        {/* Recipe save */}
+        <div className="flex gap-1.5">
+          <input type="text" value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="Recipe name"
+            className="flex-1 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:border-brand-500 focus:outline-none transition-all" />
+          <button type="button" onClick={saveRecipe} disabled={!selectedImage}
+            className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 cursor-pointer">Save Recipe</button>
+        </div>
+      </div>
 
-      {/* Generate button */}
-      <FlashantButton
-        onClick={onGenerate}
-        loading={isGenerating}
-        disabled={!selectedImage || isGenerating}
-        label={t("generate.generateCta")}
-        loadingLabel={t("generate.generatingCta")}
-      />
+      {/* CTA */}
+      <FlashantButton onClick={onGenerate} loading={isGenerating} disabled={!selectedImage || isGenerating}
+        label={t("generate.generateCta")} loadingLabel={t("generate.generatingCta")} />
     </div>
   );
 }
