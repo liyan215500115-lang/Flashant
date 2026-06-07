@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getSignedGetUrl } from "@/lib/s3";
 
 export async function POST(
   req: Request,
@@ -44,5 +45,12 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({ productImage }, { status: 201 });
+  // Resolve presigned GET URL for the private R2 image
+  const resolvedUrl = s3Key.startsWith("products/") || s3Key.startsWith("generated/")
+    ? await getSignedGetUrl(s3Key).catch(() => originalUrl)
+    : originalUrl;
+
+  return NextResponse.json({
+    productImage: { ...productImage, originalUrl: resolvedUrl },
+  }, { status: 201 });
 }
