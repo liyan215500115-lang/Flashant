@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
 
   // ── i18n: apply locale from cookie ──
   const localeCookie = request.cookies.get("NEXT_LOCALE")?.value;
-  const locale = localeCookie && ["en", "zh"].includes(localeCookie) ? localeCookie : "zh";
+  const locale = localeCookie && ["en", "zh"].includes(localeCookie) ? localeCookie : "en";
 
   // Public paths — no auth needed
   if (pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {

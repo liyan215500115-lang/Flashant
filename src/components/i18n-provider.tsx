@@ -20,14 +20,14 @@ function resolve(path: string, messages: Record<string, unknown>): string {
 }
 
 function readCookieLocale(): string {
-  if (typeof document === "undefined") return "zh";
+  if (typeof document === "undefined") return "en";
   const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]*)/);
-  return match?.[1] === "en" ? "en" : "zh";
+  return match?.[1] === "zh" ? "zh" : "en";
 }
 
 const I18nContext = createContext<{ t: (key: string) => string; locale: string }>({
   t: (key: string) => key,
-  locale: "zh",
+  locale: "en",
 });
 
 function buildT(messages: Messages) {
@@ -37,7 +37,7 @@ function buildT(messages: Messages) {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState("zh");
+  const [locale, setLocale] = useState("en");
 
   useEffect(() => {
     setLocale(readCookieLocale());

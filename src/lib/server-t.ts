@@ -35,11 +35,12 @@ export async function getServerLocale(): Promise<Locale> {
   try {
     const cookieStore = await cookies();
     const val = cookieStore.get("NEXT_LOCALE")?.value;
-    if (val === "zh" || val === "en") return val;
+    if (val === "zh") return "zh";
+    return "en";
   } catch {
     // cookies() may throw during static generation
   }
-  return "zh";
+  return "en";
 }
 
 export async function serverT(key: string, locale?: Locale): Promise<string> {

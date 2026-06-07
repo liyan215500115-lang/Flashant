@@ -6,7 +6,7 @@ import zh from "../messages/zh.json";
 import en from "../messages/en.json";
 
 export default getRequestConfig(async () => {
-  let locale = "zh";
+  let locale = "en";
   try {
     const cookieStore = await cookies();
     const cookieVal = cookieStore.get("NEXT_LOCALE")?.value;
