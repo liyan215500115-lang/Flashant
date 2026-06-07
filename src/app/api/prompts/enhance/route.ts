@@ -59,11 +59,11 @@ export async function POST(req: Request) {
 
       const description = response.choices[0]?.message?.content?.trim();
       if (description && description.length > 10) {
-        // Wrap description into an img2img prompt: product stays, scene changes
+        // img2img prompt: product stays, background changes
         const enhancedPrompt =
           lang === "zh"
-            ? `${description}，${sceneDesc}。8K高清，商业摄影`
-            : `${description}. Photographed ${sceneDesc}. 8K, sharp focus, commercial quality.`;
+            ? `保留产品主体不变，将背景替换为：${sceneDesc}。${description}。8K高清，商业摄影`
+            : `Keep the product exactly as shown in the reference image. Change the background to: ${sceneDesc}. ${description}. 8K, sharp focus, commercial quality.`;
 
         return NextResponse.json({ enhanced: enhancedPrompt });
       }
