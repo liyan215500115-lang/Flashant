@@ -135,49 +135,41 @@ export default function StudioPage() {
     setIsGenerating(true);
     setGenerationError("");
 
-    const count = Math.min(quantity || 1, 4);
-    let succeeded = 0;
-    for (let i = 0; i < count; i++) {
-      try {
-        toast.info(`Generating image ${i + 1}/${count}...`);
-        const res = await fetch("/api/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            imageProjectId: projectId,
-            productImageId: selectedImage.id,
-            prompt: prompt || undefined,
-            numOutputs: 1,
-            engineType,
-            targetPlatform,
-            targetLanguage,
-            brandPresetId: brandPresetId || undefined,
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageProjectId: projectId,
+          productImageId: selectedImage.id,
+          prompt: prompt || undefined,
+          numOutputs: 1,
+          engineType,
+          targetPlatform,
+          targetLanguage,
+          brandPresetId: brandPresetId || undefined,
         }),
       });
-        const data = await res.json();
-        if (data.status === "succeeded" && data.url) {
-          const preview = { id: data.generatedImageId, url: data.url, promptUsed: prompt };
-          setLatestImage(preview);
-          setGenerationHistory((prev) => {
-            const next = [preview, ...prev.filter((h) => h.id !== preview.id)];
-            return next.slice(0, 12);
-          });
-          succeeded++;
-        } else if (data.taskId) {
-          pollTask(data.taskId);
-          succeeded++;
-        } else if (data.error) {
-          toast.error(data.message || data.error);
-        }
-      } catch { toast.error(`Image ${i + 1} failed`); }
+      const data = await res.json();
+      if (data.status === "succeeded" && data.url) {
+        const preview = { id: data.generatedImageId, url: data.url, promptUsed: prompt };
+        setLatestImage(preview);
+        setGenerationHistory((prev) => {
+          const next = [preview, ...prev.filter((h) => h.id !== preview.id)];
+          return next.slice(0, 12);
+        });
+        toast.success("Image generated");
+        fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
+      } else if (data.taskId) {
+        pollTask(data.taskId);
+      } else if (data.error) {
+        setGenerationError(data.message || data.error);
+        toast.error(data.message || data.error);
+      }
+    } catch (e) {
+      setGenerationError(e instanceof Error ? e.message : "Network failed");
     }
     setIsGenerating(false);
-    if (succeeded > 0) {
-      toast.success(`${succeeded}/${count} images generated`);
-      fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
-    } else {
-      toast.error("Generation failed — check your Replicate credits");
-    }
   }
 
   function handleImageChange(image: ProductImage) {
