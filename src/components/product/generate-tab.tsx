@@ -185,6 +185,11 @@ export function GenerateTab({
         onPromptChange={setPrompt}
         quantity={quantity}
         onQuantityChange={setQuantity}
+        targetPlatform=""
+        onTargetPlatformChange={() => {}}
+        recipeName=""
+        onRecipeNameChange={() => {}}
+        onSaveRecipe={() => {}}
         engineType={engineType}
         onEngineTypeChange={setEngineType}
         generatedPrompt={generatedPrompt}

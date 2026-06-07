@@ -305,7 +305,7 @@ export async function POST(req: Request) {
       if (brandPreset?.logoUrl) {
         try {
           const imageBuf = await fetchImageBuffer(firstOutput.url);
-          const logoUrl = brandPreset.logoUrl.startsWith("products/") || brandPreset.logoUrl.startsWith("generated/")
+          const logoUrl = brandPreset.logoUrl && (brandPreset.logoUrl.startsWith("products/") || brandPreset.logoUrl.startsWith("generated/"))
             ? await getSignedGetUrl(brandPreset.logoUrl).catch(() => brandPreset.logoUrl)
             : brandPreset.logoUrl;
           const logoBuf = await fetchImageBuffer(logoUrl);
