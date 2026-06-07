@@ -6,6 +6,8 @@ import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { serverT } from "@/lib/server-t";
 import { getSignedGetUrl } from "@/lib/s3";
+import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
+import { uploadBuffer, hasS3Config } from "@/lib/s3";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -297,6 +299,30 @@ export async function POST(req: Request) {
         where: { id: task.id },
         data: { status: "SUCCEEDED", resultUrl: firstOutput.url },
       });
+
+      // ── Brand logo overlay ──
+      let finalUrl = firstOutput.url;
+      if (brandPreset?.logoUrl) {
+        try {
+          const imageBuf = await fetchImageBuffer(firstOutput.url);
+          const logoUrl = brandPreset.logoUrl.startsWith("products/") || brandPreset.logoUrl.startsWith("generated/")
+            ? await getSignedGetUrl(brandPreset.logoUrl).catch(() => brandPreset.logoUrl)
+            : brandPreset.logoUrl;
+          const logoBuf = await fetchImageBuffer(logoUrl);
+          const overlaid = await overlayLogo(imageBuf, logoBuf);
+
+          if (hasS3Config()) {
+            const { s3Key: newKey, publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
+            await db.generatedImage.update({
+              where: { id: placeholder.id },
+              data: { url: newUrl, s3Key: newKey },
+            });
+            finalUrl = newUrl;
+          }
+        } catch {
+          // Logo overlay failed — keep original image
+        }
+      }
 
       // Check if all tasks for this project are done
       const pendingCount = await db.task.count({
