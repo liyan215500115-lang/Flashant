@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, AlertTriangle, Loader2 } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StudioControlPanel } from "@/components/studio/control-panel";
 import { StudioPreviewCanvas } from "@/components/studio/preview-canvas";
@@ -274,9 +275,17 @@ export default function StudioPage() {
             onDismissError={() => setGenerationError("")}
           />
 
-          {/* Detail image generation — shown after main images exist */}
+          {/* Link to detail page */}
           {generationHistory.length >= 1 && (
-            <DetailImageGenerator projectId={projectId} productName={productName} engineType={engineType} />
+            <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4">
+              <Link href={`/products/${projectId}/details`} className="flex items-center justify-between group">
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Detail Images</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">Generate product listing detail images with 7 content types</p>
+                </div>
+                <ChevronRight size={16} className="text-zinc-400 group-hover:text-zinc-600 transition-colors" />
+              </Link>
+            </div>
           )}
         </div>
       </div>
@@ -285,73 +294,3 @@ export default function StudioPage() {
 }
 
 // ── Detail image generator component ──
-const DETAIL_TYPES = [
-  { key: "selling_points", label: "📐 Core Selling Points", labelZh: "📐 核心卖点图", prompt: "Product key selling points infographic style, highlighted features with clean callout text, white background, e-commerce product page section, professional layout" },
-  { key: "detail", label: "🔍 Detail Close-up", labelZh: "🔍 商品细节图", prompt: "Extreme macro close-up product detail shot, texture and material clearly visible, premium product photography, shallow depth of field, 8K" },
-  { key: "size", label: "📏 Size Guide", labelZh: "📏 尺寸/容量图", prompt: "Product size comparison with measurement reference, dimensional guide overlay, clean studio lighting, informative layout, scale reference" },
-  { key: "compare", label: "⚡ Before/After", labelZh: "⚡ 效果对比图", prompt: "Before and after comparison, split screen layout, product transformation showcase, side by side, professional presentation, dramatic improvement visible" },
-  { key: "craft", label: "🛠 Craftsmanship", labelZh: "🛠 工艺制作图", prompt: "Artisan craftsmanship process scene, hands carefully making the product, workshop environment, warm natural lighting, authentic handmade feel, documentary style" },
-  { key: "series", label: "📦 Series Collection", labelZh: "📦 系列展示图", prompt: "Product family lineup, multiple color variants or styles displayed together, organized grid layout, collection showcase, premium brand presentation" },
-  { key: "scene", label: "🏠 Lifestyle Scene", labelZh: "🏠 场景使用图", prompt: "Product in real-life use scenario, lifestyle photography, natural environment, candid authentic moment, aspirational aesthetics, magazine quality" },
-];
-
-function DetailImageGenerator({ projectId, engineType }: { projectId: string | null; productName?: string; engineType: string }) {
-  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
-  const [generating, setGenerating] = useState(false);
-  const [results, setResults] = useState<Array<{key:string; url:string; label:string}>>([]);
-
-  async function handleGenerateDetails() {
-    if (!projectId || selectedTypes.size === 0) return;
-    setGenerating(true);
-    const types = DETAIL_TYPES.filter((d) => selectedTypes.has(d.key));
-    const newResults: typeof results = [];
-
-    for (const t of types) {
-      try {
-        const res = await fetch("/api/generate", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageProjectId: projectId, productImageId: "", prompt: t.prompt, numOutputs: 1, engineType }),
-        });
-        const data = await res.json();
-        if (data.url) newResults.push({ key: t.key, url: data.url, label: t.label });
-      } catch { /* skip */ }
-    }
-    setResults((prev) => [...newResults, ...prev]);
-    setGenerating(false);
-    toast.success(`${newResults.length} detail images ready`);
-  }
-
-  return (
-    <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-5">
-      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Detail Images</h3>
-      <p className="text-xs text-zinc-500 mb-3">Select types to generate product listing detail images</p>
-      <div className="grid grid-cols-2 gap-1.5 mb-3">
-        {DETAIL_TYPES.map((dt) => (
-          <button key={dt.key} type="button"
-            onClick={() => setSelectedTypes((prev) => { const n = new Set(prev); n.has(dt.key) ? n.delete(dt.key) : n.add(dt.key); return n; })}
-            className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors duration-200 cursor-pointer border ${selectedTypes.has(dt.key) ? "bg-brand-100 border-brand-300 text-brand-800 dark:bg-brand-900/30 dark:border-brand-600 dark:text-brand-300" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400"}`}>
-            <span className="block text-[11px] text-zinc-400 mb-0.5">{dt.label}</span>
-            <span className="block text-[10px] text-zinc-300 leading-tight line-clamp-2">{dt.prompt.slice(0, 80)}...</span>
-          </button>
-        ))}
-      </div>
-      <button onClick={handleGenerateDetails} disabled={selectedTypes.size === 0 || generating}
-        className="w-full py-2.5 rounded-xl bg-brand-900 text-white text-sm font-semibold hover:bg-brand-800 disabled:opacity-40 transition-colors cursor-pointer">
-        {generating ? "Generating..." : `Generate ${selectedTypes.size || 0} Detail Images`}
-      </button>
-      {/* Results grid */}
-      {results.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-700/50">
-          {results.map((r,i) => (
-            <div key={i} className="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 group/img relative">
-              <img src={r.url} alt={r.label} className="w-full aspect-square object-cover" />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                <p className="text-[10px] text-white font-medium">{r.label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
