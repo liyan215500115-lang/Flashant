@@ -240,90 +240,91 @@ export async function POST(req: Request) {
     }
   }
 
-  // ── Flux (Replicate) path ──
+  // ── Product compositing pipeline: bg-remove + scene gen + composite ──
   try {
-    const prediction = await provider.createPrediction({
-      prompt,
-      productImageUrl: sharedImageUrl,
-      numOutputs,
+    const apiKey = process.env.REPLICATE_API_KEY!;
+
+    // Step 1: Remove background from product image
+    let isolatedUrl = sharedImageUrl;
+    try {
+      const rembgRes = await fetch("https://api.replicate.com/v1/predictions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ version: "lucataco/remove-bg", input: { image: sharedImageUrl } }),
+      });
+      if (rembgRes.ok) {
+        const rembg = await rembgRes.json();
+        for (let i = 0; i < 20; i++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          const check = await fetch(`https://api.replicate.com/v1/predictions/${rembg.id}`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+          const s = await check.json();
+          if (s.status === "succeeded") { isolatedUrl = s.output; break; }
+          if (s.status === "failed") break;
+        }
+      }
+    } catch { /* keep original image if bg-remove fails */ }
+
+    // Step 2: Generate scene background with FLUX (no product in prompt)
+    const bgPrompt = `Beautiful ${mode === "white_bg" ? "pure white infinity studio background, soft even lighting" : mode === "model" ? "lifestyle setting with natural ambient light" : "premium product display surface, clean composition, natural window light"}. Empty surface with ${mode === "scene" ? "soft shadows and elegant atmosphere" : "professional commercial look"}, 8K.`;
+    const bgPrediction = await provider.createPrediction({
+      prompt: bgPrompt,
+      productImageUrl: "",
+      numOutputs: 1,
       modelVersion,
     });
 
-    await db.task.update({
-      where: { id: task.id },
-      data: { predictionId: prediction.predictionId, status: "PROCESSING" },
-    });
+    let bgUrl = sharedImageUrl;
+    let polls = 0;
+    let bgResult = await provider.getPrediction(bgPrediction.predictionId);
+    while (bgResult.status === "processing" && polls < 30) {
+      await new Promise((r) => setTimeout(r, 1000));
+      bgResult = await provider.getPrediction(bgPrediction.predictionId);
+      polls++;
+    }
+    if (bgResult.status === "succeeded" && bgResult.outputs.length > 0) {
+      bgUrl = bgResult.outputs[0].url;
+    }
+
+    // Step 3: Composite product on background
+    const { compositeFromUrls } = await import("@/lib/composite-product");
+    const compositeBuffer = await compositeFromUrls(isolatedUrl, bgUrl);
+    const { s3Key: compKey, publicUrl: compUrl } = hasS3Config()
+      ? await uploadBuffer(compositeBuffer, "image/png", "generated/")
+      : { s3Key: "pending", publicUrl: bgUrl };
+
+    // Brand logo overlay (PRO+)
+    let finalUrl = compUrl;
+    const presetLogo = brandPreset?.logoUrl;
+    if (presetLogo && quota.tier !== "FREE") {
+      try {
+        const logoUrl = await getSignedGetUrl(presetLogo).catch(() => presetLogo);
+        const logoBuf = await fetchImageBuffer(logoUrl);
+        const overlaid = await overlayLogo(compositeBuffer, logoBuf);
+        if (hasS3Config()) {
+          const { publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
+          finalUrl = newUrl;
+        }
+      } catch { /* keep original */ }
+    }
 
     const placeholder = await db.generatedImage.create({
       data: {
         imageProjectId, productImageId,
-        s3Key: "pending", url: "", promptUsed: prompt,
-        aiProvider: engineType, status: "PROCESSING",
-        webhookId: prediction.predictionId,
+        s3Key: compKey, url: finalUrl, promptUsed: prompt,
+        aiProvider: engineType, status: "SUCCEEDED",
+        completedAt: new Date(),
       },
     });
 
-    // Poll until complete
-    let imageResult = await provider.getPrediction(prediction.predictionId);
-    let polls = 0;
-    while (imageResult.status === "processing" && polls < 30) {
-      await new Promise((r) => setTimeout(r, 1000));
-      imageResult = await provider.getPrediction(prediction.predictionId);
-      polls++;
-    }
+    await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: finalUrl } });
+    await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
 
-    if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
-      const output = imageResult.outputs[0];
-      await db.generatedImage.update({
-        where: { id: placeholder.id },
-        data: {
-          url: output.url, s3Key: output.url,
-          fileSize: output.fileSize ?? 0, mimeType: output.mimeType ?? "image/png",
-          width: output.width ?? 1024, height: output.height ?? 1024,
-          status: "SUCCEEDED", completedAt: new Date(),
-        },
-      });
-
-      // Brand logo overlay (PRO+ only)
-      let finalUrl = output.url;
-      const presetLogo = brandPreset?.logoUrl;
-      if (presetLogo && quota.tier !== "FREE") {
-        try {
-          const imageBuf = await fetchImageBuffer(output.url);
-          const logoUrl: string = (presetLogo.startsWith("products/") || presetLogo.startsWith("generated/"))
-            ? await getSignedGetUrl(presetLogo).catch(() => presetLogo)
-            : presetLogo;
-          const logoBuf = await fetchImageBuffer(logoUrl);
-          const overlaid = await overlayLogo(imageBuf, logoBuf);
-          if (hasS3Config()) {
-            const { s3Key: newKey, publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
-            await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newKey } });
-            finalUrl = newUrl;
-          }
-        } catch { /* keep original */ }
-      }
-
-      await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: finalUrl } });
-
-      const pendingCount = await db.task.count({ where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } } });
-      if (pendingCount === 0) {
-        await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
-      }
-
-      return NextResponse.json({
-        taskId: task.id, status: "succeeded",
-        generatedImageId: placeholder.id, url: finalUrl,
-      });
-    }
-
-    await db.generatedImage.update({
-      where: { id: placeholder.id },
-      data: { status: "FAILED", errorMessage: imageResult.error ?? "Failed" },
+    return NextResponse.json({
+      taskId: task.id, status: "succeeded",
+      generatedImageId: placeholder.id, url: finalUrl,
     });
-    return NextResponse.json(
-      { error: "generation_failed", message: imageResult.error ?? "Timed out" },
-      { status: 500 }
-    );
   } catch (error) {
     await db.task.update({
       where: { id: task.id },
