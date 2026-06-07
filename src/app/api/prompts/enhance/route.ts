@@ -69,7 +69,7 @@ Follow this format strictly. Output ONLY prompt-related content, no extra commen
           },
           {
             role: "user",
-            content: `Product: ${name}. ${points}. Scene: ${scene}.${targetLanguage === "zh" ? " Output in Chinese." : targetLanguage ? ` Output in ${targetLanguage} language.` : " Output in English."}`
+            content: `Product: ${name}. ${points}. Scene: ${scene}.${targetLanguage === "zh" ? " Output in Chinese." : targetLanguage ? " Output in " + targetLanguage + " language." : " Output in English."}`,
           },
         ],
         temperature: 0.7,
