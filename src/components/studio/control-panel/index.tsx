@@ -109,13 +109,17 @@ export function StudioControlPanel({
             }}
             className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors duration-200 cursor-pointer text-center">Listing</button>
           <select value={targetLanguage} onChange={(e) => onLanguageChange(e.target.value)}
-            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 cursor-pointer border-0">
+            className="w-16 px-1.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 cursor-pointer border-0">
             <option value="en">EN</option>
             <option value="zh">中文</option>
             <option value="es">ES</option>
             <option value="pt-BR">PT</option>
             <option value="ja">日本語</option>
             <option value="de">DE</option>
+            <option value="fr">FR</option>
+            <option value="ko">한국어</option>
+            <option value="ar">عربي</option>
+            <option value="it">IT</option>
           </select>
         </div>
       </div>

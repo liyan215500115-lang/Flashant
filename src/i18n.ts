@@ -6,7 +6,7 @@ import zh from "../messages/zh.json";
 import en from "../messages/en.json";
 
 export default getRequestConfig(async () => {
-  const SUPPORTED_LOCALES = ["en", "zh", "es", "pt-BR", "ja", "de"];
+  const SUPPORTED_LOCALES = ["en", "zh", "es", "pt-BR", "ja", "de", "fr", "ko", "ar", "it"];
   let locale = "en";
   try {
     const cookieStore = await cookies();
