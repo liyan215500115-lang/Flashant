@@ -18,23 +18,31 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
   const modelVersion =
     config?.modelVersion ??
     process.env.REPLICATE_MODEL_VERSION ??
-    "black-forest-labs/flux-schnell";
+    "black-forest-labs/flux-1.1-pro";
   const webhookUrl = config?.webhookUrl ?? process.env.REPLICATE_WEBHOOK_URL;
-  const timeoutMs = config?.timeoutMs ?? 30_000;
+  const timeoutMs = config?.timeoutMs ?? 60_000;
   const baseUrl = "https://api.replicate.com/v1";
 
   return {
     name: "replicate",
 
     async createPrediction(input: ImageGenerationInput) {
+      const inputPayload: Record<string, unknown> = {
+        prompt: input.prompt,
+        aspect_ratio: "1:1",
+        output_format: "png",
+        output_quality: 90,
+        safety_tolerance: 2,
+      };
+
+      // Pass product image as reference — FLUX 1.1 Pro uses it to guide composition
+      if (input.productImageUrl) {
+        inputPayload.image_prompt = input.productImageUrl;
+      }
+
       const body: Record<string, unknown> = {
         version: modelVersion,
-        input: {
-          prompt: input.prompt,
-          num_outputs: input.numOutputs ?? 2,
-          width: input.width ?? 1024,
-          height: input.height ?? 1024,
-        },
+        input: inputPayload,
       };
 
       if (webhookUrl) {
@@ -61,7 +69,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
 
       return {
         predictionId: data.id,
-        status: data.status === "starting" ? "processing" : data.status,
+        status: "processing",
         webhookId: data.id,
       };
     },
@@ -80,21 +88,29 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
       const data = await res.json();
 
       if (data.status === "succeeded") {
-        const outputs: ImageGenerationResult["outputs"] = (
-          data.output as string[]
-        ).map((url: string, i: number) => ({
-          id: `${predictionId}_${i}`,
-          url,
-          width: 1024,
-          height: 1024,
-          fileSize: 0,
-          mimeType: "image/png",
-        }));
+        // FLUX 1.1 Pro returns a single URL string; schnell returns string[]
+        const raw = data.output;
+        const urls: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+
+        const outputs: ImageGenerationResult["outputs"] = urls.map(
+          (url: string, i: number) => ({
+            id: `${predictionId}_${i}`,
+            url,
+            width: 1024,
+            height: 1024,
+            fileSize: 0,
+            mimeType: "image/png",
+          })
+        );
         return { outputs, status: "succeeded" };
       }
 
       if (data.status === "failed" || data.status === "canceled") {
-        return { outputs: [], status: "failed", error: data.error ?? "Unknown error" };
+        return {
+          outputs: [],
+          status: "failed",
+          error: data.error ?? "Unknown error",
+        };
       }
 
       return { outputs: [], status: "processing" };
