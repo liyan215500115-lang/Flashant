@@ -11,23 +11,19 @@ export async function POST(req: Request) {
   }
 
   const { imageUrl, productName, sellingPoints, sceneMode, targetLanguage } = await req.json();
-  if (!imageUrl || typeof imageUrl !== "string") {
-    return NextResponse.json({ error: "imageUrl is required" }, { status: 400 });
-  }
-
-  const sceneLabels: Record<string, string> = {
-    scene: "in a clean bright natural setting with premium studio lighting",
-    white_bg: "on a pure white infinity background with soft even studio lighting",
-    model: "worn by a lifestyle model in natural ambient light, candid editorial style",
-  };
-  const scene = sceneLabels[sceneMode] ?? sceneLabels.scene;
   const name = productName || "product";
-  const points = sellingPoints ? `, highlighting: ${sellingPoints}` : "";
+  const points = sellingPoints || "";
   const lang = targetLanguage || "en";
 
-  // Try DeepSeek (text-only), OpenAI (vision if configured), then template fallback
+  // Scene descriptions
+  const scenes: Record<string, string> = {
+    scene: "placed in a naturally lit premium setting with soft shadows and clean composition",
+    white_bg: "shot on a pure white infinity background with studio lighting, no shadows on backdrop",
+    model: "worn by a model in a lifestyle setting, natural ambient light, candid editorial style",
+  };
+  const sceneDesc = scenes[sceneMode] ?? scenes.scene;
+
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
-  const openaiKey = process.env.OPENAI_API_KEY;
 
   if (deepseekKey) {
     try {
@@ -39,51 +35,47 @@ export async function POST(req: Request) {
         fetch: isProd ? undefined : createSocksFetch(),
       });
 
-      const systemPrompt = `You are a product photography prompt expert for FLUX.2 Pro. Given a product name and selling points, output ONLY the final image generation prompt — no labels, no markdown, no formatting, no explanations. Just the plain prompt text, under 200 characters, in ${lang === "zh" ? "Chinese" : "English"}. Use commercial photography terminology.`;
+      // Ask DeepSeek to OUTPUT a visual description of the product.
+      // We'll wrap it into a photography prompt ourselves.
+      const langInstruction = lang === "zh"
+        ? "用中文回答"
+        : lang === "ja" ? "日本語で回答" : "Answer in English";
 
       const response = await client.chat.completions.create({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Product: ${name}.${points}. Scene: ${scene}.` },
+          {
+            role: "system",
+            content: `You describe products visually for AI image generation. Given a product name and selling points, output exactly ONE paragraph (80-150 words, ${langInstruction}) that vividly describes the product's: material, color, texture, shape, key details, and how it catches light. Write like a commercial photographer noting what the camera sees. No bullet points, no labels, no formatting — just the description paragraph.`,
+          },
+          {
+            role: "user",
+            content: `Product: ${name}.${points ? ` Key features: ${points}.` : ""}`,
+          },
         ],
-        temperature: 0.7,
-        max_tokens: 300,
+        temperature: 0.8,
+        max_tokens: 250,
       });
 
-      const enhanced = response.choices[0]?.message?.content?.trim();
-      if (enhanced) return NextResponse.json({ enhanced });
+      const description = response.choices[0]?.message?.content?.trim();
+      if (description && description.length > 10) {
+        // Wrap the visual description into a full FLUX prompt
+        const enhancedPrompt =
+          lang === "zh"
+            ? `专业商品摄影：${description}。${sceneDesc}。8K高清，锐利对焦，商业级画质`
+            : `Professional product photography of ${description}. ${sceneDesc}, 8K, sharp focus, commercial quality`;
+
+        return NextResponse.json({ enhanced: enhancedPrompt });
+      }
     } catch {
-      // Fall back to template
+      // Fall through to template
     }
   }
 
-  if (openaiKey && openaiKey !== "your-openai-api-key") {
-    try {
-      const OpenAI = (await import("openai")).default;
-      const client = new OpenAI({ apiKey: openaiKey, fetch: createSocksFetch() });
+  // Template fallback
+  const fallback = lang === "zh"
+    ? `专业商品摄影：${name}${points ? "，" + points : ""}。${sceneDesc}，8K高清，商业级画质`
+    : `Professional product photography of ${name}${points ? ", " + points : ""}. ${sceneDesc}, 8K, sharp focus, commercial quality.`;
 
-      const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
-        { type: "text", text: `Analyze this product image and generate a professional e-commerce product photography prompt. Product: ${name}. Scene: ${scene}${points}. Describe what you see and output a single detailed English prompt.` },
-        { type: "image_url", image_url: { url: imageUrl } },
-      ];
-
-      const response = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content } as any],
-        temperature: 0.7,
-        max_tokens: 200,
-      });
-
-      const enhanced = response.choices[0]?.message?.content?.trim();
-      if (enhanced) return NextResponse.json({ enhanced });
-    } catch {
-      // Fall back to template
-    }
-  }
-
-  // Template-based enhancement (no external model needed)
-  const enhanced = `Professional product photography of ${name}${points}. ${name.charAt(0).toUpperCase() + name.slice(1)} ${scene}, commercial quality, 8K resolution, sharp focus, premium advertising aesthetic, product-centered composition.`;
-
-  return NextResponse.json({ enhanced });
+  return NextResponse.json({ enhanced: fallback });
 }
