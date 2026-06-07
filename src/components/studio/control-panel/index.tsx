@@ -158,12 +158,6 @@ export function StudioControlPanel({
           <textarea value={prompt} onChange={(e) => onPromptChange(e.target.value)} rows={2}
             placeholder={t("generate.sellingPointsPlaceholder")}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all resize-y min-h-[60px]" />
-          {generatedPrompt && (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10 px-3 py-2.5">
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 mb-0.5 font-medium">AI Generated</p>
-              <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">{generatedPrompt}</p>
-            </div>
-          )}
         </div>
 
         <QuantitySlider value={quantity} onChange={onQuantityChange} />

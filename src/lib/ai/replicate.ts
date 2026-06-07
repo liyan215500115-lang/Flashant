@@ -35,10 +35,8 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
         safety_tolerance: 2,
       };
 
-      // FLUX.2 Pro: pass product image as reference via input_images array
-      if (input.productImageUrl) {
-        inputPayload.input_images = [input.productImageUrl];
-      }
+      // FLUX.2 Pro: text-only generation (avoids copying the input image)
+      // Product image is described in the prompt, not passed as reference
 
       const version = input.modelVersion || modelVersion;
       const body: Record<string, unknown> = {
