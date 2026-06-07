@@ -24,47 +24,63 @@ export async function POST(req: Request) {
   const name = productName || "product";
   const points = sellingPoints ? `, highlighting: ${sellingPoints}` : "";
 
-  // Try DeepSeek first, then OpenAI, then template fallback
+  // Try DeepSeek (text-only), OpenAI (vision if configured), then template fallback
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
-  const llmApiKey = deepseekKey || (openaiKey && openaiKey !== "your-openai-api-key" ? openaiKey : null);
-  const llmBaseURL = deepseekKey ? "https://api.deepseek.com" : "https://api.openai.com/v1";
-  const llmModel = deepseekKey ? "deepseek-chat" : "gpt-4o-mini";
 
-  if (llmApiKey) {
+  if (deepseekKey) {
     try {
       const OpenAI = (await import("openai")).default;
       const client = new OpenAI({
-        apiKey: llmApiKey,
-        baseURL: llmBaseURL,
+        apiKey: deepseekKey,
+        baseURL: "https://api.deepseek.com",
         fetch: createSocksFetch(),
       });
 
-      const content: Array<{ type: "text" | "image_url"; text?: string; image_url?: { url: string } }> = [
-        { type: "text", text: `Analyze this product image and generate a professional e-commerce product photography prompt.
+      const response = await client.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: "You are a professional e-commerce product photography prompt engineer. Generate vivid, detailed English prompts for AI image generation based on the product info provided. Focus on lighting, materials, composition, and atmosphere.",
+          },
+          {
+            role: "user",
+            content: `Generate a professional product photography prompt for: ${name}${points}. Scene setting: ${scene}. Output only the final English prompt — no explanations.`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      });
 
-Product name: ${name}
-Scene: ${scene}${points}
+      const enhanced = response.choices[0]?.message?.content?.trim();
+      if (enhanced) return NextResponse.json({ enhanced });
+    } catch {
+      // Fall back to template
+    }
+  }
 
-Describe what you see: the product category, key materials, colors, textures, and unique features. Then output a single detailed English prompt for AI image generation that would make this product look premium and commercial-grade. Focus on lighting, composition, and atmosphere.
+  if (openaiKey && openaiKey !== "your-openai-api-key") {
+    try {
+      const OpenAI = (await import("openai")).default;
+      const client = new OpenAI({ apiKey: openaiKey, fetch: createSocksFetch() });
 
-Output ONLY the final English prompt — no explanations, no Chinese.` },
+      const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+        { type: "text", text: `Analyze this product image and generate a professional e-commerce product photography prompt. Product: ${name}. Scene: ${scene}${points}. Describe what you see and output a single detailed English prompt.` },
         { type: "image_url", image_url: { url: imageUrl } },
       ];
 
       const response = await client.chat.completions.create({
-        model: llmModel,
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content } as any],
         temperature: 0.7,
         max_tokens: 200,
       });
 
       const enhanced = response.choices[0]?.message?.content?.trim();
-      if (enhanced) {
-        return NextResponse.json({ enhanced });
-      }
+      if (enhanced) return NextResponse.json({ enhanced });
     } catch {
-      // Fall back to template-based enhancement
+      // Fall back to template
     }
   }
 
