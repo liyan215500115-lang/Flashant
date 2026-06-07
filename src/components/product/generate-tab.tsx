@@ -65,6 +65,8 @@ export function GenerateTab({
   const [prompt, setPrompt] = useState("");
   const [quantity, setQuantity] = useState(2);
   const [engineType, setEngineType] = useState("flux");
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState("");
 
   // Build full prompt: product name + scene description
   const buildPrompt = useCallback((product: string, sceneMode: string) => {
@@ -95,6 +97,37 @@ export function GenerateTab({
       setPrompt(buildPrompt(productName, mode));
     }
   }, []);
+
+  // Magic enhance: call vision API to analyze product image + generate prompt
+  const handleEnhance = useCallback(async () => {
+    if (!selectedImage) return;
+    setIsEnhancing(true);
+    try {
+      const res = await fetch("/api/prompts/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageUrl: selectedImage.originalUrl,
+          productName,
+          sellingPoints: prompt,
+          sceneMode: mode,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const enhanced = data.enhanced as string;
+        setGeneratedPrompt(enhanced);
+        setPrompt(enhanced);
+      }
+    } catch {
+      // Fallback to local template
+      const fallback = `Professional product photography of ${productName || "product"}. ${productName || "Product"} in a clean bright setting with premium lighting, commercial quality, 8K, sharp focus.`;
+      setGeneratedPrompt(fallback);
+      setPrompt(fallback);
+    } finally {
+      setIsEnhancing(false);
+    }
+  }, [selectedImage, productName, prompt, mode]);
 
   const succeededImages = generatedImages.filter(
     (img) => img.status === "SUCCEEDED"
@@ -132,6 +165,9 @@ export function GenerateTab({
         onQuantityChange={setQuantity}
         engineType={engineType}
         onEngineTypeChange={setEngineType}
+        generatedPrompt={generatedPrompt}
+        onEnhancePrompt={handleEnhance}
+        isEnhancing={isEnhancing}
         onGenerate={handleGenerate}
         isGenerating={isGenerating}
         disabled={!selectedImage}

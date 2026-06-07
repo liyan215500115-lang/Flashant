@@ -10,42 +10,56 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { prompt } = await req.json();
-  if (!prompt || typeof prompt !== "string") {
-    return NextResponse.json({ error: "prompt is required" }, { status: 400 });
+  const { imageUrl, productName, sellingPoints, sceneMode } = await req.json();
+  if (!imageUrl || typeof imageUrl !== "string") {
+    return NextResponse.json({ error: "imageUrl is required" }, { status: 400 });
   }
+
+  const sceneLabels: Record<string, string> = {
+    scene: "in a clean bright natural setting with premium studio lighting",
+    white_bg: "on a pure white infinity background with soft even studio lighting",
+    model: "worn by a lifestyle model in natural ambient light, candid editorial style",
+  };
+  const scene = sceneLabels[sceneMode] ?? sceneLabels.scene;
+  const name = productName || "product";
+  const points = sellingPoints ? `, highlighting: ${sellingPoints}` : "";
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "OPENAI_API_KEY not configured" },
-      { status: 500 }
-    );
+  if (apiKey && apiKey !== "your-openai-api-key") {
+    try {
+      const OpenAI = (await import("openai")).default;
+      const client = new OpenAI({ apiKey, fetch: createSocksFetch() });
+
+      const content: Array<{ type: "text" | "image_url"; text?: string; image_url?: { url: string } }> = [
+        { type: "text", text: `Analyze this product image and generate a professional e-commerce product photography prompt.
+
+Product name: ${name}
+Scene: ${scene}${points}
+
+Describe what you see: the product category, key materials, colors, textures, and unique features. Then output a single detailed English prompt for AI image generation that would make this product look premium and commercial-grade. Focus on lighting, composition, and atmosphere.
+
+Output ONLY the final English prompt — no explanations, no Chinese.` },
+        { type: "image_url", image_url: { url: imageUrl } },
+      ];
+
+      const response = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content } as any],
+        temperature: 0.7,
+        max_tokens: 200,
+      });
+
+      const enhanced = response.choices[0]?.message?.content?.trim();
+      if (enhanced) {
+        return NextResponse.json({ enhanced });
+      }
+    } catch {
+      // Fall back to template-based enhancement if OpenAI fails
+    }
   }
 
-  let enhanced = prompt;
-  try {
-    const OpenAI = (await import("openai")).default;
-    const client = new OpenAI({ apiKey, fetch: createSocksFetch() });
-
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional product photography prompt engineer. Translate the user's Chinese prompt into a detailed, vivid English prompt suitable for AI image generation. Focus on lighting, composition, materials, colors, and atmosphere. Output ONLY the English prompt, no explanation.",
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 200,
-    });
-
-    enhanced = response.choices[0]?.message?.content?.trim() ?? prompt;
-  } catch {
-    // If OpenAI fails, return the original prompt
-  }
+  // Template-based enhancement (no external model needed)
+  const enhanced = `Professional product photography of ${name}${points}. ${name.charAt(0).toUpperCase() + name.slice(1)} ${scene}, commercial quality, 8K resolution, sharp focus, premium advertising aesthetic, product-centered composition.`;
 
   return NextResponse.json({ enhanced });
 }
