@@ -67,6 +67,28 @@ export function GenerateTab({
   const [engineType, setEngineType] = useState("flux");
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [targetPlatform, setTargetPlatform] = useState("");
+  const [recipeName, setRecipeName] = useState("");
+
+  // ── Recipe: save/load generation presets ──
+  const saveRecipe = useCallback(() => {
+    const recipe = { mode, productName, prompt, quantity, engineType, targetPlatform };
+    const key = `flashant-recipe-${recipeName || Date.now()}`;
+    localStorage.setItem(key, JSON.stringify(recipe));
+    alert("Recipe saved: " + key);
+  }, [mode, productName, prompt, quantity, engineType, targetPlatform, recipeName]);
+
+  const loadRecipe = useCallback((key: string) => {
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    const r = JSON.parse(raw);
+    setMode(r.mode || "scene");
+    setProductName(r.productName || "");
+    setPrompt(r.prompt || "");
+    setQuantity(r.quantity || 4);
+    setEngineType(r.engineType || "flux");
+    setTargetPlatform(r.targetPlatform || "");
+  }, []);
 
   // Build full prompt: product name + scene description
   const buildPrompt = useCallback((product: string, sceneMode: string) => {
