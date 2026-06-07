@@ -86,6 +86,7 @@ export function ControlPanel({
           className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-zinc-300 dark:focus:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-100 dark:focus:ring-zinc-700 transition-all"
         >
           <option value="flux">{t("generate.engineFlux")}</option>
+          <option value="flux2">{t("generate.engineFlux2")}</option>
           <option value="sdxl">{t("generate.engineSdxl")}</option>
           <option value="playground">{t("generate.enginePlayground")}</option>
         </select>

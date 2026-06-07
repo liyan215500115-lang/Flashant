@@ -31,10 +31,11 @@ export async function POST(req: Request) {
   if (deepseekKey) {
     try {
       const OpenAI = (await import("openai")).default;
+      const isProd = process.env.NODE_ENV === "production";
       const client = new OpenAI({
         apiKey: deepseekKey,
         baseURL: "https://api.deepseek.com",
-        fetch: createSocksFetch(),
+        fetch: isProd ? undefined : createSocksFetch(), // SOCKS only for local dev
       });
 
       const response = await client.chat.completions.create({
