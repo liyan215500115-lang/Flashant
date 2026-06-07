@@ -264,12 +264,12 @@ export async function POST(req: Request) {
     });
 
     // Poll until complete
-    let attempts = 0;
     let imageResult = await provider.getPrediction(prediction.predictionId);
-    while (imageResult.status === "processing" && attempts < 30) {
+    let polls = 0;
+    while (imageResult.status === "processing" && polls < 30) {
       await new Promise((r) => setTimeout(r, 1000));
       imageResult = await provider.getPrediction(prediction.predictionId);
-      attempts++;
+      polls++;
     }
 
     if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
