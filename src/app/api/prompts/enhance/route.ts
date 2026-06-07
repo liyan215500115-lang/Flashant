@@ -39,17 +39,7 @@ export async function POST(req: Request) {
         fetch: isProd ? undefined : createSocksFetch(),
       });
 
-      const systemPrompt = `You are a senior e-commerce visual marketing expert, specialized in writing high-quality product image prompts for AI image generation models (FLUX.2 Pro, Midjourney, SDXL).
-
-## Output ONLY in ${lang === "zh" ? "Chinese" : lang === "es" ? "Spanish" : lang === "ja" ? "Japanese" : "English"}:
-1. A detailed image generation prompt including: product name, material, color, details, background, lighting, composition, quality (8K), photography style
-2. A negative prompt: avoid low quality, deformed, blurry, watermark, text
-3. A brief explanation of why this prompt works
-
-## Rules:
-- Keep the prompt under 200 characters
-- Use professional product photography terminology
-- Optimize for ${lang === "zh" ? "Chinese e-commerce platforms" : "global e-commerce platforms"}`;
+      const systemPrompt = `You are a product photography prompt expert for FLUX.2 Pro. Given a product name and selling points, output ONLY the final image generation prompt — no labels, no markdown, no formatting, no explanations. Just the plain prompt text, under 200 characters, in ${lang === "zh" ? "Chinese" : "English"}. Use commercial photography terminology.`;
 
       const response = await client.chat.completions.create({
         model: "deepseek-chat",
