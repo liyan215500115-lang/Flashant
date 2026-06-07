@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { imageUrl, productName, sellingPoints, sceneMode } = await req.json();
+  const { imageUrl, productName, sellingPoints, sceneMode, targetLanguage } = await req.json();
   if (!imageUrl || typeof imageUrl !== "string") {
     return NextResponse.json({ error: "imageUrl is required" }, { status: 400 });
   }
@@ -69,7 +69,7 @@ Follow this format strictly. Output ONLY prompt-related content, no extra commen
           },
           {
             role: "user",
-            content: `Generate a professional product photography prompt for: ${name}${points}. Scene setting: ${scene}. Output only the final English prompt — no explanations.`,
+            content: `Product: ${name}. ${points}. Scene: ${scene}.${targetLanguage === "zh" ? " Output in Chinese." : targetLanguage ? ` Output in ${targetLanguage} language.` : " Output in English."}`
           },
         ],
         temperature: 0.7,
