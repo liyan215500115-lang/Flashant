@@ -63,7 +63,7 @@ export function GenerateTab({
   const [mode, setMode] = useState("scene");
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [quantity, setQuantity] = useState(2);
+  const [quantity, setQuantity] = useState(4);
   const [engineType, setEngineType] = useState("flux");
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState("");
