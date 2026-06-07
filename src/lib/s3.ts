@@ -41,19 +41,23 @@ async function getClient(): Promise<S3Client> {
 }
 
 /** Generate a pre-signed GET URL for private R2 objects — 7 day expiry */
+// Cache presigned URLs (they expire in 7 days, so 1h cache is safe)
+const urlCache = new Map<string, { url: string; until: number }>();
+
 export async function getSignedGetUrl(s3Key: string, expiresIn = 604800): Promise<string> {
+  const cached = urlCache.get(s3Key);
+  if (cached && cached.until > Date.now()) return cached.url;
+
   const bucket = process.env.S3_BUCKET ?? "uploads";
   const [{ GetObjectCommand }, { getSignedUrl }] = await Promise.all([
     import("@aws-sdk/client-s3"),
     import("@aws-sdk/s3-request-presigner"),
   ]);
 
-  const command = new GetObjectCommand({
-    Bucket: bucket,
-    Key: s3Key,
-  });
-
-  return getSignedUrl(await getClient(), command, { expiresIn });
+  const command = new GetObjectCommand({ Bucket: bucket, Key: s3Key });
+  const url = await getSignedUrl(await getClient(), command, { expiresIn });
+  urlCache.set(s3Key, { url, until: Date.now() + 3600_000 }); // 1h TTL
+  return url;
 }
 
 export async function createUploadUrl(
