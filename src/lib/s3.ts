@@ -40,6 +40,22 @@ async function getClient(): Promise<S3Client> {
   return client;
 }
 
+/** Generate a pre-signed GET URL for private R2 objects — 7 day expiry */
+export async function getSignedGetUrl(s3Key: string, expiresIn = 604800): Promise<string> {
+  const bucket = process.env.S3_BUCKET ?? "uploads";
+  const [{ GetObjectCommand }, { getSignedUrl }] = await Promise.all([
+    import("@aws-sdk/client-s3"),
+    import("@aws-sdk/s3-request-presigner"),
+  ]);
+
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: s3Key,
+  });
+
+  return getSignedUrl(await getClient(), command, { expiresIn });
+}
+
 export async function createUploadUrl(
   fileName: string,
   mimeType: string
