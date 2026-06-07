@@ -29,14 +29,11 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
     async createPrediction(input: ImageGenerationInput) {
       const inputPayload: Record<string, unknown> = {
         prompt: input.prompt,
-        aspect_ratio: "match_input_image",
+        aspect_ratio: "1:1",
         output_format: "png",
         output_quality: 90,
         safety_tolerance: 2,
       };
-
-      // FLUX.2 Pro: text-only generation (avoids copying the input image)
-      // Product image is described in the prompt, not passed as reference
 
       const version = input.modelVersion || modelVersion;
       const body: Record<string, unknown> = {
