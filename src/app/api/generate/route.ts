@@ -5,6 +5,7 @@ import { getProvider } from "@/lib/ai/registry";
 import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { serverT } from "@/lib/server-t";
+import { getSignedGetUrl } from "@/lib/s3";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -78,6 +79,12 @@ export async function POST(req: Request) {
       { status: 404 }
     );
   }
+
+  // Generate a public presigned URL so Replicate/DeepSeek can access the image
+  const isR2Image = productImage.s3Key && (productImage.s3Key.startsWith("products/") || productImage.s3Key.startsWith("generated/"));
+  const sharedImageUrl = isR2Image
+    ? await getSignedGetUrl(productImage.s3Key, 3600).catch(() => productImage.originalUrl)
+    : productImage.originalUrl;
 
   // Prompt resolution
   let prompt = "Professional product photography, studio lighting, high quality";
@@ -154,7 +161,7 @@ export async function POST(req: Request) {
     try {
       const result = await provider.createPrediction({
         prompt,
-        productImageUrl: productImage.originalUrl,
+        productImageUrl: sharedImageUrl,
         numOutputs,
       });
 
@@ -235,7 +242,7 @@ export async function POST(req: Request) {
   try {
     const prediction = await provider.createPrediction({
       prompt,
-      productImageUrl: productImage.originalUrl,
+      productImageUrl: sharedImageUrl,
       numOutputs,
       modelVersion,
     });
