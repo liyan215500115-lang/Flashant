@@ -70,9 +70,9 @@ export function StudioControlPanel({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* Upload */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4">
+      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-3.5">
         {projectId ? (
           <ImageUploadZone projectId={projectId} currentImage={selectedImage} onImageChange={onImageChange} />
         ) : (
@@ -83,7 +83,7 @@ export function StudioControlPanel({
       </div>
 
       {/* Publish + Brand + Tools */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4 flex flex-col gap-3">
+      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-3.5 flex flex-col gap-3">
         <PublishDestination value={targetPlatform} onChange={onPlatformChange} language={targetLanguage} onLanguageChange={onLanguageChange} />
         <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
         {/* Quick tools: bg remove + listing + language */}
@@ -97,7 +97,7 @@ export function StudioControlPanel({
                 {loading:"Removing background...",success:"Done!",error:"Failed"}
               );
             }}
-            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-center">✂️ Remove BG</button>
+            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors duration-200 cursor-pointer text-center">Remove BG</button>
           <button type="button"
             onClick={async () => {
               const res = await fetch("/api/listing/generate", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName, sellingPoints:prompt, platform:targetPlatform})});
@@ -107,21 +107,21 @@ export function StudioControlPanel({
                 toast.success("Listing generated");
               } else { toast.error("Failed to generate listing"); }
             }}
-            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-center">📝 Listing</button>
+            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors duration-200 cursor-pointer text-center">Listing</button>
           <select value={targetLanguage} onChange={(e) => onLanguageChange(e.target.value)}
             className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 cursor-pointer border-0">
-            <option value="en">🇺🇸 EN</option>
-            <option value="zh">🇨🇳 中文</option>
-            <option value="es">🇪🇸 ES</option>
-            <option value="pt-BR">🇧🇷 PT</option>
-            <option value="ja">🇯🇵 日本語</option>
-            <option value="de">🇩🇪 DE</option>
+            <option value="en">EN</option>
+            <option value="zh">中文</option>
+            <option value="es">ES</option>
+            <option value="pt-BR">PT</option>
+            <option value="ja">日本語</option>
+            <option value="de">DE</option>
           </select>
         </div>
       </div>
 
       {/* Generation config */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4 flex flex-col gap-4">
+      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-3.5 flex flex-col gap-4">
         {/* Engine */}
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("generate.engineLabel")}</span>

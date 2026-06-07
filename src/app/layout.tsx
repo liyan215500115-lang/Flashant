@@ -14,6 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Flashant — Stunning Visuals. Generated in a Flash.",
       description:
         "Flashant — AI product image generation pipeline. Upload product photos, generate white-background, scene, and model images. Publish to Shopify, Amazon, TikTok Shop.",
+      icons: { icon: "/logo.svg" },
     };
   }
   return {

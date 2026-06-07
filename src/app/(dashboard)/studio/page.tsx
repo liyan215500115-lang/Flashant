@@ -207,18 +207,16 @@ export default function StudioPage() {
   }
 
   return (
-    <div className="px-6 py-8 flex flex-col gap-6 h-full">
+    <div className="max-w-[1400px] mx-auto px-8 py-6 flex flex-col gap-5 h-full">
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-bold text-brand-900 dark:text-brand-300 tracking-tight">
-          {t("studio.title")}
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{t("studio.desc")}</p>
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{t("studio.title")}</h1>
+        <p className="text-sm text-zinc-500 mt-0.5">{t("studio.desc")}</p>
       </div>
 
-      <div className="flex gap-6 flex-1 min-h-0">
+      <div className="flex gap-8 flex-1 min-h-0">
         {/* ── Left panel ── */}
-        <div className="w-[360px] flex-shrink-0">
+        <div className="w-[340px] flex-shrink-0">
           {projectCreating ? (
             <div className="flex items-center justify-center gap-2.5 h-64 text-sm text-zinc-400 dark:text-zinc-500 bg-white dark:bg-zinc-800/50 rounded-xl border border-zinc-200/70 dark:border-zinc-700/70">
               <Loader2 size={16} className="animate-spin text-brand-500" />
