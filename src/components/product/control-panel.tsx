@@ -106,6 +106,10 @@ export function ControlPanel({
             <option value="AMAZON">Amazon</option>
             <option value="TIKTOK_SHOP">TikTok Shop</option>
             <option value="ETSY">Etsy</option>
+            <option value="EBAY">eBay</option>
+            <option value="WALMART">Walmart</option>
+            <option value="MERCADO_LIBRE">Mercado Libre</option>
+            <option value="LAZADA">Lazada</option>
           </select>
         </div>
         <div className="flex flex-col gap-1.5 justify-end">

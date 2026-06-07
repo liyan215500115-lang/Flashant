@@ -300,10 +300,10 @@ export async function POST(req: Request) {
         data: { status: "SUCCEEDED", resultUrl: firstOutput.url },
       });
 
-      // ── Brand logo overlay ──
+      // ── Brand logo overlay (PRO+ only) ──
       let finalUrl = firstOutput.url;
       const presetLogo = brandPreset?.logoUrl;
-      if (presetLogo) {
+      if (presetLogo && quota.tier !== "FREE") {
         try {
           const imageBuf = await fetchImageBuffer(firstOutput.url);
           const logoUrl: string = (presetLogo.startsWith("products/") || presetLogo.startsWith("generated/"))
