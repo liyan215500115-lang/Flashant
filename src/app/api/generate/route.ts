@@ -240,88 +240,98 @@ export async function POST(req: Request) {
     }
   }
 
-  // ── Flux (Replicate) path: generate numOutputs images ──
-  // Prevent FLUX from copying input: stronger prompt, NO image reference
-  const fluxPrompt = `${prompt}. NEW scene, NEW background, NEW lighting, NEW composition. Do not copy the reference photo. Professional e-commerce product photography.`;
-  const count = Math.min(numOutputs || 4, 4);
+  // ── Flux (Replicate) path ──
+  try {
+    const prediction = await provider.createPrediction({
+      prompt,
+      productImageUrl: sharedImageUrl,
+      numOutputs,
+      modelVersion,
+    });
 
-  const results: Array<{ id: string; url: string }> = [];
-  let firstUrl = "";
+    await db.task.update({
+      where: { id: task.id },
+      data: { predictionId: prediction.predictionId, status: "PROCESSING" },
+    });
 
-  for (let i = 0; i < count; i++) {
-    try {
-      const prediction = await provider.createPrediction({
-        prompt: fluxPrompt,
-        productImageUrl: "", // Don't send the image — avoids copying
-        numOutputs: 1,
-        modelVersion,
-      });
+    const placeholder = await db.generatedImage.create({
+      data: {
+        imageProjectId, productImageId,
+        s3Key: "pending", url: "", promptUsed: prompt,
+        aiProvider: engineType, status: "PROCESSING",
+        webhookId: prediction.predictionId,
+      },
+    });
 
-      const placeholder = await db.generatedImage.create({
+    // Poll until complete
+    let attempts = 0;
+    let imageResult = await provider.getPrediction(prediction.predictionId);
+    while (imageResult.status === "processing" && attempts < 30) {
+      await new Promise((r) => setTimeout(r, 1000));
+      imageResult = await provider.getPrediction(prediction.predictionId);
+      attempts++;
+    }
+
+    if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
+      const output = imageResult.outputs[0];
+      await db.generatedImage.update({
+        where: { id: placeholder.id },
         data: {
-          imageProjectId, productImageId,
-          s3Key: "pending", url: "", promptUsed: prompt,
-          aiProvider: engineType, status: "PROCESSING",
-          webhookId: prediction.predictionId,
+          url: output.url, s3Key: output.url,
+          fileSize: output.fileSize ?? 0, mimeType: output.mimeType ?? "image/png",
+          width: output.width ?? 1024, height: output.height ?? 1024,
+          status: "SUCCEEDED", completedAt: new Date(),
         },
       });
 
-      // Poll until complete
-      let attempts = 0;
-      let imageResult = await provider.getPrediction(prediction.predictionId);
-      while (imageResult.status === "processing" && attempts < 30) {
-        await new Promise((r) => setTimeout(r, 1000));
-        imageResult = await provider.getPrediction(prediction.predictionId);
-        attempts++;
+      // Brand logo overlay (PRO+ only)
+      let finalUrl = output.url;
+      const presetLogo = brandPreset?.logoUrl;
+      if (presetLogo && quota.tier !== "FREE") {
+        try {
+          const imageBuf = await fetchImageBuffer(output.url);
+          const logoUrl: string = (presetLogo.startsWith("products/") || presetLogo.startsWith("generated/"))
+            ? await getSignedGetUrl(presetLogo).catch(() => presetLogo)
+            : presetLogo;
+          const logoBuf = await fetchImageBuffer(logoUrl);
+          const overlaid = await overlayLogo(imageBuf, logoBuf);
+          if (hasS3Config()) {
+            const { s3Key: newKey, publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
+            await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newKey } });
+            finalUrl = newUrl;
+          }
+        } catch { /* keep original */ }
       }
 
-      if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
-        const output = imageResult.outputs[0];
-        await db.generatedImage.update({
-          where: { id: placeholder.id },
-          data: {
-            url: output.url, s3Key: output.url,
-            fileSize: output.fileSize ?? 0, mimeType: output.mimeType ?? "image/png",
-            width: output.width ?? 1024, height: output.height ?? 1024,
-            status: "SUCCEEDED", completedAt: new Date(),
-          },
-        });
-        results.push({ id: placeholder.id, url: output.url });
-        if (!firstUrl) firstUrl = output.url;
-      } else {
-        await db.generatedImage.update({
-          where: { id: placeholder.id },
-          data: { status: "FAILED", errorMessage: imageResult.error ?? "Failed" },
-        });
+      await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: finalUrl } });
+
+      const pendingCount = await db.task.count({ where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } } });
+      if (pendingCount === 0) {
+        await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
       }
-    } catch {
-      // Continue with next attempt
+
+      return NextResponse.json({
+        taskId: task.id, status: "succeeded",
+        generatedImageId: placeholder.id, url: finalUrl,
+      });
     }
-  }
 
-  if (results.length > 0) {
+    await db.generatedImage.update({
+      where: { id: placeholder.id },
+      data: { status: "FAILED", errorMessage: imageResult.error ?? "Failed" },
+    });
+    return NextResponse.json(
+      { error: "generation_failed", message: imageResult.error ?? "Timed out" },
+      { status: 500 }
+    );
+  } catch (error) {
     await db.task.update({
       where: { id: task.id },
-      data: { status: "SUCCEEDED", resultUrl: firstUrl },
+      data: { status: "FAILED", errorMessage: error instanceof Error ? error.message : "Unknown error" },
     });
-    await db.imageProject.update({
-      where: { id: imageProjectId },
-      data: { status: "GENERATED" },
-    });
-    return NextResponse.json({
-      taskId: task.id, status: "succeeded",
-      results,
-      url: firstUrl,
-      message: `${results.length} images generated`,
-    });
+    return NextResponse.json(
+      { error: "generation_failed", message: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
+    );
   }
-
-  await db.task.update({
-    where: { id: task.id },
-    data: { status: "FAILED", errorMessage: "All generation attempts failed" },
-  });
-  return NextResponse.json(
-    { error: "generation_failed", message: "All attempts failed" },
-    { status: 500 }
-  );
 }
