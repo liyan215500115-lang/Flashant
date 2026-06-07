@@ -56,15 +56,15 @@ export default function NewProductPage() {
       setError(t("error.unsupportedFile"));
       return;
     }
-    if (f.size > 10 * 1024 * 1024) {
-      setError(t("error.fileTooLarge"));
+    if (f.size > 20 * 1024 * 1024) {
+      setError(t("error.fileTooLarge").replace("{size}", `${(f.size / 1024 / 1024).toFixed(1)}MB`));
       return;
     }
     setError("");
     setFile(f);
-    const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result as string);
-    reader.readAsDataURL(f);
+    // Use Object URL for instant preview — faster and handles large files
+    const previewUrl = URL.createObjectURL(f);
+    setPreview(previewUrl);
     // Auto-fill title from filename
     if (!title) {
       const name = f.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
