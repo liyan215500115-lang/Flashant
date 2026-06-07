@@ -23,6 +23,7 @@ export async function POST(req: Request) {
   const scene = sceneLabels[sceneMode] ?? sceneLabels.scene;
   const name = productName || "product";
   const points = sellingPoints ? `, highlighting: ${sellingPoints}` : "";
+  const lang = targetLanguage || "en";
 
   // Try DeepSeek (text-only), OpenAI (vision if configured), then template fallback
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
@@ -35,45 +36,29 @@ export async function POST(req: Request) {
       const client = new OpenAI({
         apiKey: deepseekKey,
         baseURL: "https://api.deepseek.com",
-        fetch: isProd ? undefined : createSocksFetch(), // SOCKS only for local dev
+        fetch: isProd ? undefined : createSocksFetch(),
       });
+
+      const systemPrompt = `You are a senior e-commerce visual marketing expert, specialized in writing high-quality product image prompts for AI image generation models (FLUX.2 Pro, Midjourney, SDXL).
+
+## Output ONLY in ${lang === "zh" ? "Chinese" : lang === "es" ? "Spanish" : lang === "ja" ? "Japanese" : "English"}:
+1. A detailed image generation prompt including: product name, material, color, details, background, lighting, composition, quality (8K), photography style
+2. A negative prompt: avoid low quality, deformed, blurry, watermark, text
+3. A brief explanation of why this prompt works
+
+## Rules:
+- Keep the prompt under 200 characters
+- Use professional product photography terminology
+- Optimize for ${lang === "zh" ? "Chinese e-commerce platforms" : "global e-commerce platforms"}`;
 
       const response = await client.chat.completions.create({
         model: "deepseek-chat",
         messages: [
-          {
-            role: "system",
-            content: "You are a senior e-commerce visual marketing expert, specialized in writing high-quality product image prompts for AI image generation models (FLUX.2 Pro, Midjourney, SDXL). Your task is to output a professional, detailed English prompt ready for image generation, along with a Chinese explanation.
-
-### Output Format:
-1. **Prompt**: An English prompt for FLUX.2 Pro / SDXL, including:
-   - Product: name, material, color, key details
-   - Background: specific material, color, atmosphere
-   - Lighting: natural/studio/side/back light
-   - Quality: 8K, high resolution, sharp focus
-   - Style: commercial photography, product photography, clean background
-   - Optional: camera angle (top-down/eye-level/macro)
-
-2. **Negative Prompt**: Avoid low quality, deformation, watermark, etc.
-
-3. **中文说明**: Briefly explain why this prompt works.
-
-### Example:
-Input: ceramic mug, matte white, wooden table, warm feel
-Output:
-**Prompt**: Professional product photography of a handmade ceramic mug, matte white glaze, placed on a rustic wooden table with blurred green plant background, natural window light from left, soft shadows, warm cozy atmosphere, 8K, sharp focus, commercial lighting, clean background.
-**Negative**: deformed, ugly, blurry, low quality, watermark, text, cropped, harsh shadows, overexposed.
-**说明**: 强调材质哑光感和侧光营造温馨氛围，自然虚化背景避免杂乱。
-
-Follow this format strictly. Output ONLY prompt-related content, no extra commentary.",
-          },
-          {
-            role: "user",
-            content: `Product: ${name}. ${points}. Scene: ${scene}.${targetLanguage === "zh" ? " Output in Chinese." : targetLanguage ? " Output in " + targetLanguage + " language." : " Output in English."}`,
-          },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Product: ${name}.${points}. Scene: ${scene}.` },
         ],
         temperature: 0.7,
-        max_tokens: 200,
+        max_tokens: 300,
       });
 
       const enhanced = response.choices[0]?.message?.content?.trim();
