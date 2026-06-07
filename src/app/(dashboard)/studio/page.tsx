@@ -279,7 +279,7 @@ export default function StudioPage() {
           />
 
           {/* Detail image generation — shown after main images exist */}
-          {generationHistory.length >= 4 && (
+          {generationHistory.length >= 1 && (
             <DetailImageGenerator projectId={projectId} productName={productName} engineType={engineType} />
           )}
         </div>

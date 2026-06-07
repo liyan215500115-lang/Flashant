@@ -58,16 +58,32 @@ export function BrandPresetForm({
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handleLogoUpload(file: File) {
-    if (!file.type.startsWith("image/")) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload a PNG, JPG, or SVG image");
+      return;
+    }
     setUploading(true);
     setError("");
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload-url", { method: "POST", body: formData });
-      if (!res.ok) throw new Error(t("error.uploadFailed"));
-      const data = await res.json();
-      setLogoUrl(data.publicUrl);
+      // 1. Get presigned upload URL (S3 flow, works in production)
+      const urlRes = await fetch(`/api/upload-url?fileName=${encodeURIComponent(file.name)}&mimeType=${encodeURIComponent(file.type)}`);
+      if (!urlRes.ok) throw new Error(t("error.uploadFailed"));
+      const config = await urlRes.json();
+
+      let publicUrl: string;
+      if (config.mode === "local") {
+        const formData = new FormData();
+        formData.append("file", file);
+        const localRes = await fetch("/api/upload-url", { method: "POST", body: formData });
+        if (!localRes.ok) throw new Error(t("error.uploadFailed"));
+        publicUrl = (await localRes.json()).publicUrl;
+      } else {
+        // 2. PUT to R2 presigned URL
+        const uploadRes = await fetch(config.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+        if (!uploadRes.ok) throw new Error(t("error.uploadFailed"));
+        publicUrl = config.publicUrl;
+      }
+      setLogoUrl(publicUrl);
     } catch {
       setError(t("error.uploadFailed"));
     } finally {
