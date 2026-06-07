@@ -136,8 +136,10 @@ export default function StudioPage() {
     setGenerationError("");
 
     const count = Math.min(quantity || 1, 4);
+    let succeeded = 0;
     for (let i = 0; i < count; i++) {
       try {
+        toast.info(`Generating image ${i + 1}/${count}...`);
         const res = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -160,15 +162,21 @@ export default function StudioPage() {
             const next = [preview, ...prev.filter((h) => h.id !== preview.id)];
             return next.slice(0, 12);
           });
+          succeeded++;
         } else if (data.taskId) {
           pollTask(data.taskId);
+          succeeded++;
+        } else if (data.error) {
+          toast.error(data.message || data.error);
         }
-      } catch { /* retry next */ }
+      } catch { toast.error(`Image ${i + 1} failed`); }
     }
     setIsGenerating(false);
-    if (generationHistory.length > 0) {
-      toast.success(`${count} image(s) generated`);
+    if (succeeded > 0) {
+      toast.success(`${succeeded}/${count} images generated`);
       fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
+    } else {
+      toast.error("Generation failed — check your Replicate credits");
     }
   }
 
