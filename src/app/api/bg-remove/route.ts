@@ -9,20 +9,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { imageS3Key } = await req.json();
-  if (!imageS3Key) {
-    return NextResponse.json({ error: "imageS3Key required" }, { status: 400 });
-  }
-
+  const { imageUrl: inputUrl, imageS3Key } = await req.json();
   const apiKey = process.env.REPLICATE_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "REPLICATE_API_KEY not set" }, { status: 500 });
   }
 
-  // Get a presigned URL the model can access
-  const imageUrl = await getSignedGetUrl(imageS3Key, 3600).catch(
-    () => `${process.env.S3_PUBLIC_URL}/${imageS3Key}`
-  );
+  // Use provided URL or resolve presigned URL from s3Key
+  let imageUrl = inputUrl as string;
+  if (!imageUrl && imageS3Key) {
+    imageUrl = await getSignedGetUrl(imageS3Key, 3600).catch(() => `${process.env.S3_PUBLIC_URL}/${imageS3Key}`);
+  }
+  if (!imageUrl) {
+    return NextResponse.json({ error: "imageUrl or imageS3Key required" }, { status: 400 });
+  }
 
   try {
     // Create prediction

@@ -86,6 +86,38 @@ export function StudioControlPanel({
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4 flex flex-col gap-3">
         <PublishDestination value={targetPlatform} onChange={onPlatformChange} language={targetLanguage} onLanguageChange={onLanguageChange} />
         <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
+        {/* Quick tools: bg remove + listing + language */}
+        <div className="flex gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-700/50">
+          <button type="button"
+            onClick={async () => {
+              if (!selectedImage) return;
+              toast.promise(
+                fetch("/api/bg-remove", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:selectedImage.originalUrl})})
+                  .then(r=>r.json()).then(d=>{if(d.url)onImageChange({...selectedImage,originalUrl:d.url})}),
+                {loading:"Removing background...",success:"Done!",error:"Failed"}
+              );
+            }}
+            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-center">✂️ Remove BG</button>
+          <button type="button"
+            onClick={async () => {
+              const res = await fetch("/api/listing/generate", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName, sellingPoints:prompt, platform:targetPlatform})});
+              const data = await res.json();
+              if (data.title) {
+                onPromptChange(`Title: ${data.title}\n\nBullets:\n${(data.bullets||[]).map((b:string)=>`• ${b}`).join("\n")}\n\nDescription: ${data.description}`);
+                toast.success("Listing generated");
+              } else { toast.error("Failed to generate listing"); }
+            }}
+            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-center">📝 Listing</button>
+          <select value={targetLanguage} onChange={(e) => onLanguageChange(e.target.value)}
+            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 cursor-pointer border-0">
+            <option value="en">🇺🇸 EN</option>
+            <option value="zh">🇨🇳 中文</option>
+            <option value="es">🇪🇸 ES</option>
+            <option value="pt-BR">🇧🇷 PT</option>
+            <option value="ja">🇯🇵 日本語</option>
+            <option value="de">🇩🇪 DE</option>
+          </select>
+        </div>
       </div>
 
       {/* Generation config */}
