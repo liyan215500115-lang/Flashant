@@ -18,7 +18,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
   const modelVersion =
     config?.modelVersion ??
     process.env.REPLICATE_MODEL_VERSION ??
-    "black-forest-labs/flux-1.1-pro";
+    "black-forest-labs/flux-2-pro";
   const webhookUrl = config?.webhookUrl ?? process.env.REPLICATE_WEBHOOK_URL;
   const timeoutMs = config?.timeoutMs ?? 60_000;
   const baseUrl = "https://api.replicate.com/v1";
@@ -29,15 +29,15 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
     async createPrediction(input: ImageGenerationInput) {
       const inputPayload: Record<string, unknown> = {
         prompt: input.prompt,
-        aspect_ratio: "1:1",
+        aspect_ratio: "match_input_image",
         output_format: "png",
         output_quality: 90,
         safety_tolerance: 2,
       };
 
-      // Pass product image as reference — FLUX 1.1 Pro uses it to guide composition
+      // FLUX.2 Pro: pass product image as reference via input_images array
       if (input.productImageUrl) {
-        inputPayload.image_prompt = input.productImageUrl;
+        inputPayload.input_images = [input.productImageUrl];
       }
 
       const body: Record<string, unknown> = {
