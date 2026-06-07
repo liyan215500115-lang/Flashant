@@ -30,8 +30,9 @@ export default function StudioPage() {
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
   const [mode, setMode] = useState("scene");
+  const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [quantity, setQuantity] = useState(2);
+  const [quantity, setQuantity] = useState(4);
   const [engineType, setEngineType] = useState("flux");
   const [targetPlatform, setTargetPlatform] = useState("SHOPIFY");
   const [targetLanguage, setTargetLanguage] = useState("en");
@@ -46,6 +47,9 @@ export default function StudioPage() {
 
   const [quotaUsed, setQuotaUsed] = useState(0);
   const [quotaLimit, setQuotaLimit] = useState(-1);
+
+  // Detail: tracking
+  const [detailGen, setDetailGen] = useState<Record<string,boolean>>({});
 
   async function createProject() {
     setProjectCreating(true);
@@ -259,7 +263,7 @@ export default function StudioPage() {
         </div>
 
         {/* ── Right panel ── */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col gap-6">
           <StudioPreviewCanvas
             isGenerating={isGenerating}
             latestImage={latestImage}
@@ -275,8 +279,66 @@ export default function StudioPage() {
             generationError={generationError}
             onDismissError={() => setGenerationError("")}
           />
+
+          {/* Detail image generation — shown after main images exist */}
+          {generationHistory.length >= 4 && (
+            <DetailImageGenerator projectId={projectId} productName={productName} engineType={engineType} />
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Detail image generator component ──
+const DETAIL_TYPES = [
+  { key: "selling_points", label: "📐 Core Selling Points", labelZh: "📐 核心卖点图", prompt: "Product key selling points infographic style, highlighted features with clean callout text, white background, e-commerce product page section, professional layout" },
+  { key: "detail", label: "🔍 Detail Close-up", labelZh: "🔍 商品细节图", prompt: "Extreme macro close-up product detail shot, texture and material clearly visible, premium product photography, shallow depth of field, 8K" },
+  { key: "size", label: "📏 Size Guide", labelZh: "📏 尺寸/容量图", prompt: "Product size comparison with measurement reference, dimensional guide overlay, clean studio lighting, informative layout, scale reference" },
+  { key: "compare", label: "⚡ Before/After", labelZh: "⚡ 效果对比图", prompt: "Before and after comparison, split screen layout, product transformation showcase, side by side, professional presentation, dramatic improvement visible" },
+  { key: "craft", label: "🛠 Craftsmanship", labelZh: "🛠 工艺制作图", prompt: "Artisan craftsmanship process scene, hands carefully making the product, workshop environment, warm natural lighting, authentic handmade feel, documentary style" },
+  { key: "series", label: "📦 Series Collection", labelZh: "📦 系列展示图", prompt: "Product family lineup, multiple color variants or styles displayed together, organized grid layout, collection showcase, premium brand presentation" },
+  { key: "scene", label: "🏠 Lifestyle Scene", labelZh: "🏠 场景使用图", prompt: "Product in real-life use scenario, lifestyle photography, natural environment, candid authentic moment, aspirational aesthetics, magazine quality" },
+];
+
+function DetailImageGenerator({ projectId, engineType }: { projectId: string | null; productName?: string; engineType: string }) {
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
+  const [generating, setGenerating] = useState(false);
+
+  async function handleGenerateDetails() {
+    if (!projectId || selectedTypes.size === 0) return;
+    setGenerating(true);
+    const types = DETAIL_TYPES.filter((d) => selectedTypes.has(d.key));
+
+    for (const t of types) {
+      try {
+        await fetch("/api/generate", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageProjectId: projectId, prompt: t.prompt, numOutputs: 1, engineType }),
+        });
+      } catch { /* continue */ }
+    }
+    setGenerating(false);
+    toast.success(`${types.length} detail images queued`);
+  }
+
+  return (
+    <div className="rounded-2xl border border-brand-200 dark:border-brand-700 bg-brand-50/30 dark:bg-brand-900/10 p-5">
+      <h3 className="text-sm font-semibold text-brand-900 dark:text-brand-300 mb-1">📋 Generate Detail Images</h3>
+      <p className="text-xs text-zinc-500 mb-3">Select content types — AI generates each as a separate image</p>
+      <div className="grid grid-cols-2 gap-1.5 mb-3">
+        {DETAIL_TYPES.map((dt) => (
+          <button key={dt.key} type="button"
+            onClick={() => setSelectedTypes((prev) => { const n = new Set(prev); n.has(dt.key) ? n.delete(dt.key) : n.add(dt.key); return n; })}
+            className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${selectedTypes.has(dt.key) ? "bg-brand-100 border-brand-300 text-brand-800 dark:bg-brand-900/30 dark:border-brand-600 dark:text-brand-300" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400"}`}>
+            {dt.label}
+          </button>
+        ))}
+      </div>
+      <button onClick={handleGenerateDetails} disabled={selectedTypes.size === 0 || generating}
+        className="w-full py-2.5 rounded-xl bg-brand-900 text-white text-sm font-semibold hover:bg-brand-800 disabled:opacity-40 transition-colors cursor-pointer">
+        {generating ? "Generating..." : `Generate ${selectedTypes.size || 0} Detail Images`}
+      </button>
     </div>
   );
 }
