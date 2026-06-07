@@ -40,8 +40,9 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
         inputPayload.input_images = [input.productImageUrl];
       }
 
+      const version = input.modelVersion || modelVersion;
       const body: Record<string, unknown> = {
-        version: modelVersion,
+        version,
         input: inputPayload,
       };
 

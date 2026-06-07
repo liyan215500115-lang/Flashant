@@ -112,6 +112,15 @@ export async function POST(req: Request) {
 
   const numOutputs = customNumOutputs ?? 2;
 
+  // Model version mapping for alternative engines (all routed through Replicate)
+  const ENGINE_MODELS: Record<string, string> = {
+    flux: "black-forest-labs/flux-2-pro",
+    flux2: "black-forest-labs/flux-2-pro",
+    sdxl: "stability-ai/sdxl",
+    playground: "playgroundai/playground-v2.5-1024px-aesthetic",
+  };
+  const modelVersion = ENGINE_MODELS[engineType] || ENGINE_MODELS.flux;
+
   // Resolve provider
   let provider;
   try {
@@ -228,6 +237,7 @@ export async function POST(req: Request) {
       prompt,
       productImageUrl: productImage.originalUrl,
       numOutputs,
+      modelVersion,
     });
 
     await db.task.update({

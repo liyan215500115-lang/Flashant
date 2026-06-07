@@ -4,6 +4,8 @@ export interface ImageGenerationInput {
   width?: number;
   height?: number;
   numOutputs?: number;
+  /** Override the default model version for this prediction */
+  modelVersion?: string;
 }
 
 export interface ImageGenerationOutput {
