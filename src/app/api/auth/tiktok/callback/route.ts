@@ -43,13 +43,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const tokenUrl = new URL("https://auth.tiktok-shops.com/api/v2/token/get");
-    tokenUrl.searchParams.set("app_key", clientId);
-    tokenUrl.searchParams.set("app_secret", clientSecret);
-    tokenUrl.searchParams.set("auth_code", code);
-    tokenUrl.searchParams.set("grant_type", "authorized_code");
+    const tokenUrl = "https://auth.tiktok-shops.com/api/v2/token/get";
 
-    const res = await fetch(tokenUrl.toString());
+    const res = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        app_key: clientId,
+        app_secret: clientSecret,
+        auth_code: code,
+        grant_type: "authorized_code",
+      }),
+    });
 
     if (!res.ok) {
       return NextResponse.redirect(
@@ -81,7 +86,9 @@ export async function GET(req: NextRequest) {
       {
         accessToken: payload.access_token,
         refreshToken: payload.refresh_token,
-        expiresAt: undefined,
+        expiresAt: (data.data?.access_token_expire_in)
+          ? new Date(Date.now() + (data.data.access_token_expire_in) * 1000)
+          : undefined,
         sellerId: payload.open_id,
       }
     );
