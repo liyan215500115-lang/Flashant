@@ -302,12 +302,13 @@ export async function POST(req: Request) {
 
       // ── Brand logo overlay ──
       let finalUrl = firstOutput.url;
-      if (brandPreset?.logoUrl) {
+      const presetLogo = brandPreset?.logoUrl;
+      if (presetLogo) {
         try {
           const imageBuf = await fetchImageBuffer(firstOutput.url);
-          const logoUrl = brandPreset.logoUrl && (brandPreset.logoUrl.startsWith("products/") || brandPreset.logoUrl.startsWith("generated/"))
-            ? await getSignedGetUrl(brandPreset.logoUrl).catch(() => brandPreset.logoUrl)
-            : brandPreset.logoUrl;
+          const logoUrl: string = (presetLogo.startsWith("products/") || presetLogo.startsWith("generated/"))
+            ? await getSignedGetUrl(presetLogo).catch(() => presetLogo)
+            : presetLogo;
           const logoBuf = await fetchImageBuffer(logoUrl);
           const overlaid = await overlayLogo(imageBuf, logoBuf);
 
