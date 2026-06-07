@@ -7,6 +7,11 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { serverT } from "@/lib/server-t";
+import { getSignedGetUrl } from "@/lib/s3";
+
+function isR2Key(key: string | null): boolean {
+  return !!(key && (key.startsWith("products/") || key.startsWith("generated/")));
+}
 
 export async function GET() {
   const session = await auth();
@@ -27,7 +32,30 @@ export async function GET() {
     orderBy: { updatedAt: "desc" },
   });
 
-  return NextResponse.json({ projects });
+  // Resolve presigned GET URLs for private R2 images
+  const resolved = await Promise.all(
+    projects.map(async (p) => ({
+      ...p,
+      productImages: await Promise.all(
+        p.productImages.map(async (img) => ({
+          ...img,
+          originalUrl: isR2Key(img.s3Key)
+            ? await getSignedGetUrl(img.s3Key).catch(() => img.originalUrl)
+            : img.originalUrl,
+        }))
+      ),
+      generatedImages: await Promise.all(
+        p.generatedImages.map(async (img) => ({
+          ...img,
+          url: isR2Key(img.s3Key)
+            ? await getSignedGetUrl(img.s3Key).catch(() => img.url)
+            : img.url,
+        }))
+      ),
+    }))
+  );
+
+  return NextResponse.json({ projects: resolved });
 }
 
 export async function POST(req: Request) {
