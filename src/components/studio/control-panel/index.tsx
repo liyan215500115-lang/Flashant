@@ -82,7 +82,7 @@ export function StudioControlPanel({
         )}
       </div>
 
-      {/* Publish destination + Brand */}
+      {/* Publish + Brand + Tools */}
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4 flex flex-col gap-3">
         <PublishDestination value={targetPlatform} onChange={onPlatformChange} language={targetLanguage} onLanguageChange={onLanguageChange} />
         <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
