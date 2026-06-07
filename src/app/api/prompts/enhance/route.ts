@@ -24,11 +24,21 @@ export async function POST(req: Request) {
   const name = productName || "product";
   const points = sellingPoints ? `, highlighting: ${sellingPoints}` : "";
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (apiKey && apiKey !== "your-openai-api-key") {
+  // Try DeepSeek first, then OpenAI, then template fallback
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const llmApiKey = deepseekKey || (openaiKey && openaiKey !== "your-openai-api-key" ? openaiKey : null);
+  const llmBaseURL = deepseekKey ? "https://api.deepseek.com" : "https://api.openai.com/v1";
+  const llmModel = deepseekKey ? "deepseek-chat" : "gpt-4o-mini";
+
+  if (llmApiKey) {
     try {
       const OpenAI = (await import("openai")).default;
-      const client = new OpenAI({ apiKey, fetch: createSocksFetch() });
+      const client = new OpenAI({
+        apiKey: llmApiKey,
+        baseURL: llmBaseURL,
+        fetch: createSocksFetch(),
+      });
 
       const content: Array<{ type: "text" | "image_url"; text?: string; image_url?: { url: string } }> = [
         { type: "text", text: `Analyze this product image and generate a professional e-commerce product photography prompt.
@@ -43,7 +53,7 @@ Output ONLY the final English prompt — no explanations, no Chinese.` },
       ];
 
       const response = await client.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: llmModel,
         messages: [{ role: "user", content } as any],
         temperature: 0.7,
         max_tokens: 200,
@@ -54,7 +64,7 @@ Output ONLY the final English prompt — no explanations, no Chinese.` },
         return NextResponse.json({ enhanced });
       }
     } catch {
-      // Fall back to template-based enhancement if OpenAI fails
+      // Fall back to template-based enhancement
     }
   }
 
