@@ -267,7 +267,7 @@ export async function POST(req: Request) {
     } catch { /* keep original image if bg-remove fails */ }
 
     // Step 2: Generate scene background with FLUX (no product in prompt)
-    const bgPrompt = `Beautiful ${mode === "white_bg" ? "pure white infinity studio background, soft even lighting" : mode === "model" ? "lifestyle setting with natural ambient light" : "premium product display surface, clean composition, natural window light"}. Empty surface with ${mode === "scene" ? "soft shadows and elegant atmosphere" : "professional commercial look"}, 8K.`;
+    const bgPrompt = "Beautiful premium product display surface, clean composition, natural studio lighting, soft shadows, elegant atmosphere, empty surface for product placement, 8K, commercial photography background.";
     const bgPrediction = await provider.createPrediction({
       prompt: bgPrompt,
       productImageUrl: "",
