@@ -134,45 +134,41 @@ export default function StudioPage() {
     if (!projectId || !selectedImage || isGenerating) return;
     setIsGenerating(true);
     setGenerationError("");
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageProjectId: projectId,
-          productImageId: selectedImage.id,
-          prompt: prompt || undefined,
-          numOutputs: quantity,
-          engineType,
-          targetPlatform,
-          targetLanguage,
-          brandPresetId: brandPresetId || undefined,
+
+    const count = Math.min(quantity || 1, 4);
+    for (let i = 0; i < count; i++) {
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageProjectId: projectId,
+            productImageId: selectedImage.id,
+            prompt: prompt || undefined,
+            numOutputs: 1,
+            engineType,
+            targetPlatform,
+            targetLanguage,
+            brandPresetId: brandPresetId || undefined,
         }),
       });
-      const data = await res.json();
-      if (data.status === "succeeded") {
-        const preview = { id: data.generatedImageId, url: data.url, promptUsed: prompt };
-        setLatestImage(preview);
-        setGenerationHistory((prev) => {
-          const next = [preview, ...prev.filter((h) => h.id !== preview.id)];
-          return next.slice(0, 12);
-        });
-        setIsGenerating(false);
-        toast.success("Image generated successfully");
-        fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
-      } else if (data.taskId) {
-        pollTask(data.taskId);
-      } else if (data.error) {
-        setGenerationError(data.message || data.error);
-        toast.error(data.message || data.error);
-        setIsGenerating(false);
-      } else {
-        setIsGenerating(false);
-      }
-    } catch {
-      setGenerationError(t("error.networkFailed"));
-      toast.error(t("error.networkFailed"));
-      setIsGenerating(false);
+        const data = await res.json();
+        if (data.status === "succeeded" && data.url) {
+          const preview = { id: data.generatedImageId, url: data.url, promptUsed: prompt };
+          setLatestImage(preview);
+          setGenerationHistory((prev) => {
+            const next = [preview, ...prev.filter((h) => h.id !== preview.id)];
+            return next.slice(0, 12);
+          });
+        } else if (data.taskId) {
+          pollTask(data.taskId);
+        }
+      } catch { /* retry next */ }
+    }
+    setIsGenerating(false);
+    if (generationHistory.length > 0) {
+      toast.success(`${count} image(s) generated`);
+      fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
     }
   }
 
