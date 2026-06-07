@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getSignedGetUrl } from "@/lib/s3";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,22 @@ export default async function DashboardPage() {
   ]);
 
   const tier = subscription?.planTier ?? "FREE";
+
+  // Resolve presigned URLs for product images
+  const resolvedProjects = await Promise.all(
+    projects.map(async (p) => ({
+      ...p,
+      productImages: await Promise.all(
+        p.productImages.map(async (img) => {
+          if (img.s3Key && (img.s3Key.startsWith("products/") || img.s3Key.startsWith("generated/"))) {
+            const signed = await getSignedGetUrl(img.s3Key).catch(() => img.originalUrl);
+            return { ...img, originalUrl: signed };
+          }
+          return img;
+        })
+      ),
+    }))
+  );
 
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
@@ -122,13 +139,13 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Recent projects ── */}
-      {projects.length > 0 && (
+      {resolvedProjects.length > 0 && (
         <div>
           <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 mb-4">
             {t("dashboard.recentProjects")}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {projects.map((project) => (
+            {resolvedProjects.map((project) => (
               <Link key={project.id} href={`/products/${project.id}`}>
                 <Card className="group/card border-zinc-200/70 dark:border-zinc-700/70 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all cursor-pointer h-full bg-white dark:bg-zinc-800/50">
                   <CardContent className="p-3">
@@ -179,7 +196,7 @@ export default async function DashboardPage() {
       )}
 
       {/* ── Empty state ── */}
-      {projects.length === 0 && (
+      {resolvedProjects.length === 0 && (
         <Card className="border-dashed border-zinc-300 dark:border-zinc-600 rounded-2xl bg-white dark:bg-zinc-800/50">
           <CardContent className="flex flex-col items-center justify-center py-20 gap-5">
             <Sparkles size={36} className="text-zinc-300 dark:text-zinc-600" strokeWidth={1} />
