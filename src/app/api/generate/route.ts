@@ -222,53 +222,114 @@ export async function POST(req: Request) {
     }
   }
 
-  // ── Flux (Replicate) async path ──
-  provider
-    .createPrediction({
+  // ── Flux (Replicate) path ──
+  try {
+    const prediction = await provider.createPrediction({
       prompt,
       productImageUrl: productImage.originalUrl,
       numOutputs,
-    })
-    .then(async (result) => {
-      await db.task.update({
-        where: { id: task.id },
-        data: {
-          predictionId: result.predictionId,
-          status: "PROCESSING",
-        },
-      });
-
-      await db.generatedImage.create({
-        data: {
-          imageProjectId,
-          productImageId,
-          s3Key: "pending",
-          url: "",
-          promptUsed: prompt,
-          aiProvider: engineType,
-          status: "PROCESSING",
-          webhookId: result.predictionId,
-        },
-      });
-    })
-    .catch(async (error) => {
-      await db.task.update({
-        where: { id: task.id },
-        data: {
-          status: "FAILED",
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-      await db.imageProject.update({
-        where: { id: imageProjectId },
-        data: { status: "FAILED" },
-      });
     });
 
-  return NextResponse.json({
-    taskId: task.id,
-    status: "pending",
-    engineType,
-    message: await serverT("api.taskCreated"),
-  });
+    await db.task.update({
+      where: { id: task.id },
+      data: {
+        predictionId: prediction.predictionId,
+        status: "PROCESSING",
+      },
+    });
+
+    const placeholder = await db.generatedImage.create({
+      data: {
+        imageProjectId,
+        productImageId,
+        s3Key: "pending",
+        url: "",
+        promptUsed: prompt,
+        aiProvider: engineType,
+        status: "PROCESSING",
+        webhookId: prediction.predictionId,
+      },
+    });
+
+    // Poll until complete (Flux schnell finishes in 1-5 seconds)
+    let attempts = 0;
+    let imageResult = await provider.getPrediction(prediction.predictionId);
+    while (imageResult.status === "processing" && attempts < 30) {
+      await new Promise((r) => setTimeout(r, 1000));
+      imageResult = await provider.getPrediction(prediction.predictionId);
+      attempts++;
+    }
+
+    if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
+      const firstOutput = imageResult.outputs[0];
+      await db.generatedImage.update({
+        where: { id: placeholder.id },
+        data: {
+          url: firstOutput.url,
+          s3Key: firstOutput.url,
+          fileSize: firstOutput.fileSize ?? 0,
+          mimeType: firstOutput.mimeType ?? "image/png",
+          width: firstOutput.width ?? 1024,
+          height: firstOutput.height ?? 1024,
+          status: "SUCCEEDED",
+          completedAt: new Date(),
+        },
+      });
+
+      await db.task.update({
+        where: { id: task.id },
+        data: { status: "SUCCEEDED", resultUrl: firstOutput.url },
+      });
+
+      // Check if all tasks for this project are done
+      const pendingCount = await db.task.count({
+        where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
+      });
+      if (pendingCount === 0) {
+        await db.imageProject.update({
+          where: { id: imageProjectId },
+          data: { status: "GENERATED" },
+        });
+      }
+
+      return NextResponse.json({
+        taskId: task.id,
+        status: "succeeded",
+        generatedImageId: placeholder.id,
+        url: firstOutput.url,
+      });
+    } else {
+      await db.generatedImage.update({
+        where: { id: placeholder.id },
+        data: {
+          status: "FAILED",
+          errorMessage: imageResult.error ?? "Prediction timed out or failed",
+        },
+      });
+      await db.task.update({
+        where: { id: task.id },
+        data: { status: "FAILED", errorMessage: imageResult.error ?? "Timed out" },
+      });
+      return NextResponse.json(
+        { error: "generation_failed", message: imageResult.error ?? "Timed out" },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    await db.task.update({
+      where: { id: task.id },
+      data: {
+        status: "FAILED",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      },
+    });
+    await db.imageProject.update({
+      where: { id: imageProjectId },
+      data: { status: "FAILED" },
+    });
+    return NextResponse.json(
+      { error: "generation_failed", message: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
 }
