@@ -35,6 +35,10 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
         safety_tolerance: 2,
       };
 
+      // Pass product photo as reference — prompt controls scene change
+      if (input.productImageUrl) {
+        inputPayload.input_images = [input.productImageUrl];
+      }
 
       const version = input.modelVersion || modelVersion;
       const body: Record<string, unknown> = {

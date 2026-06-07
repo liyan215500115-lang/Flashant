@@ -59,11 +59,11 @@ export async function POST(req: Request) {
 
       const description = response.choices[0]?.message?.content?.trim();
       if (description && description.length > 10) {
-        // Wrap the visual description into a full FLUX prompt
+        // Wrap description into an img2img prompt: product stays, scene changes
         const enhancedPrompt =
           lang === "zh"
-            ? `专业商品摄影：${description}。${sceneDesc}。8K高清，锐利对焦，商业级画质`
-            : `Professional product photography of ${description}. ${sceneDesc}, 8K, sharp focus, commercial quality`;
+            ? `${description}，${sceneDesc}。8K高清，商业摄影`
+            : `${description}. Photographed ${sceneDesc}. 8K, sharp focus, commercial quality.`;
 
         return NextResponse.json({ enhanced: enhancedPrompt });
       }
