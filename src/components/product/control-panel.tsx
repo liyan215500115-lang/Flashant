@@ -27,6 +27,8 @@ interface ControlPanelProps {
   onPromptChange: (prompt: string) => void;
   quantity: number;
   onQuantityChange: (quantity: number) => void;
+  engineType: string;
+  onEngineTypeChange: (engine: string) => void;
   onGenerate: () => void;
   isGenerating: boolean;
   disabled: boolean;
@@ -45,6 +47,8 @@ export function ControlPanel({
   onPromptChange,
   quantity,
   onQuantityChange,
+  engineType,
+  onEngineTypeChange,
   onGenerate,
   isGenerating,
   disabled,
@@ -66,6 +70,19 @@ export function ControlPanel({
       />
 
       <ModeSelect value={mode} onChange={onModeChange} />
+
+      {/* Engine selector */}
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("generate.engineLabel")}</span>
+        <select
+          value={engineType}
+          onChange={(e) => onEngineTypeChange(e.target.value)}
+          className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-zinc-300 dark:focus:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-100 dark:focus:ring-zinc-700 transition-all"
+        >
+          <option value="flux">{t("generate.engineFlux")}</option>
+          <option value="openai">{t("generate.engineOpenai")}</option>
+        </select>
+      </div>
 
       {/* Product name — injected into prompt for accurate generation */}
       <div className="flex flex-col gap-2">

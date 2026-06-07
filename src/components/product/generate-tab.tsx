@@ -63,6 +63,7 @@ export function GenerateTab({
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [quantity, setQuantity] = useState(2);
+  const [engineType, setEngineType] = useState("flux");
 
   // Build full prompt: product name + scene description
   const buildPrompt = useCallback((product: string, sceneMode: string) => {
@@ -103,8 +104,9 @@ export function GenerateTab({
     if (!selectedImage || isGenerating) return;
     onGenerate({
       productImageId: selectedImage.id,
-      prompt: prompt || modeDefaultPrompts[mode],
+      prompt: prompt || buildPrompt(productName, mode),
       numOutputs: quantity,
+      engineType,
     });
   }
 
@@ -127,6 +129,8 @@ export function GenerateTab({
         onPromptChange={setPrompt}
         quantity={quantity}
         onQuantityChange={setQuantity}
+        engineType={engineType}
+        onEngineTypeChange={setEngineType}
         onGenerate={handleGenerate}
         isGenerating={isGenerating}
         disabled={!selectedImage}

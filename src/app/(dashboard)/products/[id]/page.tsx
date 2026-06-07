@@ -170,8 +170,9 @@ export default function ProductDetailPage() {
     productImageId: string;
     prompt?: string;
     numOutputs?: number;
+    engineType?: string;
   }) {
-    const { productImageId, prompt, numOutputs } = params;
+    const { productImageId, prompt, numOutputs, engineType } = params;
     if (generatingIds.has(productImageId)) return;
     setError("");
 
@@ -185,6 +186,7 @@ export default function ProductDetailPage() {
           promptTemplateId: project!.promptTemplate?.id ?? null,
           prompt: prompt ?? undefined,
           numOutputs: numOutputs ?? undefined,
+          engineType: engineType ?? undefined,
         }),
       });
 
