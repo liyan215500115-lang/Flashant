@@ -27,6 +27,11 @@ interface ControlPanelProps {
   onPromptChange: (prompt: string) => void;
   quantity: number;
   onQuantityChange: (quantity: number) => void;
+  targetPlatform: string;
+  onTargetPlatformChange: (p: string) => void;
+  recipeName: string;
+  onRecipeNameChange: (n: string) => void;
+  onSaveRecipe: () => void;
   generatedPrompt: string;
   onEnhancePrompt: () => void;
   isEnhancing: boolean;
@@ -50,6 +55,11 @@ export function ControlPanel({
   onPromptChange,
   quantity,
   onQuantityChange,
+  targetPlatform,
+  onTargetPlatformChange,
+  recipeName,
+  onRecipeNameChange,
+  onSaveRecipe,
   generatedPrompt,
   onEnhancePrompt,
   isEnhancing,
@@ -83,6 +93,30 @@ export function ControlPanel({
           <option value="sdxl">{t("generate.engineSdxl")}</option>
           <option value="playground">{t("generate.enginePlayground")}</option>
         </select>
+      </div>
+
+      {/* Platform target + Recipe save */}
+      <div className="flex gap-2">
+        <div className="flex-1 flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{t("generate.platformLabel")}</span>
+          <select value={targetPlatform} onChange={(e) => onTargetPlatformChange(e.target.value)}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:border-brand-500 focus:outline-none transition-all">
+            <option value="">{t("generate.platformNone")}</option>
+            <option value="SHOPIFY">Shopify</option>
+            <option value="AMAZON">Amazon</option>
+            <option value="TIKTOK_SHOP">TikTok Shop</option>
+            <option value="ETSY">Etsy</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5 justify-end">
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider invisible">Recipe</span>
+          <div className="flex gap-1">
+            <input type="text" value={recipeName} onChange={(e) => onRecipeNameChange(e.target.value)} placeholder="配方名"
+              className="w-20 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:border-brand-500 focus:outline-none transition-all" />
+            <button type="button" onClick={onSaveRecipe} disabled={disabled}
+              className="px-2 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-zinc-600 hover:bg-zinc-200 transition-colors disabled:opacity-50 cursor-pointer">保存</button>
+          </div>
+        </div>
       </div>
 
       <ModeSelect value={mode} onChange={onModeChange} />
