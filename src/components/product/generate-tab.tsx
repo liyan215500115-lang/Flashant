@@ -31,6 +31,7 @@ interface GenerateTabProps {
     productImageId: string;
     prompt: string;
     numOutputs: number;
+    engineType?: string;
   }) => void;
   isGenerating: boolean;
   onImageUploaded: (image: ProductImage) => void;
