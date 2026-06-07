@@ -35,6 +35,11 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
         safety_tolerance: 2,
       };
 
+      // Pass product image as reference — FLUX uses it as concept guide, not copy source
+      if (input.productImageUrl) {
+        inputPayload.input_images = [input.productImageUrl];
+      }
+
       const version = input.modelVersion || modelVersion;
       const body: Record<string, unknown> = {
         version,
