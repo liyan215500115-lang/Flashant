@@ -33,6 +33,8 @@ async function getClient(): Promise<S3Client> {
     region: process.env.S3_REGION ?? "auto",
     endpoint: process.env.S3_ENDPOINT!,
     credentials: { accessKeyId, secretAccessKey },
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
 
   return client;
@@ -59,6 +61,7 @@ export async function createUploadUrl(
     Bucket: bucket,
     Key: s3Key,
     ContentType: mimeType,
+    ChecksumAlgorithm: undefined,
   });
 
   const uploadUrl = await getSignedUrl(await getClient(), command, {
