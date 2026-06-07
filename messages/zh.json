@@ -417,27 +417,27 @@
           "name": "免费版",
           "desc": "适合个人卖家入门",
           "feature1": "10 次生成 / 月",
-          "feature2": "14 平台规格下载",
+          "feature2": "智能抠图 + 14 平台下载",
           "feature3": "5 种场景模板",
           "feature4": "标准分辨率"
         },
         "pro": {
           "name": "Pro",
           "desc": "适合成长型品牌",
-          "feature1": "200 次生成 / 月",
-          "feature2": "Shopify 一键发布",
-          "feature3": "14 平台规格下载",
-          "feature4": "全部场景模板",
+          "feature1": "100 次生成 / 月",
+          "feature2": "AI 智能提示词生成",
+          "feature3": "Shopify 一键发布",
+          "feature4": "品牌 Logo 叠加",
           "feature5": "HD 高清 + 品牌预设"
         },
         "business": {
           "name": "Business",
           "desc": "适合品牌团队",
-          "feature1": "1,500 次生成 / 月",
-          "feature2": "Shopify 一键发布",
-          "feature3": "14 平台规格下载",
-          "feature4": "UHD 超高清分辨率",
-          "feature5": "自定义模板 + 品牌预设"
+          "feature1": "1,000 次生成 / 月",
+          "feature2": "AI 智能提示词 + 文案生成",
+          "feature3": "Shopify 一键发布",
+          "feature4": "品牌 Logo 叠加",
+          "feature5": "UHD 超高清 + 自定义模板"
         }
       }
     },

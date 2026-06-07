@@ -417,27 +417,27 @@
           "name": "Free",
           "desc": "For individual sellers",
           "feature1": "10 generations / month",
-          "feature2": "AI Background Removal + 14 Platforms",
-          "feature3": "5 Scene Templates",
-          "feature4": "Standard Resolution"
+          "feature2": "14 platform spec downloads",
+          "feature3": "5 scene templates",
+          "feature4": "Standard resolution"
         },
         "pro": {
           "name": "Pro",
           "desc": "For growing brands",
-          "feature1": "100 generations / month",
-          "feature2": "AI Smart Prompt Generation",
-          "feature3": "Shopify One-Click Publish",
-          "feature4": "Brand Logo Overlay",
-          "feature5": "HD + Brand Presets"
+          "feature1": "200 generations / month",
+          "feature2": "Shopify one-click publish",
+          "feature3": "14 platform spec downloads",
+          "feature4": "All scene templates",
+          "feature5": "HD resolution + Brand presets"
         },
         "business": {
           "name": "Business",
           "desc": "For brand teams",
-          "feature1": "1,000 generations / month",
-          "feature2": "AI Prompt + Listing Generator",
-          "feature3": "Shopify One-Click Publish",
-          "feature4": "Brand Logo Overlay",
-          "feature5": "UHD + Custom Templates"
+          "feature1": "1,500 generations / month",
+          "feature2": "Shopify one-click publish",
+          "feature3": "14 platform spec downloads",
+          "feature4": "UHD resolution",
+          "feature5": "Custom templates + Brand presets"
         }
       }
     },
