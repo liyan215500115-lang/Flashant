@@ -266,6 +266,9 @@ export async function POST(req: Request) {
       }
     } catch { /* keep original image if bg-remove fails */ }
 
+    // Rate limit: wait between Replicate calls (free tier: 6/min, burst 1)
+    await new Promise((r) => setTimeout(r, 12000));
+
     // Step 2: Generate scene background with FLUX (no product in prompt)
     const bgPrompt = "Beautiful premium product display surface, clean composition, natural studio lighting, soft shadows, elegant atmosphere, empty surface for product placement, 8K, commercial photography background.";
     const bgPrediction = await provider.createPrediction({
