@@ -143,8 +143,8 @@ export default function NewProductPage() {
         throw new Error(data.error || t("error.createFailed"));
       }
 
-      const project = await res.json();
-      router.push(`/products/${project.id}`);
+      const data = await res.json();
+      router.push(`/products/${data.project.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("error.createFailed"));
     } finally {
