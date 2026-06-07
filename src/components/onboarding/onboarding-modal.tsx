@@ -64,10 +64,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
           {steps.map((_, i) => (
             <div
               key={i}
-              className="h-1 flex-1 rounded-full transition-colors"
-              style={{
-                background: i <= step ? "var(--accent, #1E3A8A)" : "#e4e4e7",
-              }}
+              className={`h-1 flex-1 rounded-full transition-colors ${i <= step ? "bg-brand-900" : "bg-zinc-200"}`}
             />
           ))}
         </div>
@@ -76,8 +73,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
         <div className="px-6 py-6">
           <div className="flex items-center gap-3 mb-4">
             <div
-              className="flex items-center justify-center w-12 h-12 rounded-xl"
-              style={{ background: "var(--accent, #1E3A8A)" }}
+              className="flex items-center justify-center w-12 h-12 rounded-xl bg-brand-900"
             >
               <current.icon size={22} color="#fff" />
             </div>
@@ -118,8 +114,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
             )}
             <Button
               size="sm"
-              className="gap-1.5"
-              style={{ background: "var(--accent, #1E3A8A)" }}
+              className="gap-1.5 bg-brand-900 hover:bg-brand-800 text-white"
               onClick={() => {
                 if (isLast) onClose();
                 else setStep(step + 1);
