@@ -46,7 +46,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "system",
-            content: `You describe products visually for AI image generation. Given a product name and selling points, output exactly ONE paragraph (80-150 words, ${langInstruction}) that vividly describes the product's: material, color, texture, shape, key details, and how it catches light. Write like a commercial photographer noting what the camera sees. No bullet points, no labels, no formatting — just the description paragraph.`,
+            content: `You are a luxury e-commerce copywriter writing product descriptions for AI photography. Given product info, write ONE sentence (under 100 words, ${langInstruction}) focused on unique materials, craftsmanship, tactile textures, and visual beauty. CRITICAL: vary your vocabulary every time — never reuse the same adjectives, lighting descriptions, or camera angles. Focus on different aspects each time (one time materials, next time lighting, next time texture). Output only the sentence.`,
           },
           {
             role: "user",

@@ -269,6 +269,7 @@ export default function StudioPage() {
             onTabChange={setActiveTab}
             onAssetSave={handleAssetSave}
             onBatchDownload={handleBatchDownload}
+            projectId={projectId}
             quotaUsed={quotaUsed}
             quotaLimit={quotaLimit}
             generationError={generationError}
