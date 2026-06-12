@@ -40,11 +40,10 @@ async function getClient(): Promise<S3Client> {
   return client;
 }
 
-/** Generate a pre-signed GET URL for private R2 objects — 7 day expiry */
-// Cache presigned URLs (they expire in 7 days, so 1h cache is safe)
+/** Generate a pre-signed GET URL for private R2 objects — 30 day expiry */
 const urlCache = new Map<string, { url: string; until: number }>();
 
-export async function getSignedGetUrl(s3Key: string, expiresIn = 604800): Promise<string> {
+export async function getSignedGetUrl(s3Key: string, expiresIn = 2592000): Promise<string> {
   const cached = urlCache.get(s3Key);
   if (cached && cached.until > Date.now()) return cached.url;
 
@@ -56,7 +55,7 @@ export async function getSignedGetUrl(s3Key: string, expiresIn = 604800): Promis
 
   const command = new GetObjectCommand({ Bucket: bucket, Key: s3Key });
   const url = await getSignedUrl(await getClient(), command, { expiresIn });
-  urlCache.set(s3Key, { url, until: Date.now() + 3600_000 }); // 1h TTL
+  urlCache.set(s3Key, { url, until: Date.now() + 600_000 }); // 10min cache
   return url;
 }
 
