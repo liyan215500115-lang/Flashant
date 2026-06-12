@@ -18,7 +18,7 @@ export default async function DashboardLayout({
       <TooltipProvider>
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
-          <main className="flex-1 overflow-y-auto bg-gradient-to-br from-zinc-50/80 via-white to-zinc-50/40 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900/90">
+          <main className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900">
             {children}
           </main>
           <Toaster position="bottom-right" richColors />

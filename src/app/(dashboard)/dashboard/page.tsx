@@ -80,15 +80,14 @@ export default async function DashboardPage() {
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
       {/* Welcome banner */}
-      <div className="relative mb-8 rounded-2xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 p-6 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.08),transparent)]" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="mb-8 rounded-2xl bg-brand-900 p-6 text-white">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.hello")}, {session.user?.name || "User"} 👋</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.hello")}, {session.user?.name || "User"}</h1>
             <p className="text-sm text-brand-200 mt-1">{t("dashboard.tagline")}</p>
           </div>
           <Link href="/studio">
-            <Button className="bg-white text-brand-900 hover:bg-brand-50 cursor-pointer gap-2 shadow-lg shadow-black/20">
+            <Button className="bg-white text-brand-900 hover:bg-brand-50 cursor-pointer gap-2 rounded-xl shadow-lg shadow-black/20">
               <Sparkles size={16} strokeWidth={2} />
               {t("dashboard.enterStudio")}
             </Button>
@@ -97,23 +96,23 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
-          <Package size={18} className="text-brand-500 mb-3" strokeWidth={1.5} />
-          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{totalProjects}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-[1.2fr_1fr_0.8fr] gap-3 mb-8">
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
+          <Package size={18} className="text-brand-700 mb-3" strokeWidth={1.5} />
+          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums tracking-tight">{totalProjects}</div>
           <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{t("dashboard.totalProjects")}</div>
         </div>
-        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
           <Image size={18} className="text-holo-500 mb-3" strokeWidth={1.5} />
-          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{generatedCount}</div>
+          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums tracking-tight">{generatedCount}</div>
           <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{t("dashboard.generatedImages")}</div>
         </div>
-        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/40 p-5 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <Zap size={18} className="text-gold-500" strokeWidth={1.5} />
             {usagePercent > 80 && <TrendingUp size={14} className="text-amber-500" />}
           </div>
-          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{tier === "FREE" ? t("dashboard.free") : tier}</div>
+          <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{tier === "FREE" ? t("dashboard.free") : tier}</div>
           <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{t("dashboard.currentPlan")}</div>
         </div>
       </div>
@@ -136,7 +135,7 @@ export default async function DashboardPage() {
               const statusClass = STATUS_STYLE[project.status] ?? STATUS_STYLE.DRAFT;
               return (
                 <Link key={project.id} href={`/products/${project.id}`} className="group/card block">
-                  <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md transition-all overflow-hidden">
+                  <div className="rounded-2xl bg-white dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-700/80 hover:border-brand-200 dark:hover:border-zinc-500 hover:shadow-md transition-all duration-300 overflow-hidden">
                     <div className="aspect-[4/3] bg-zinc-50 dark:bg-zinc-700/30 relative overflow-hidden">
                       {project.productImages[0]?.originalUrl ? (
                         <img src={project.productImages[0].originalUrl} alt={project.title} className="w-full h-full object-cover group-hover/card:scale-[1.04] transition-transform duration-500" />
@@ -171,7 +170,7 @@ export default async function DashboardPage() {
 
       {/* Empty state */}
       {resolvedProjects.length === 0 && (
-        <div className="rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/40 flex flex-col items-center justify-center py-16 gap-4">
+        <div className="rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 flex flex-col items-center justify-center py-16 gap-4">
           <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
             <Sparkles size={28} className="text-brand-500" strokeWidth={1} />
           </div>

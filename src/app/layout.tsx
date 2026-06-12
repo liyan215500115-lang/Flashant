@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
 import "./globals.css";
-import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { getServerLocale } from "@/lib/server-t";
-
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
@@ -31,7 +28,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getServerLocale();
   return (
-    <html lang={locale} className={cn("font-sans scroll-smooth", geist.variable)}>
+    <html lang={locale} className={cn("scroll-smooth")} style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
       <body className="min-h-screen flex flex-col">
         <Providers>{children}</Providers>
       </body>

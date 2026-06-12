@@ -6,6 +6,8 @@ import { ArrowDown, ArrowRight } from "lucide-react";
 import { Logo } from "@/components/landing/logo";
 import { LogoMark } from "@/components/landing/logo-mark";
 import { Navbar } from "@/components/landing/navbar";
+import { ScrollReveal } from "@/components/scroll-reveal";
+import { HeroCards } from "@/components/landing/hero-cards";
 import { TrustCloud } from "@/components/landing/trust-cloud";
 import { StyleShowcase } from "@/components/landing/style-showcase";
 import { BeforeAfterSlider } from "@/components/landing/before-after-slider";
@@ -90,15 +92,8 @@ export default async function LandingPage() {
 
   return (
     <div className="bg-white relative">
-      {/* Global grid background */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.015]"
-        style={{
-          backgroundImage:
-            "linear-gradient(#1E3A8A 1px, transparent 1px), linear-gradient(90deg, #1E3A8A 1px, transparent 1px)",
-          backgroundSize: "64px 64px",
-        }}
-      />
+      <div className="fixed inset-0 pointer-events-none opacity-[0.015]" style={{ backgroundImage: "linear-gradient(#1E3A8A 1px, transparent 1px), linear-gradient(90deg, #1E3A8A 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
+      <ScrollReveal />
 
       <Navbar
         user={user}
@@ -118,7 +113,7 @@ export default async function LandingPage() {
       />
 
       {/* ═══════════ Section 1: Hero ═══════════ */}
-      <section className="relative flex flex-col lg:flex-row items-center justify-center text-center lg:text-left px-6 pt-28 pb-20 md:pt-36 md:pb-28 max-w-6xl mx-auto gap-12 lg:gap-16">
+      <section className="relative flex flex-col lg:flex-row items-center justify-center text-center lg:text-left px-6 pt-32 pb-24 md:pt-44 md:pb-36 max-w-6xl mx-auto gap-16 lg:gap-20">
         {/* Left: copy */}
         <div className="flex-1 max-w-xl">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-brand-900 tracking-tight leading-[1.05]">
@@ -129,11 +124,11 @@ export default async function LandingPage() {
             </span>
           </h1>
 
-          <p className="mt-6 text-base md:text-lg text-zinc-500 leading-relaxed max-w-lg">
+          <p className="mt-6 text-base md:text-lg text-zinc-500 leading-relaxed max-w-lg animate-on-scroll">
             {t("landing.hero.subheadline")}
           </p>
 
-          <div className="mt-8">
+          <div className="mt-8 animate-on-scroll">
             <Link
               href={user ? "/studio" : "/register"}
               className="inline-flex items-center gap-2 rounded-xl bg-brand-900 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 transition-all duration-200 active:scale-[0.98] shadow-lg shadow-brand-900/20 hover:shadow-xl hover:shadow-brand-900/25"
@@ -146,72 +141,7 @@ export default async function LandingPage() {
         </div>
 
         {/* Right: product transformation preview */}
-        <div className="flex-1 max-w-lg w-full">
-          <div className="grid grid-cols-2 gap-3">
-            {/* Before — raw product photo */}
-            <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden group/card">
-              <div className="aspect-[3/4] relative">
-                <img
-                  src="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&h=533&fit=crop&q=60"
-                  alt="Raw product photo"
-                  className="absolute inset-0 w-full h-full object-cover grayscale-[30%] brightness-75 saturate-30"
-                />
-                <div className="absolute inset-0 bg-zinc-900/5" />
-                {/* Label */}
-                <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                  <span className="inline-block rounded-lg bg-zinc-800/70 backdrop-blur-sm px-2.5 py-1 text-[10px] font-semibold text-white uppercase tracking-wider shadow-sm">
-                    Before
-                  </span>
-                  <span className="w-5 h-5 rounded-full bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#71717A" strokeWidth="2.5" strokeLinecap="round">
-                      <rect x="3" y="3" width="18" height="18" rx="3" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <path d="M21 15l-5-5L5 21" />
-                    </svg>
-                  </span>
-                </div>
-                {/* Bottom gradient label */}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-white via-white/80 to-transparent pt-6 pb-2.5 px-3">
-                  <p className="text-[11px] text-zinc-500 font-medium">Raw phone photo</p>
-                </div>
-              </div>
-            </div>
-
-            {/* After — AI-generated advertising visual */}
-            <div className="rounded-2xl border-2 border-brand-200 bg-white shadow-lg shadow-brand-900/10 overflow-hidden relative group/card">
-              {/* Glow spot */}
-              <div className="absolute -top-10 -right-10 w-28 h-28 bg-holo-500/10 rounded-full blur-2xl pointer-events-none" />
-              <div className="aspect-[3/4] relative">
-                <img
-                  src="https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=400&h=533&fit=crop&q=90"
-                  alt="AI transformed product advertisement"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                {/* Sheen overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-holo-500/[0.06] pointer-events-none" />
-                {/* Label row */}
-                <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-900/80 backdrop-blur-sm px-2.5 py-1 text-[10px] font-semibold text-white uppercase tracking-wider shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-holo-500 animate-pulse" />
-                    After
-                  </span>
-                  <LogoMark size={18} />
-                </div>
-                {/* Bottom gradient label */}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-white via-white/85 to-transparent pt-6 pb-2.5 px-3">
-                  <p className="text-[11px] text-brand-700 font-semibold">AI studio-quality</p>
-                </div>
-              </div>
-              {/* Bottom accent glow */}
-              <div className="absolute inset-x-3 bottom-3 h-px rounded-full bg-gradient-to-r from-transparent via-holo-500/40 to-transparent" />
-            </div>
-          </div>
-
-          {/* Caption */}
-          <p className="mt-4 text-center text-xs text-zinc-400">
-            From smartphone snap to studio-quality ad. Same product, transformed in seconds.
-          </p>
-        </div>
+        <HeroCards />
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
           <ArrowDown size={16} className="text-zinc-300 animate-bounce" />
@@ -233,13 +163,13 @@ export default async function LandingPage() {
       />
 
       {/* ═══════════ Section 4: Before & After ═══════════ */}
-      <section className="py-24 md:py-32 px-6 bg-brand-950 text-white">
+      <section className="py-32 md:py-40 px-6 bg-zinc-50">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+          <div className="text-center mb-14 animate-on-scroll">
+            <h2 className="text-2xl md:text-3xl font-bold text-brand-900 tracking-tight">
               {t("landing.beforeAfter.title")}
             </h2>
-            <p className="mt-3 text-sm text-zinc-400 max-w-md mx-auto">
+            <p className="mt-3 text-sm text-zinc-500 max-w-md mx-auto">
               {t("landing.beforeAfter.desc")}
             </p>
           </div>
@@ -281,9 +211,9 @@ export default async function LandingPage() {
       />
 
       {/* ═══════════ Section 7: Pricing ═══════════ */}
-      <section id="pricing" className="scroll-mt-20 py-24 md:py-32 px-6 bg-white">
+      <section id="pricing" className="scroll-mt-20 py-32 md:py-40 px-6 bg-zinc-50">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16 animate-on-scroll">
             <h2 className="text-2xl md:text-3xl font-bold text-brand-900 tracking-tight">
               {t("landing.pricing.title")}
             </h2>

@@ -15,9 +15,9 @@ const ICONS = [Upload, Wand2, PackageOpen] as const;
 
 export function WorkflowSteps({ title, subtitle, steps }: WorkflowStepsProps) {
   return (
-    <section className="py-24 md:py-32 px-6 bg-white">
+    <section className="py-32 md:py-40 px-6 bg-white">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="text-center mb-16 animate-on-scroll">
           <h2 className="text-2xl md:text-3xl font-bold text-brand-900 tracking-tight">
             {title}
           </h2>
@@ -33,7 +33,7 @@ export function WorkflowSteps({ title, subtitle, steps }: WorkflowStepsProps) {
                 className="relative flex flex-col items-center text-center group"
               >
                 {/* Step number badge */}
-                <span className="absolute -top-3 left-4 text-7xl font-bold text-zinc-50 select-none pointer-events-none">
+                <span className="absolute -top-3 left-4 text-7xl font-bold text-brand-50/60 select-none pointer-events-none">
                   {i + 1}
                 </span>
 

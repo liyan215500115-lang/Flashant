@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "闪象",
-    "tagline": "AI 商品图",
+    "tagline": "一键闪象，万象更新",
     "save": "保存",
     "cancel": "取消",
     "delete": "删除",
@@ -36,7 +36,7 @@
     "goRegister": "立即注册",
     "goLogin": "去登录",
     "backHome": "← 返回首页",
-    "brandSlogan": "闪象 Flashant · 一键闪象，万象更新",
+    "brandSlogan": "闪象 · 一键闪象，万象更新",
     "errorEmailPassword": "邮箱或密码错误",
     "errorPasswordMismatch": "两次密码不一致",
     "errorWeakPassword": "密码至少 6 位",
@@ -318,92 +318,92 @@
       "startFree": "免费开始"
     },
     "hero": {
-      "headline": "惊艳产品视觉。",
-      "headlineHighlight": "一键闪象。",
-      "subheadline": "认识闪象，你聪明又软萌的 AI 视觉助手。把普通产品照变成高转化、影棚级的精品图，覆盖 Amazon、Shopify、TikTok Shop —— 只需几秒。",
+      "headline": "产品图，",
+      "headlineHighlight": "拍完就用。",
+      "subheadline": "上传原图，选个风格，几秒钟拿到合规电商图。支持 Amazon、Shopify、TikTok Shop 等 14 个平台。",
       "cta": "免费开始创作",
-      "ctaSub": "无需信用卡。每月 10 次免费额度。"
+      "ctaSub": "每月 10 次免费额度，无需信用卡"
     },
     "trustCloud": {
-      "title": "为跨境卖家而生",
-      "subtitle": "出图自动锁定平台合规规则，开箱即用"
+      "title": "14 个平台。一键出图。",
+      "subtitle": "每个平台的主图尺寸、背景色、留白比例自动对齐，出图即合规。"
     },
     "styleShowcase": {
-      "title": "四种标志性风格。",
-      "subtitle": "选定美学。点击。生成。就这么简单。",
+      "title": "四种风格，一键切换",
+      "subtitle": "选个喜欢的，剩下的交给引擎",
       "tabs": {
-        "cosmetics": "北欧极简",
-        "luxury": "奢华大理石",
-        "cyber": "赛博科技",
+        "cosmetics": "北欧轻奢",
+        "luxury": "大理石台面",
+        "cyber": "赛博质感",
         "whiteBg": "纯白底图"
       },
       "tooltips": {
-        "cosmetics": "柔影轻氛，为品牌注入呼吸感。",
-        "luxury": "瞬间拉高品牌溢价，质感立现。",
-        "cyber": "未来主义能量流，为 Gen-Z 打造。",
-        "whiteBg": "100% 符合亚马逊 SP-API 规范。锁定 1:1。"
+        "cosmetics": "柔光浅影，适合美妆和护肤品类。",
+        "luxury": "高光质感，瞬间拉高品牌溢价。",
+        "cyber": "强对比霓虹调，适合 3C 数码和潮牌。",
+        "whiteBg": "亚马逊主图规格，100% 合规。"
       }
     },
     "beforeAfter": {
-      "title": "从手机烂图到影棚大片",
-      "desc": "拖动滑块，感受闪象魔法",
-      "beforeLabel": "手机实拍原图",
-      "afterLabel": "闪象 AI 生成"
+      "title": "手机拍的原图 vs 生成的结果",
+      "desc": "拖动中间线，看看差距",
+      "beforeLabel": "手机原图",
+      "afterLabel": "闪象生成"
     },
     "workflow": {
-      "title": "三步走。无限产出。",
-      "subtitle": "你的工业级视觉流水线，化繁为简。",
+      "title": "三步出图",
+      "subtitle": "从原图到可用素材，三分钟内完工",
       "step1": {
-        "title": "拖拽上传",
-        "desc": "丢入原始产品图。系统瞬间分离主体，不丢失任何边缘细节。"
+        "title": "上传原图",
+        "desc": "拖入产品照。PNG、JPG、WebP 都可以，单张不超过 20MB。"
       },
       "step2": {
-        "title": "轻挥魔杖",
-        "desc": "用你的母语描述场景。点击魔杖，即时升级为高转化英文 Prompt。"
+        "title": "选风格和平台",
+        "desc": "挑一个风格，指定目标平台。AI 自动匹配尺寸和背景要求。"
       },
       "step3": {
-        "title": "批量收割",
-        "desc": "多风格并行生成。存入素材库，一键打包下载整套电商启动物料。"
+        "title": "下载或发布",
+        "desc": "生成完成后一键下载全套素材，或直接发布到 Shopify、TikTok Shop。"
       }
     },
     "roi": {
-      "title": "数字不会说谎。",
-      "subtitle": "单个产品上架拍摄的真实成本对比。",
-      "col1": "传统影棚 / 外包",
-      "col2": "闪象 AI 助手",
+      "title": "一张图能省多少钱",
+      "subtitle": "以单个 SKU 上架 5 张主图为例",
+      "col1": "找摄影棚",
+      "col2": "用闪象",
       "rows": {
         "cost": {
-          "label": "成本",
-          "old": "$50–$100 / 张",
-          "new": "$0.02 / 张"
+          "label": "花费",
+          "old": "约 ¥350–700 / SKU",
+          "new": "约 ¥0.14 / SKU"
         },
         "speed": {
-          "label": "速度",
+          "label": "耗时",
           "old": "3–5 个工作日",
-          "new": "10 秒即时出图"
+          "new": "几十秒出图"
         },
         "revision": {
           "label": "修改",
-          "old": "有限次数，额外收费",
-          "new": "无限次即时生成"
+          "old": "加钱、加时、沟通成本",
+          "new": "不限次，随时再生成"
         },
         "compliance": {
-          "label": "合规",
-          "old": "人工逐张检查",
-          "new": "自动锁定平台规则"
+          "label": "合规检查",
+          "old": "人工逐张比对规则",
+          "new": "出图即合规"
         }
       },
-      "winner": "闪象碾压式胜出。"
+      "winner": "换闪象，每个 SKU 省一杯咖啡钱。"
     },
     "bottomCta": {
-      "title": "准备好升级你的产品图了吗？",
-      "subtitle": "加入 5,000+ 跨境卖家，用秒级速度产出影棚级视觉。",
+      "title": "换掉手机图，上架用它。",
+      "subtitle": "免费用，10 次 / 月。没信用卡也能试。",
       "cta": "免费开始创作",
-      "ctaSub": "无需信用卡。每月 10 次免费额度。"
+      "ctaSub": "每月 10 次免费额度"
     },
     "pricing": {
       "title": "简单定价",
-      "desc": "从免费开始，随业务增长灵活升级",
+      "desc": "从免费开始，按用量升级",
       "currentPlanPrefix": "你当前正在使用 ",
       "currentPlanSuffix": " 套餐",
       "freePlan": "免费版",
@@ -414,30 +414,30 @@
       "goToWorkspace": "前往工作台",
       "plans": {
         "free": {
-          "name": "免费版",
-          "desc": "适合个人卖家入门",
-          "feature1": "10 次 AI 生图 / 月",
-          "feature2": "AI 智能提示词 + 文案生成",
-          "feature3": "智能抠图 + 14 平台下载",
-          "feature4": "5 种场景模板"
+          "name": "Free",
+          "desc": "刚起步的卖家",
+          "feature1": "10 次 / 月",
+          "feature2": "5 种场景模板",
+          "feature3": "14 平台下载",
+          "feature4": "AI 提示词辅助"
         },
         "pro": {
           "name": "Pro",
-          "desc": "适合成长型品牌",
-          "feature1": "100 次 AI 生图 / 月",
-          "feature2": "AI 无限提示词 + 文案生成",
+          "desc": "在增长的品牌",
+          "feature1": "100 次 / 月",
+          "feature2": "全部模板 + HD",
           "feature3": "Shopify 一键发布",
           "feature4": "品牌 Logo 叠加",
-          "feature5": "全部场景模板 + HD"
+          "feature5": "无限 AI 提示词"
         },
         "business": {
           "name": "Business",
-          "desc": "适合品牌团队",
-          "feature1": "1,000 次 AI 生图 / 月",
-          "feature2": "AI 无限提示词 + 文案生成",
+          "desc": "品牌团队",
+          "feature1": "1,000 次 / 月",
+          "feature2": "全部模板 + HD",
           "feature3": "Shopify 一键发布",
           "feature4": "品牌 Logo 叠加",
-          "feature5": "全部场景模板 + HD"
+          "feature5": "无限 AI 提示词 + API"
         }
       }
     },
@@ -464,7 +464,7 @@
     "emptyPreview": "上传图片并点击生成",
     "downloadImage": "下载",
     "syncToShopify": "同步至 Shopify",
-    "slogan": "一键闪象，万象更新 · Stunning Visuals. Generated in a Flash.",
+    "slogan": "一键闪象，万象更新 · Product photos. Done in a flash.",
     "modeLabel": "生成模式",
     "promptLabel": "商品卖点",
     "sellingPointsLabel": "商品卖点",

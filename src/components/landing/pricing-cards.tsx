@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { Check } from "lucide-react";
 
 interface PlanDef {
@@ -26,7 +26,6 @@ interface PricingCardsProps {
 
 export function PricingCards({
   currentPlan,
-  userLoggedIn,
   popularLabel,
   currentPlanLabel,
   getStartedLabel,
@@ -34,32 +33,36 @@ export function PricingCards({
   goToWorkspaceLabel,
   plans,
 }: PricingCardsProps) {
-  const isCurrentPlan = (tier: string) =>
-    currentPlan?.toUpperCase() === tier.toUpperCase();
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const activeTier = selectedTier ?? currentPlan;
 
-  const linkHref = userLoggedIn ? "/studio" : "/login";
+  const isActive = (tier: string) =>
+    activeTier?.toUpperCase() === tier.toUpperCase();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
       {plans.map((plan) => {
-        const isCurrent = isCurrentPlan(plan.tier);
+        const active = isActive(plan.tier);
+        const isReallyCurrent = currentPlan?.toUpperCase() === plan.tier.toUpperCase();
 
         return (
-          <div
+          <button
+            type="button"
             key={plan.tier}
-            className={`relative rounded-2xl border bg-white p-6 md:p-8 flex flex-col transition-all duration-300 hover:shadow-md ${
-              plan.highlighted
-                ? "border-blue-600 ring-2 ring-blue-600"
-                : "border-zinc-100"
+            onClick={() => setSelectedTier(plan.tier)}
+            className={`relative rounded-2xl border bg-white p-6 md:p-8 flex flex-col transition-all duration-200 text-left ${
+              active
+                ? "border-brand-600 ring-2 ring-brand-600/20 shadow-md"
+                : "border-zinc-200 hover:border-brand-300 hover:shadow-md cursor-pointer"
             }`}
           >
-            {plan.highlighted && !isCurrent && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center rounded-full bg-blue-600 text-white text-xs font-medium px-3 py-0.5">
+            {plan.highlighted && !active && (
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center rounded-full bg-brand-900 text-white text-xs font-medium px-3 py-0.5">
                 {popularLabel}
               </span>
             )}
-            {isCurrent && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center rounded-full bg-zinc-900 text-white text-xs font-medium px-3 py-0.5">
+            {isReallyCurrent && (
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center rounded-full bg-zinc-800 text-white text-xs font-medium px-3 py-0.5">
                 {currentPlanLabel}
               </span>
             )}
@@ -72,7 +75,7 @@ export function PricingCards({
             </div>
 
             <div className="mb-6">
-              <span className="text-3xl font-bold text-zinc-900">
+              <span className="text-3xl font-bold text-zinc-900 tabular-nums">
                 {plan.price}
               </span>
               <span className="text-sm text-zinc-400">{plan.period}</span>
@@ -84,35 +87,26 @@ export function PricingCards({
                   key={feat}
                   className="flex items-start gap-2 text-sm text-zinc-600"
                 >
-                  <Check
-                    size={14}
-                    className="mt-0.5 shrink-0 text-blue-600"
-                  />
+                  <Check size={14} className="mt-0.5 shrink-0 text-brand-600" />
                   {feat}
                 </li>
               ))}
             </ul>
 
-            {isCurrent ? (
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center justify-center w-full rounded-xl px-4 py-2.5 text-sm font-medium bg-zinc-100 text-zinc-500 hover:bg-zinc-200 transition-colors"
-              >
-                {goToWorkspaceLabel}
-              </Link>
-            ) : (
-              <Link
-                href={linkHref}
-                className={`inline-flex items-center justify-center w-full rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.98] ${
-                  plan.highlighted
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-zinc-900 text-white hover:bg-zinc-800"
-                }`}
-              >
-                {plan.highlighted ? getStartedLabel : learnMoreLabel}
-              </Link>
-            )}
-          </div>
+            <div className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium text-center transition-colors ${
+              active
+                ? "bg-brand-900 text-white"
+                : "bg-zinc-900 text-white hover:bg-zinc-800"
+            }`}>
+              {isReallyCurrent && active
+                ? goToWorkspaceLabel
+                : active && !isReallyCurrent
+                  ? getStartedLabel
+                  : plan.highlighted
+                    ? getStartedLabel
+                    : learnMoreLabel}
+            </div>
+          </button>
         );
       })}
     </div>

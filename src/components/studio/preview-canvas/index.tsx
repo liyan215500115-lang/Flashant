@@ -83,12 +83,12 @@ export function StudioPreviewCanvas({
           <div className="absolute inset-0">
             <Skeleton className="w-full h-full" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-4 text-center shadow-sm">
+              <div className="bg-white rounded-xl px-6 py-4 text-center shadow-sm border border-zinc-200">
                 <div className="flex gap-1.5 justify-center mb-2">
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className="w-2 h-2 rounded-full bg-zinc-400 animate-bounce"
+                      className="w-2 h-2 rounded-full bg-brand-500 animate-bounce"
                       style={{ animationDelay: `${i * 150}ms` }}
                     />
                   ))}
@@ -116,8 +116,8 @@ export function StudioPreviewCanvas({
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-xl bg-zinc-100 flex items-center justify-center">
-                <Sparkles size={28} className="text-zinc-300" />
+              <div className="w-16 h-16 mx-auto mb-3 rounded-xl bg-brand-50 flex items-center justify-center">
+                <Sparkles size={28} className="text-brand-300" />
               </div>
               <p className="text-sm font-medium text-zinc-400">{t("generate.emptyPreview")}</p>
               <p className="text-xs text-zinc-300 mt-1">{t("generate.uploadHint")}</p>
@@ -128,7 +128,7 @@ export function StudioPreviewCanvas({
 
       {/* Generation history thumbnails */}
       {generationHistory.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }}>
           {generationHistory.map((img) => (
             <button
               key={img.id}

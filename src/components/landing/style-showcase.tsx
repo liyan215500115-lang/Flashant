@@ -21,9 +21,9 @@ export function StyleShowcase({ title, subtitle, styles }: StyleShowcaseProps) {
   const current = styles[active];
 
   return (
-    <section className="py-24 md:py-32 px-6">
+    <section className="py-32 md:py-40 px-6 bg-zinc-50">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 animate-on-scroll">
           <h2 className="text-2xl md:text-3xl font-bold text-brand-900 tracking-tight">
             {title}
           </h2>
@@ -41,7 +41,7 @@ export function StyleShowcase({ title, subtitle, styles }: StyleShowcaseProps) {
               className={`relative inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
                 i === active
                   ? "bg-brand-900 text-white shadow-lg shadow-brand-900/20"
-                  : "bg-zinc-50 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"
+                  : "bg-zinc-50 text-zinc-600 hover:text-zinc-700 hover:bg-zinc-100"
               }`}
             >
               {i === active && <Sparkles size={13} className="text-holo-400" />}
@@ -60,7 +60,7 @@ export function StyleShowcase({ title, subtitle, styles }: StyleShowcaseProps) {
           {current.images.map((src, i) => (
             <div
               key={`${current.key}-${i}`}
-              className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200/60 shadow-sm hover:shadow-md transition-all duration-500"
+              className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200/60 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-500 cursor-pointer"
             >
               <img
                 src={src}
@@ -68,7 +68,7 @@ export function StyleShowcase({ title, subtitle, styles }: StyleShowcaseProps) {
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </div>
           ))}
         </div>

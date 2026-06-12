@@ -24,7 +24,7 @@ export function RoiTable({
   winner,
 }: RoiTableProps) {
   return (
-    <section className="py-24 md:py-32 px-6 bg-zinc-50/50">
+    <section className="py-32 md:py-40 px-6 bg-white">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-bold text-brand-900 tracking-tight">

@@ -144,16 +144,16 @@ export default function ProductsPage() {
       {projects.length > 0 && (
         <div className="flex items-center gap-2 mb-5 flex-wrap">
           <input type="text" placeholder={t("products.searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-52 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs placeholder:text-zinc-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10" />
+            className="h-9 w-52 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs placeholder:text-zinc-400 focus:outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10 transition-all" />
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-600">
+            className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-600 transition-all">
             <option value="">{t("products.allStatus")}</option>
             {["DRAFT","GENERATING","GENERATED","REVIEW","PUBLISHED","FAILED"].map((s) => (
               <option key={s} value={s}>{t(`status.${s}`)}</option>
             ))}
           </select>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value as "newest"|"oldest")}
-            className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-600">
+            className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-600 transition-all">
             <option value="newest">{t("products.sortNewest")}</option>
             <option value="oldest">{t("products.sortOldest")}</option>
           </select>
@@ -162,7 +162,7 @@ export default function ProductsPage() {
 
       {/* Empty state */}
       {projects.length === 0 && (
-        <Card className="border-2 border-dashed border-zinc-200 dark:border-zinc-600 rounded-2xl bg-white dark:bg-zinc-800/40">
+        <Card className="border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40">
           <CardContent className="flex flex-col items-center justify-center py-20 gap-4">
             <Package size={36} className="text-zinc-300 dark:text-zinc-600" strokeWidth={1} />
             <div className="text-center">
@@ -179,17 +179,17 @@ export default function ProductsPage() {
       )}
 
       {/* Project grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 [&>*:first-child]:xl:col-span-2 [&>*:first-child]:xl:row-span-2">
         {filtered.length === 0 && projects.length > 0 ? (
           <div className="col-span-full text-center py-12 text-sm text-zinc-400">{t("products.noResults")}</div>
         ) : (
-          displayProjects.map((project) => {
+          displayProjects.map((project, idx) => {
             const s = STATUS_STYLE[project.status as ProjectStatus] ?? STATUS_STYLE.DRAFT;
             const thumbnail = project.productImages[0]?.originalUrl || project.generatedImages[0]?.url || null;
             const isDeleting = deletingIds.has(project.id);
 
             return (
-              <div key={project.id} className={`group/card relative rounded-2xl border bg-white dark:bg-zinc-800/40 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md transition-all duration-200 ${isDeleting ? "opacity-40 scale-95 pointer-events-none" : "border-zinc-200/80 dark:border-zinc-700/80"}`}>
+              <div key={project.id} className={`group/card relative rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 hover:shadow-md transition-all duration-200 ${isDeleting ? "opacity-40 scale-95 pointer-events-none" : ""} ${idx === 0 ? "xl:aspect-auto" : ""}`}>
                 <Link href={`/products/${project.id}`} className="block p-3">
                   <div className="aspect-[4/3] rounded-xl mb-3 overflow-hidden bg-zinc-50 dark:bg-zinc-700/30 relative">
                     {thumbnail ? (

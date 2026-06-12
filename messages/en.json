@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "Flashant",
-    "tagline": "AI Product Images",
+    "tagline": "Product Photos. Done in a Flash.",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -36,7 +36,7 @@
     "goRegister": "Sign up",
     "goLogin": "Sign in",
     "backHome": "← Back to home",
-    "brandSlogan": "Flashant · Stunning Visuals. Generated in a Flash.",
+    "brandSlogan": "Flashant · Product Photos. Done in a Flash.",
     "errorEmailPassword": "Invalid email or password",
     "errorPasswordMismatch": "Passwords do not match",
     "errorWeakPassword": "Password must be at least 6 characters",
@@ -77,11 +77,11 @@
     "operator": "Operator",
     "admin": "Admin",
     "signOut": "Sign Out",
-    "tagline": "Stunning Visuals. Generated in a Flash."
+    "tagline": "Product Photos. Done in a Flash."
   },
   "dashboard": {
     "hello": "Hello",
-    "tagline": "Stunning Visuals. Generated in a Flash.",
+    "tagline": "Product Photos. Done in a Flash.",
     "totalProjects": "Total Projects",
     "generatedImages": "Generated",
     "currentPlan": "Current Plan",
@@ -318,92 +318,92 @@
       "startFree": "Start Free"
     },
     "hero": {
-      "headline": "Stunning Product Visuals.",
-      "headlineHighlight": "Generated in a Flash.",
-      "subheadline": "Meet Flashant, your smart, friendly AI visual assistant. Turn ordinary product photos into high-converting, studio-quality masterpieces for Amazon, Shopify, and TikTok Shop — in seconds.",
-      "cta": "Start Creating for Free",
-      "ctaSub": "No credit card required. 10 free credits monthly."
+      "headline": "Product photos done in a flash.",
+      "headlineHighlight": "No studio. No wait.",
+      "subheadline": "Upload a product photo, pick a style, get platform-ready images in seconds. Works across 14 marketplaces.",
+      "cta": "Start Free",
+      "ctaSub": "10 free credits monthly. No credit card."
     },
     "trustCloud": {
-      "title": "Built for Cross-Border Sellers",
-      "subtitle": "Images auto-locked to platform compliance rules out of the box"
+      "title": "14 marketplaces. One button.",
+      "subtitle": "Every image auto-matched to each platform's size, background, and margin rules."
     },
     "styleShowcase": {
-      "title": "Four Signature Styles.",
-      "subtitle": "Pick your aesthetic. Click. Generate. It's that simple.",
+      "title": "Four styles. One click.",
+      "subtitle": "Pick a look. The engine handles the rest.",
       "tabs": {
-        "cosmetics": "Nordic Minimalist",
-        "luxury": "Luxury Marble",
-        "cyber": "Cyberpunk Tech",
-        "whiteBg": "Pure White BG"
+        "cosmetics": "Nordic Soft",
+        "luxury": "Marble Desk",
+        "cyber": "Cyberpunk",
+        "whiteBg": "Pure White"
       },
       "tooltips": {
-        "cosmetics": "Breathe elegance into your brand. Soft shadows, airy tones.",
-        "luxury": "Elevate your perceived value instantly with premium textures.",
-        "cyber": "Stop the scroll with futuristic energy. Engineered for Gen-Z.",
-        "whiteBg": "100% Amazon SP-API Guideline Compliant. Locked 1:1."
+        "cosmetics": "Soft light and shadow — great for beauty and skincare.",
+        "luxury": "High-end gloss — instantly lifts premium feel.",
+        "cyber": "Bold neons — ideal for tech, gaming, and streetwear.",
+        "whiteBg": "Amazon main image spec. 100% compliant."
       }
     },
     "beforeAfter": {
-      "title": "From Phone Snap to Studio Masterpiece",
-      "desc": "Drag the slider to see the Flashant difference",
-      "beforeLabel": "Raw Smartphone Photo",
-      "afterLabel": "Flashant Magic Generated"
+      "title": "Phone snap vs the result",
+      "desc": "Drag the line to compare",
+      "beforeLabel": "Original Photo",
+      "afterLabel": "Flashant Output"
     },
     "workflow": {
-      "title": "Three Steps. Infinite Content.",
-      "subtitle": "Your industrial-grade visual pipeline, simplified.",
+      "title": "Three steps to pro photos",
+      "subtitle": "From raw shot to finished assets in under three minutes",
       "step1": {
-        "title": "Drag & Drop",
-        "desc": "Drop your raw product image. Our system instantly isolates the subject without losing a single edge detail."
+        "title": "Upload",
+        "desc": "Drop your product photo. PNG, JPG, WebP — up to 20MB each."
       },
       "step2": {
-        "title": "Wave the Magic Wand",
-        "desc": "Speak in your native language. Click the Magic Wand to instantly upgrade your text into highly descriptive, conversion-optimized English prompts."
+        "title": "Pick a style",
+        "desc": "Choose a look and your target platform. The engine handles sizing and background specs."
       },
       "step3": {
-        "title": "Batch Harvest",
-        "desc": "Run multiple style concepts together. Stash them in your Asset Grid and download the entire e-commerce launch kit in one .zip file."
+        "title": "Download or publish",
+        "desc": "Grab the full set as a .zip, or publish directly to Shopify or TikTok Shop."
       }
     },
     "roi": {
-      "title": "The Numbers Don't Lie.",
-      "subtitle": "A real cost comparison for a single product listing shoot.",
-      "col1": "Traditional Agency / Studio",
-      "col2": "Flashant AI Helper",
+      "title": "What a single SKU actually costs",
+      "subtitle": "Based on 5 main images per listing",
+      "col1": "Hire a Studio",
+      "col2": "Use Flashant",
       "rows": {
         "cost": {
           "label": "Cost",
-          "old": "$50–$100 per photo",
-          "new": "$0.02 per photo"
+          "old": "~$50–100 / SKU",
+          "new": "~$0.02 / SKU"
         },
         "speed": {
-          "label": "Speed",
-          "old": "3–5 Days turnaround",
-          "new": "10 Seconds instant delivery"
+          "label": "Turnaround",
+          "old": "3–5 business days",
+          "new": "Seconds"
         },
         "revision": {
-          "label": "Revision",
-          "old": "Limited rounds, extra fees",
-          "new": "Infinite variations in a flash"
+          "label": "Revisions",
+          "old": "Extra fees, extra emails",
+          "new": "Unlimited, anytime"
         },
         "compliance": {
           "label": "Compliance",
-          "old": "Manual checking",
-          "new": "Auto-locked to platform rules"
+          "old": "Manual check per platform",
+          "new": "Auto-matched on export"
         }
       },
-      "winner": "Flashant wins on every metric."
+      "winner": "Flashant saves you about the cost of a coffee per SKU."
     },
     "bottomCta": {
-      "title": "Ready to Transform Your Product Images?",
-      "subtitle": "Join 5,000+ cross-border sellers who ship studio-quality visuals in seconds, not days.",
-      "cta": "Start Creating for Free",
-      "ctaSub": "No credit card required. 10 free credits monthly."
+      "title": "Swap the phone snap. Ship this instead.",
+      "subtitle": "Free to start. 10 credits a month. No card needed.",
+      "cta": "Start Free",
+      "ctaSub": "10 free credits monthly"
     },
     "pricing": {
-      "title": "Simple Pricing",
-      "desc": "Start free, upgrade as you grow",
+      "title": "Simple pricing",
+      "desc": "Start free. Scale with usage.",
       "currentPlanPrefix": "You are on the ",
       "currentPlanSuffix": " plan",
       "freePlan": "Free",
@@ -415,29 +415,29 @@
       "plans": {
         "free": {
           "name": "Free",
-          "desc": "For individual sellers",
-          "feature1": "10 AI generations / month",
-          "feature2": "AI Prompts + Listing Generator",
-          "feature3": "Background Removal + 14 Platforms",
-          "feature4": "5 Scene Templates"
+          "desc": "Getting started",
+          "feature1": "10 / month",
+          "feature2": "5 scene templates",
+          "feature3": "14 platform exports",
+          "feature4": "AI prompt assist"
         },
         "pro": {
           "name": "Pro",
-          "desc": "For growing brands",
-          "feature1": "100 AI generations / month",
-          "feature2": "Unlimited AI Prompts & Listings",
-          "feature3": "Shopify One-Click Publish",
-          "feature4": "Brand Logo Overlay",
-          "feature5": "All Templates + HD"
+          "desc": "Growing brands",
+          "feature1": "100 / month",
+          "feature2": "All templates + HD",
+          "feature3": "Shopify one-click",
+          "feature4": "Brand logo overlay",
+          "feature5": "Unlimited AI prompts"
         },
         "business": {
           "name": "Business",
-          "desc": "For brand teams",
-          "feature1": "1,000 AI generations / month",
-          "feature2": "Unlimited AI Prompts & Listings",
-          "feature3": "Shopify One-Click Publish",
-          "feature4": "Brand Logo Overlay",
-          "feature5": "All Templates + HD"
+          "desc": "Brand teams",
+          "feature1": "1,000 / month",
+          "feature2": "All templates + HD",
+          "feature3": "Shopify one-click",
+          "feature4": "Brand logo overlay",
+          "feature5": "Unlimited AI prompts + API"
         }
       }
     },
@@ -464,7 +464,7 @@
     "emptyPreview": "Upload an image and click generate",
     "downloadImage": "Download",
     "syncToShopify": "Sync to Shopify",
-    "slogan": "Stunning Visuals. Generated in a Flash. 一键闪象，万象更新",
+    "slogan": "Product Photos. Done in a Flash. · 商品图，一拍即成。",
     "modeLabel": "Generation Mode",
     "promptLabel": "Selling Points",
     "sellingPointsLabel": "Selling Points",

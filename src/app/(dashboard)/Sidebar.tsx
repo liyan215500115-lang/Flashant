@@ -58,7 +58,7 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="flex flex-col h-screen flex-shrink-0 w-[232px] bg-gradient-to-b from-white to-zinc-50/50 dark:from-zinc-900 dark:to-zinc-900/80 border-r border-zinc-200/80 dark:border-zinc-700/80 shadow-sm">
+    <aside className="flex flex-col h-screen flex-shrink-0 w-[232px] bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700/60">
       {/* Brand */}
       <div className="px-4 pt-5 pb-4">
         <Link href="/" className="inline-block">
@@ -83,13 +83,16 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`group/nav relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     active
                       ? "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
                       : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800"
                   }`}
                 >
-                  <Icon size={16} strokeWidth={1.5} />
+                  {active && (
+                    <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-brand-600" />
+                  )}
+                  <Icon size={16} strokeWidth={1.5} className="transition-transform duration-200 group-hover/nav:scale-110" />
                   <span>{item.label}</span>
                 </Link>
               );
