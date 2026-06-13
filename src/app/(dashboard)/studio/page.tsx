@@ -175,7 +175,7 @@ export default function StudioPage() {
           imageProjectId: pid!,
           productImageId: selectedImage.id,
           prompt: prompt || undefined,
-          numOutputs: 1,
+          numOutputs: quantity,
           engineType,
           targetPlatform,
           targetLanguage,
