@@ -87,14 +87,7 @@ export default function ProductsPage() {
   }
 
   async function handlePublish(id: string) {
-    toast.success("Publishing...");
-    try {
-      await fetch("/api/products/batch", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "publish", ids: [id] }),
-      });
-      fetchProjects();
-    } catch { toast.error(t("error.loadFailed")); }
+    window.location.href = `/products/${id}/publish`;
   }
 
   const filtered = projects

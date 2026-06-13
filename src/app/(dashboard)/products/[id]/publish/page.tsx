@@ -62,10 +62,6 @@ export default function PublishPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setProject(data.project);
-      const succeeded = data.project.generatedImages
-        .filter((img: GeneratedImage) => img.status === "SUCCEEDED")
-        .map((img: GeneratedImage) => img.id);
-      setSelectedImages(new Set(succeeded));
       setLoading(false);
     } catch {
       setError(t("publish.loadProjectFailed"));
@@ -212,7 +208,7 @@ export default function PublishPage() {
     return (
       <div className="max-w-[720px] mx-auto py-8">
         <p className="text-destructive">{t("detail.projectNotFound")}</p>
-        <Link href="/">
+        <Link href="/dashboard">
           <Button variant="outline" size="sm" className="mt-4">
             <ArrowLeft size={14} className="mr-1" />
             {t("publish.backToDashboard")}

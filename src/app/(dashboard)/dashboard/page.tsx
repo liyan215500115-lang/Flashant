@@ -150,7 +150,7 @@ export default async function DashboardPage() {
                       {/* Hover: quick actions */}
                       <div className="absolute inset-0 bg-black/0 group-hover/card:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover/card:opacity-100">
                         <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-lg">
-                          <Play size={12} /> {t("dashboard.enterStudio")}
+                          <Play size={12} /> {t("products.newProject")}
                         </span>
                       </div>
                     </div>

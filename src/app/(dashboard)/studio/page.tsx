@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Plus, AlertTriangle, Loader2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -25,8 +26,10 @@ interface PreviewImage {
 
 export default function StudioPage() {
   const { t } = useT();
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [projectCreating, setProjectCreating] = useState(false);
+  const searchParams = useSearchParams();
+  const existingId = searchParams.get("projectId");
+  const [projectId, setProjectId] = useState<string | null>(existingId);
+  const [projectCreating, setProjectCreating] = useState(!existingId);
   const [projectError, setProjectError] = useState("");
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
@@ -79,7 +82,6 @@ export default function StudioPage() {
   }
 
   useEffect(() => {
-    // Load quota on mount — no auto project creation
     fetch("/api/quota")
       .then((r) => r.json())
       .then((d) => {
@@ -87,6 +89,17 @@ export default function StudioPage() {
         setQuotaLimit(d.limit ?? -1);
       })
       .catch(() => {});
+    // If we got a projectId from URL, load its first product image
+    if (existingId) {
+      fetch(`/api/products/${existingId}`)
+        .then((r) => r.json())
+        .then((d) => {
+          const imgs = d.project?.productImages ?? [];
+          if (imgs.length > 0) setSelectedImage(imgs[0]);
+        })
+        .catch(() => {});
+      setProjectCreating(false);
+    }
   }, []);
 
   const pollTask = useCallback(
@@ -173,6 +186,7 @@ export default function StudioPage() {
         fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
       } else if (data.taskId) {
         pollTask(data.taskId);
+        return; // polling manages its own setIsGenerating(false)
       } else if (data.error) {
         setGenerationError(data.message || data.error);
         toast.error(data.message || data.error);
@@ -217,7 +231,14 @@ export default function StudioPage() {
     <div className="max-w-[1400px] mx-auto px-8 py-6 flex flex-col gap-5 h-full">
       {/* ── Header ── */}
       <div>
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{t("studio.title")}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{t("studio.title")}</h1>
+          {projectId && (
+            <Link href={`/products/${projectId}`} className="text-sm text-brand-600 hover:text-brand-700 font-medium">
+              View project →
+            </Link>
+          )}
+        </div>
         <p className="text-sm text-zinc-500 mt-0.5">{t("studio.desc")}</p>
       </div>
 

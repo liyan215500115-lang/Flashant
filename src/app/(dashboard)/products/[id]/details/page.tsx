@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 
 const DETAIL_TYPES = [
@@ -67,10 +67,15 @@ export default function DetailsPage() {
         <Link href={`/products/${projectId}`} className="text-zinc-500 hover:text-zinc-700">
           <ArrowLeft size={18} />
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Detail Images</h1>
           <p className="text-sm text-zinc-500 mt-0.5">Select content types and generate product listing detail images</p>
         </div>
+        <Link href={`/products/${projectId}/publish`}>
+          <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
+            <Send size={14} /> Publish / Download
+          </Button>
+        </Link>
       </div>
 
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-6 mb-6">
