@@ -59,12 +59,7 @@ export async function POST(req: Request) {
 
       const description = response.choices[0]?.message?.content?.trim();
       if (description && description.length > 10) {
-        // img2img prompt: product stays, background changes
-        const enhancedPrompt =
-          lang === "zh"
-            ? `保留产品主体不变，将背景替换为：${sceneDesc}。${description}。8K高清，商业摄影`
-            : `Keep the product exactly as shown in the reference image. Change the background to: ${sceneDesc}. ${description}. 8K, sharp focus, commercial quality.`;
-
+        const enhancedPrompt = `${description}. ${sceneDesc}, 8K, professional product photography.`;
         return NextResponse.json({ enhanced: enhancedPrompt });
       }
     } catch {
@@ -73,9 +68,7 @@ export async function POST(req: Request) {
   }
 
   // Template fallback
-  const fallback = lang === "zh"
-    ? `专业商品摄影：${name}${points ? "，" + points : ""}。${sceneDesc}，8K高清，商业级画质`
-    : `Professional product photography of ${name}${points ? ", " + points : ""}. ${sceneDesc}, 8K, sharp focus, commercial quality.`;
+  const fallback = `${name}${points ? ", " + points : ""}. ${sceneDesc}, 8K, professional product photography.`;
 
   return NextResponse.json({ enhanced: fallback });
 }
