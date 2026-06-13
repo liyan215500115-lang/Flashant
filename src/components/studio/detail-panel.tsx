@@ -44,10 +44,10 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, onDet
       try {
         const res = await fetch("/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: d.key, baseStyle: basePrompt, numOutputs: 1 }),
+          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, numOutputs: 1 }),
         });
-        const d = await res.json();
-        if (d.url) out.push({ key: t.key, url: d.url, label: t.zh });
+        const detailRes = await res.json() as { url?: string };
+        if (detailRes.url) out.push({ key: t.key, url: detailRes.url, label: t.zh });
       } catch {}
     }
     setResults((prev) => [...out, ...prev]);
