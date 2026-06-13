@@ -37,7 +37,8 @@ export function StudioControlPanel({
   onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
   onGenerate,
 }: StudioControlPanelProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const isZh = locale === "zh";
   const isAmazon = targetPlatform === "AMAZON";
   const [productName, setProductName] = useState("");
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -141,15 +142,15 @@ export function StudioControlPanel({
           <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("landing.nav.styles")}</span>
           <div className="flex flex-wrap gap-1.5">
             {[
-              { label: "纯白底", prompt: "Place the product centered on a pure white background, soft studio lighting, realistic shadow directly under the product, e-commerce packshot style, no props, 4K detail" },
-              { label: "影棚光", prompt: "Professional studio product shot, dramatic key light with soft fill, dark moody background, rim lighting, high-end commercial photography, magazine quality" },
-              { label: "自然光", prompt: "Product in natural outdoor setting, golden hour sunlight, blurred green foliage background, lifestyle photography style, warm tones, candid feel" },
-              { label: "大理石", prompt: "Product placed on elegant white marble surface, soft natural window light, shallow depth of field, luxury aesthetic, professional product photography" },
-              { label: "生活感", prompt: "Natural lifestyle scene showing product in real use context, warm home or cafe environment, candid photography style, relatable and authentic, soft natural lighting" },
-              { label: "北欧风", prompt: "Product in a bright Scandinavian interior, minimal decor, natural wood textures, soft diffused daylight, clean composition, editorial e-commerce photography" },
+              { label: "纯白底", prompt: "Product centered on pure white background, soft studio lighting, realistic shadow, e-commerce packshot, 4K", promptZh: "产品居中放置在纯白背景上，柔和摄影棚灯光，逼真阴影，电商白底图风格，4K高清" },
+              { label: "影棚光", prompt: "Professional studio product shot, dramatic key light with soft fill, dark moody background, rim lighting, high-end commercial photography, magazine quality", promptZh: "专业影棚产品拍摄，戏剧性主光配柔和补光，深色背景，轮廓光，高端商业摄影质感" },
+              { label: "自然光", prompt: "Product in natural outdoor setting, golden hour sunlight, blurred green foliage background, lifestyle photography, warm tones, candid feel", promptZh: "产品置于自然户外场景，黄金时段阳光，虚化绿色植物背景，生活方式摄影风格，温暖色调" },
+              { label: "大理石", prompt: "Product placed on elegant white marble surface, soft natural window light, shallow depth of field, luxury aesthetic, professional product photography", promptZh: "产品放置于优雅白色大理石台面，柔和自然窗光，浅景深，奢华质感，专业产品摄影" },
+              { label: "生活感", prompt: "Natural lifestyle scene showing product in real use context, warm home or cafe environment, candid photography, relatable and authentic, soft natural lighting", promptZh: "产品在真实使用场景中，温暖居家或咖啡厅环境，抓拍风格，真实自然，柔和自然光" },
+              { label: "北欧风", prompt: "Product in a bright Scandinavian interior, minimal decor, natural wood textures, soft diffused daylight, clean composition, editorial e-commerce photography", promptZh: "产品在明亮北欧风室内，极简装饰，天然木纹，柔和散射日光，干净构图，杂志级电商摄影" },
             ].map((s) => (
               <button key={s.label} type="button"
-                onClick={() => onPromptChange(s.prompt)}
+                onClick={() => onPromptChange(isZh ? s.promptZh : s.prompt)}
                 className="px-2.5 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-zinc-700 transition-colors cursor-pointer">
                 {s.label}
               </button>

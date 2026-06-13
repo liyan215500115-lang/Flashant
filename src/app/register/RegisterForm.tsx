@@ -58,8 +58,8 @@ export function RegisterForm() {
       });
 
       if (result?.error) {
-        setError(t("auth.errorRegisterFailed"));
-        setLoading(false);
+        // Registration succeeded but auto-login failed — redirect to login page
+        router.push("/login?registered=1");
       } else {
         router.push("/dashboard");
       }
