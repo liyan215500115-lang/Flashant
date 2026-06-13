@@ -89,7 +89,7 @@ export default function StudioPage() {
         setQuotaLimit(d.limit ?? -1);
       })
       .catch(() => {});
-    // If we got a projectId from URL, load its first product image
+    // If we got a projectId from URL, load it. Otherwise create a new one.
     if (existingId) {
       fetch(`/api/products/${existingId}`)
         .then((r) => r.json())
@@ -99,6 +99,14 @@ export default function StudioPage() {
         })
         .catch(() => {});
       setProjectCreating(false);
+    } else {
+      // Auto-create a draft project so upload works
+      setProjectCreating(true);
+      fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
+        .then((r) => r.json())
+        .then((d) => { if (d.project?.id) setProjectId(d.project.id); })
+        .catch((e) => setProjectError(e.message))
+        .finally(() => setProjectCreating(false));
     }
   }, []);
 

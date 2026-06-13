@@ -44,7 +44,7 @@ export default async function DashboardPage() {
 
   const [projects, generatedCount, subscription, totalProjects] = await Promise.all([
     db.imageProject.findMany({
-      where: { userId },
+      where: { userId, OR: [{ productImages: { some: {} } }, { generatedImages: { some: {} } }] },
       include: {
         productImages: { take: 1, orderBy: { sortOrder: "asc" } },
         generatedImages: { where: { status: "SUCCEEDED" }, take: 1 },

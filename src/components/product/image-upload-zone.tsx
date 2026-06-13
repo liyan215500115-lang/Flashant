@@ -14,7 +14,7 @@ interface ProductImage {
 }
 
 interface ImageUploadZoneProps {
-  projectId: string;
+  projectId: string | null;
   currentImage: ProductImage | null;
   onImageChange: (image: ProductImage) => void;
   allImages?: ProductImage[];
