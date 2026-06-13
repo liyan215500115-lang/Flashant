@@ -29,6 +29,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
     async createPrediction(input: ImageGenerationInput) {
       const inputPayload: Record<string, unknown> = {
         prompt: input.prompt,
+        num_outputs: input.numOutputs ?? 1,
         aspect_ratio: "1:1",
         output_format: "png",
         output_quality: 90,
