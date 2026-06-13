@@ -149,6 +149,27 @@ export function StudioControlPanel({
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all" />
         </div>
 
+        {/* Style presets */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Style</span>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: "纯白", en: "White BG", prompt: "Place the product centered on a pure white background, soft studio lighting, realistic shadow directly under the product, e-commerce packshot style, no props, 4K detail" },
+              { label: "影棚", en: "Studio", prompt: "Professional studio product shot, dramatic key light with soft fill, dark moody background, rim lighting, high-end commercial photography, magazine quality" },
+              { label: "自然光", en: "Outdoor", prompt: "Product in natural outdoor setting, golden hour sunlight, blurred green foliage background, lifestyle photography style, warm tones, candid feel" },
+              { label: "大理石", en: "Marble", prompt: "Product placed on elegant white marble surface, soft natural window light, shallow depth of field, luxury aesthetic, professional product photography" },
+              { label: "生活", en: "Lifestyle", prompt: "Natural lifestyle scene showing product in real use context, warm home or cafe environment, candid photography style, relatable and authentic, soft natural lighting" },
+              { label: "北欧", en: "Nordic", prompt: "Product in a bright Scandinavian interior, minimal decor, natural wood textures, soft diffused daylight, clean composition, editorial e-commerce photography" },
+            ].map((s) => (
+              <button key={s.label} type="button"
+                onClick={() => onPromptChange(s.prompt)}
+                className="px-2.5 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-zinc-700 transition-colors cursor-pointer">
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Selling points + Magic wand */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
