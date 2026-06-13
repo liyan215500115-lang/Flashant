@@ -110,7 +110,7 @@ export async function POST(req: Request) {
   const project = await db.imageProject.create({
     data: {
       userId: session.user.id,
-      title: title || await serverT("common.untitled"),
+      title: title || `${new Date().toLocaleDateString("zh-CN")} ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`,
       promptTemplateId: promptTemplateId ?? null,
       status: "DRAFT",
     },
