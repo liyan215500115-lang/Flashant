@@ -8,11 +8,16 @@ import { useT } from "@/components/i18n-provider";
 const DETAIL_TYPES = [
   { key: "selling_points", zh: "核心卖点" },
   { key: "detail", zh: "细节特写" },
+  { key: "material", zh: "材质成分" },
   { key: "size", zh: "尺寸参考" },
+  { key: "multi_angle", zh: "多角度" },
+  { key: "color_variants", zh: "颜色款式" },
   { key: "compare", zh: "效果对比" },
-  { key: "craft", zh: "工艺展示" },
-  { key: "series", zh: "系列展示" },
-  { key: "scene", zh: "场景使用" },
+  { key: "brand_story", zh: "品牌故事" },
+  { key: "craft", zh: "制作工艺" },
+  { key: "lifestyle", zh: "使用场景" },
+  { key: "flatlay", zh: "平铺展示" },
+  { key: "scene_atmosphere", zh: "场景氛围" },
 ];
 
 interface StudioDetailPanelProps {

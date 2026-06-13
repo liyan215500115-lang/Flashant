@@ -33,13 +33,22 @@ export async function POST(req: Request) {
 
   // Detail image type prompts (server-side only)
   const DETAIL_PROMPTS: Record<string, string> = {
-    selling_points: "Product key selling points infographic, highlighted features, clean callout text, white background, professional layout, 8K",
-    detail: "Extreme macro close-up, texture and material clearly visible, premium product photography, shallow depth of field, 8K",
-    size: "Product size comparison with measurement reference, dimensional guide, clean studio lighting, informative layout",
-    compare: "Before and after comparison, split screen layout, product transformation showcase, professional presentation",
-    craft: "Artisan craftsmanship process, hands making product, workshop environment, warm natural lighting, authentic handmade feel",
-    series: "Product family lineup, multiple variants displayed together, organized grid layout, premium brand presentation",
-    scene: "Product in real-life use scenario, lifestyle photography, natural environment, candid authentic moment, magazine quality",
+    // ── 功能卖点 ──
+    selling_points: "Product key selling points infographic, highlighted features with clean callout text, white background, professional e-commerce layout, 8K, sharp detail",
+    detail: "Extreme macro close-up product detail shot, texture and material clearly visible, premium product photography, shallow depth of field, soft studio lighting, 8K",
+    size: "Product size comparison with measurement reference, dimensional guide overlay, clean studio lighting, informative layout, scale reference, white background",
+    compare: "Before and after comparison, split screen layout, product transformation showcase, side by side, professional presentation, clean composition",
+    // ── 工艺品牌 ──
+    craft: "Artisan craftsmanship process scene, hands carefully making the product, workshop environment, warm natural lighting, authentic handmade feel, documentary style, editorial quality",
+    material: "Clean product detail shot showcasing the material texture and composition, macro lens, surface clearly visible, soft studio lighting, informative product page layout, white background, professional e-commerce photography",
+    brand_story: "Brand storytelling image featuring the product in an aspirational setting, warm emotional lighting, relatable human element, authentic connection, editorial brand campaign photography, premium aesthetic, 4K",
+    // ── 多角度 ──
+    multi_angle: "Professional product photography showing the product at multiple angles: front view, back view, side profile, 45-degree angle, consistent lighting across angles, white background, e-commerce multi-angle set, 4K",
+    flatlay: "Overhead flat lay photography of the product surrounded by carefully arranged complementary items, clean white surface, soft even lighting, organized composition with intentional negative space, editorial catalog style",
+    // ── 场景氛围 ──
+    lifestyle: "Natural lifestyle scene showing the product in real use context, warm home environment, candid photography style, relatable and authentic, soft natural lighting, editorial quality",
+    scene_atmosphere: "Atmospheric product photography with the product as the hero, dramatic cinematic lighting with fog or warm ambiance, emotional depth, movie poster quality, premium aesthetic",
+    color_variants: "Grid layout photography showing the product in multiple color or style variants, consistent lighting and angle, organized arrangement, white background, e-commerce color selection showcase",
   };
 
   if (!imageProjectId || !productImageId) {
