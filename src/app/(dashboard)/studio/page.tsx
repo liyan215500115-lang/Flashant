@@ -96,6 +96,7 @@ export default function StudioPage() {
         .then((d) => {
           const imgs = d.project?.productImages ?? [];
           if (imgs.length > 0) setSelectedImage(imgs[0]);
+          if (d.project?.title && !d.project.title.startsWith("202")) setProductName(d.project.title);
           const gens = d.project?.generatedImages ?? [];
           if (gens.length > 0) {
             const history = gens
@@ -166,7 +167,7 @@ export default function StudioPage() {
     if (!pid) {
       setProjectCreating(true);
       try {
-        const r = await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+        const r = await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: productName || "" }) });
         const d = await r.json();
         if (d.project?.id) { pid = d.project.id; setProjectId(pid); }
         else { setProjectError("Failed to create project"); setProjectCreating(false); return; }
