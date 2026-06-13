@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/i18n-provider";
@@ -26,7 +26,7 @@ interface StudioDetailPanelProps {
   productImageId: string;
   basePrompt: string;
   referenceImageUrl?: string;
-  onDetailGenerated?: () => void;
+  onDetailGenerated?: (results: Array<{key:string;url:string;label:string}>) => void;
 }
 
 export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, onDetailGenerated }: StudioDetailPanelProps) {
@@ -54,7 +54,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     }
     setResults((prev) => [...out, ...prev]);
     setGenerating(false);
-    onDetailGenerated?.();
+    onDetailGenerated?.(out);
   }
 
   const selectedCount = selected.size;

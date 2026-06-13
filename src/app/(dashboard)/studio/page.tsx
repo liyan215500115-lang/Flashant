@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { Plus, AlertTriangle, Loader2, ChevronRight } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StudioControlPanel } from "@/components/studio/control-panel";
@@ -299,6 +299,14 @@ export default function StudioPage() {
               basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
               referenceImageUrl={latestImage.url}
             />
+          )}
+
+          {latestImage && projectId && (
+            <Link href={`/projects/${projectId}`}
+              className="flex items-center justify-center gap-2 w-full rounded-xl bg-brand-50 py-3 text-sm font-medium text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer">
+              <FolderOpen size={16} />
+              查看项目全部图片
+            </Link>
           )}
         </div>
       </div>

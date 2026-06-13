@@ -254,6 +254,13 @@ export default function ProductDetailPage() {
     }
   }
 
+  async function handleDeleteImage(imageId: string) {
+    try {
+      await fetch(`/api/products/${params.id}/images`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageId }) });
+      fetchProject();
+    } catch {}
+  }
+
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -433,10 +440,17 @@ export default function ProductDetailPage() {
                               download
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-background/90 hover:bg-background shadow-sm transition-colors"
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-background/90 hover:bg-blue-50 hover:text-blue-600 shadow-sm transition-colors"
                             >
-                              <Download size={14} />
+                              <Download size={13} />
                             </a>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteImage(img.id)}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-background/90 hover:bg-red-50 hover:text-red-600 shadow-sm transition-colors"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </div>
                       ))}
