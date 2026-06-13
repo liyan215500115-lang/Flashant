@@ -36,7 +36,6 @@ export default function StudioPage() {
   const [activeStyle, setActiveStyle] = useState<string | null>(null);
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [quantity, setQuantity] = useState(1);
   const [engineType, setEngineType] = useState("flux");
   const [targetPlatform, setTargetPlatform] = useState("SHOPIFY");
   const [targetLanguage, setTargetLanguage] = useState("en");
@@ -181,7 +180,7 @@ export default function StudioPage() {
           productImageId: selectedImage.id,
           prompt: prompt,
           title: productName,
-          numOutputs: quantity,
+          numOutputs: 1,
           engineType,
           targetPlatform,
           targetLanguage,
@@ -253,7 +252,6 @@ export default function StudioPage() {
               projectId={projectId}
               selectedImage={selectedImage}
               prompt={prompt}
-              quantity={quantity}
               engineType={engineType}
               targetPlatform={targetPlatform}
               targetLanguage={targetLanguage}
@@ -262,7 +260,6 @@ export default function StudioPage() {
               activeStyle={activeStyle}
               onImageChange={handleImageChange}
               onPromptChange={setPrompt}
-              onQuantityChange={setQuantity}
               onEngineChange={setEngineType}
               onPlatformChange={(p) => {
                 setTargetPlatform(p);

@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
-import { QuantitySlider } from "@/components/product/quantity-slider";
+
 import { FlashantButton } from "@/components/product/flashant-button";
 import { PublishDestination } from "./publish-destination";
 import { BrandPresetSelector } from "./brand-preset-selector";
 import { StylePicker } from "./style-picker";
 import { useT } from "@/components/i18n-provider";
-import { PLATFORM_SPECS } from "@/lib/platform-specs";
+
 import { toast } from "sonner";
 
 interface ProductImage {
@@ -17,13 +17,12 @@ interface ProductImage {
 
 interface StudioControlPanelProps {
   projectId: string | null; selectedImage: ProductImage | null;
-  prompt: string; quantity: number;
+  prompt: string;
   engineType: string; targetPlatform: string; targetLanguage: string;
   brandPresetId: string | null; isGenerating: boolean;
   activeStyle: string | null;
   onImageChange: (image: ProductImage) => void;
   onPromptChange: (prompt: string) => void;
-  onQuantityChange: (quantity: number) => void;
   onEngineChange: (engine: string) => void;
   onPlatformChange: (platform: string) => void;
   onLanguageChange: (language: string) => void;
@@ -33,19 +32,15 @@ interface StudioControlPanelProps {
 }
 
 export function StudioControlPanel({
-  projectId, selectedImage, prompt, quantity,
+  projectId, selectedImage, prompt,
   engineType, targetPlatform, targetLanguage, brandPresetId, isGenerating,
-  activeStyle, onImageChange, onPromptChange, onQuantityChange,
+  activeStyle, onImageChange, onPromptChange,
   onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
   onStyleChange, onGenerate,
 }: StudioControlPanelProps) {
   const { t } = useT();
   const [productName, setProductName] = useState("");
   const [isEnhancing, setIsEnhancing] = useState(false);
-
-  // Dynamic max from platform spec
-  const platformMax = targetPlatform ? (PLATFORM_SPECS[targetPlatform]?.maxImages ?? 4) : 4;
-  const maxQuantity = Math.min(platformMax, 10);
 
   async function handleEnhance() {
     if (!selectedImage) return;
@@ -145,7 +140,6 @@ export function StudioControlPanel({
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all resize-y min-h-[60px]" />
         </div>
 
-        <QuantitySlider value={quantity} onChange={onQuantityChange} max={maxQuantity} />
       </div>
 
       {/* CTA */}
