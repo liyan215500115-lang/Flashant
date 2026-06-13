@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     title: projectTitle,
     detailType,
     baseStyle,
+    customDesc,
   } = await req.json();
 
   // Detail image type prompts (server-side only)
@@ -117,6 +118,7 @@ export async function POST(req: Request) {
   if (detailType && DETAIL_PROMPTS[detailType]) {
     prompt = DETAIL_PROMPTS[detailType];
     if (baseStyle) prompt = `${prompt}, consistent with this style: ${baseStyle}`;
+    if (customDesc) prompt = `${prompt}. Additional instructions: ${customDesc}`;
   } else if (customPrompt) {
     prompt = customPrompt;
   } else if (promptTemplateId) {

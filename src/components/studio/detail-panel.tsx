@@ -32,6 +32,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, onDet
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [customDesc, setCustomDesc] = useState("");
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string }>>([]);
 
@@ -44,7 +45,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, onDet
       try {
         const res = await fetch("/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, numOutputs: 1 }),
+          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, numOutputs: 1 }),
         });
         const detailRes = await res.json() as { url?: string };
         if (detailRes.url) out.push({ key: t.key, url: detailRes.url, label: t.zh });
@@ -68,7 +69,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, onDet
         </button>
       ) : (
         <>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t("studio.detailImages")}</h3>
             <button onClick={() => setOpen(false)} className="text-xs text-zinc-400 hover:text-zinc-600">收起</button>
           </div>
@@ -83,6 +84,10 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, onDet
               </button>
             ))}
           </div>
+          <textarea value={customDesc} onChange={(e) => setCustomDesc(e.target.value)}
+            placeholder="补充描述，如：突出金属材质的反光感、深色背景、夏季海边场景..."
+            rows={2}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none resize-none mb-2" />
           <Button onClick={handleGenerate} disabled={selectedCount === 0 || generating}
             size="sm" className="w-full gap-1.5 cursor-pointer rounded-xl bg-brand-900 hover:bg-brand-800 text-white">
             {generating && <Loader2 size={12} className="animate-spin" />}

@@ -7,7 +7,6 @@ import { PublishDestination } from "./publish-destination";
 import { BrandPresetSelector } from "./brand-preset-selector";
 import { StylePicker } from "./style-picker";
 import { useT } from "@/components/i18n-provider";
-import { toast } from "sonner";
 
 interface ProductImage {
   id: string; originalUrl: string; fileName: string; mimeType: string;
@@ -84,28 +83,6 @@ export function StudioControlPanel({
         </div>
         <PublishDestination value={targetPlatform} onChange={onPlatformChange} language={targetLanguage} onLanguageChange={onLanguageChange} />
         <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
-        <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-700/50">
-          <button type="button"
-            onClick={async () => {
-              if (!selectedImage) return;
-              toast.promise(
-                fetch("/api/bg-remove", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:selectedImage.originalUrl})})
-                  .then(r=>r.json()).then(d=>{if(d.url)onImageChange({...selectedImage,originalUrl:d.url})}),
-                {loading:"处理中...",success:"完成",error:"失败"}
-              );
-            }}
-            className="flex-1 h-8 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer">{t("generate.backgroundLabel")}</button>
-          <button type="button"
-            onClick={async () => {
-              const res = await fetch("/api/listing/generate", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName, sellingPoints:prompt, platform:targetPlatform})});
-              const data = await res.json();
-              if (data.title) {
-                onPromptChange(`Title: ${data.title}\n\nBullets:\n${(data.bullets||[]).map((b:string)=>`• ${b}`).join("\n")}\n\nDescription: ${data.description}`);
-                toast.success("Listing 已生成");
-              } else { toast.error("生成失败"); }
-            }}
-            className="flex-1 h-8 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer">{t("generate.tabListing")}</button>
-        </div>
       </div>
 
       {/* ── 生成设置 ── */}
