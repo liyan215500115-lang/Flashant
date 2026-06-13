@@ -216,31 +216,6 @@ export default function StudioPage() {
     setLatestImage(null);
   }
 
-  function handleAssetSave(id: string) {
-    setAssetImages((prev) => {
-      if (prev.some((img) => img.id === id)) return prev;
-      const target = latestImage;
-      if (target && target.id === id) return [...prev, target];
-      return prev;
-    });
-  }
-
-  async function handleBatchDownload() {
-    for (const img of assetImages) {
-      try {
-        const res = await fetch(img.url);
-        const blob = await res.blob();
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `flashant-${img.id.slice(0, 8)}.png`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(a.href);
-      } catch { /* skip */ }
-    }
-  }
-
   return (
     <div className="max-w-[1400px] mx-auto px-8 py-6 flex flex-col gap-5 h-full">
       {/* ── Header ── */}
