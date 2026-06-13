@@ -28,7 +28,7 @@ export default function DetailsPage() {
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string }>>([]);
 
   useEffect(() => {
-    fetch(`/api/projects/${projectId}`)
+    fetch(`/api/products/${projectId}`)
       .then((r) => r.json())
       .then((d) => setProductImages(d.project?.productImages ?? []))
       .catch(() => {});

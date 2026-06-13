@@ -58,7 +58,7 @@ export default function ProductsPage() {
     setProjects((prev) => prev.filter((p) => p.id !== id));
 
     try {
-      const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
       if (!res.ok) {
         setProjects(snapshot);
         toast.error("Delete failed — project restored");
@@ -78,7 +78,7 @@ export default function ProductsPage() {
   async function handleRegenerate(id: string) {
     toast.success("Regeneration queued");
     try {
-      await fetch("/api/projects/batch", {
+      await fetch("/api/products/batch", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "regenerate", ids: [id] }),
       });

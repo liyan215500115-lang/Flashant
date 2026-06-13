@@ -91,7 +91,7 @@ export default function StudioPage() {
       .catch(() => {});
     // If we got a projectId from URL, load its first product image
     if (existingId) {
-      fetch(`/api/projects/${existingId}`)
+      fetch(`/api/products/${existingId}`)
         .then((r) => r.json())
         .then((d) => {
           const imgs = d.project?.productImages ?? [];

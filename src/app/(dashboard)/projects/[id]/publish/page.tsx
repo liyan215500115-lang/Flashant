@@ -58,7 +58,7 @@ export default function PublishPage() {
 
   const fetchProject = useCallback(async () => {
     try {
-      const res = await fetch(`/api/projects/${params.id}`);
+      const res = await fetch(`/api/products/${params.id}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setProject(data.project);
