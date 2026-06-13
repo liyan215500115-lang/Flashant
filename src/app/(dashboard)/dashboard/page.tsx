@@ -41,6 +41,8 @@ export default async function DashboardPage() {
 
   const userId = session.user.id;
   const t = await getT();
+  const locale = (await Promise.resolve((await cookies()).get("NEXT_LOCALE")))?.value === "zh" ? "zh" : "en";
+  const isZh = locale === "zh";
 
   const [projects, generatedCount, subscription, totalProjects] = await Promise.all([
     db.imageProject.findMany({
@@ -150,7 +152,7 @@ export default async function DashboardPage() {
                       {/* Hover: quick actions */}
                       <div className="absolute inset-0 bg-black/0 group-hover/card:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover/card:opacity-100">
                         <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-lg">
-                          <Play size={12} /> {t("products.newProject")}
+                          <Play size={12} /> {isZh ? "继续编辑" : "Edit"}
                         </span>
                       </div>
                     </div>
