@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     detailType,
     baseStyle,
     customDesc,
+    referenceImageUrl,
   } = await req.json();
 
   // Detail image type prompts (server-side only)
@@ -282,6 +283,7 @@ export async function POST(req: Request) {
       const prediction = await provider.createPrediction({
         prompt: `${prompt} ${i > 0 ? `(variant ${i + 1})` : ""}`,
         productImageUrl: sharedImageUrl,
+        referenceImageUrl,
         numOutputs: 1,
         width: genWidth,
         height: genHeight,

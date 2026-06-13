@@ -38,9 +38,9 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
       };
 
       // Pass product photo as reference — prompt controls scene change
-      if (input.productImageUrl) {
-        inputPayload.input_images = [input.productImageUrl];
-      }
+      const refImages: string[] = [input.productImageUrl];
+      if (input.referenceImageUrl) refImages.push(input.referenceImageUrl);
+      if (refImages.length > 0) inputPayload.input_images = refImages;
 
       const version = input.modelVersion || modelVersion;
       const body: Record<string, unknown> = {

@@ -1,6 +1,8 @@
 export interface ImageGenerationInput {
   prompt: string;
   productImageUrl: string;
+  /** Optional reference image for style/person consistency */
+  referenceImageUrl?: string;
   width?: number;
   height?: number;
   numOutputs?: number;

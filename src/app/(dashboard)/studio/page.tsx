@@ -297,6 +297,7 @@ export default function StudioPage() {
               projectId={projectId}
               productImageId={selectedImage.id}
               basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
+              referenceImageUrl={latestImage.url}
             />
           )}
         </div>

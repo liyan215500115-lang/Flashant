@@ -25,10 +25,11 @@ interface StudioDetailPanelProps {
   projectId: string | null;
   productImageId: string;
   basePrompt: string;
+  referenceImageUrl?: string;
   onDetailGenerated?: () => void;
 }
 
-export function StudioDetailPanel({ projectId, productImageId, basePrompt, onDetailGenerated }: StudioDetailPanelProps) {
+export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, onDetailGenerated }: StudioDetailPanelProps) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -45,7 +46,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, onDet
       try {
         const res = await fetch("/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, numOutputs: 1 }),
+          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, numOutputs: 1 }),
         });
         const detailRes = await res.json() as { url?: string };
         if (detailRes.url) out.push({ key: t.key, url: detailRes.url, label: t.zh });
