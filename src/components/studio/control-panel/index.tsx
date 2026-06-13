@@ -2,13 +2,11 @@
 
 import { useState } from "react";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
-
 import { FlashantButton } from "@/components/product/flashant-button";
 import { PublishDestination } from "./publish-destination";
 import { BrandPresetSelector } from "./brand-preset-selector";
 import { StylePicker } from "./style-picker";
 import { useT } from "@/components/i18n-provider";
-
 import { toast } from "sonner";
 
 interface ProductImage {
@@ -52,65 +50,79 @@ export function StudioControlPanel({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: activeStyle ?? "scene", targetLanguage }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        onPromptChange(data.enhanced);
-      }
+      if (res.ok) { const data = await res.json(); onPromptChange(data.enhanced); }
     } catch { /* fallback */ }
     finally { setIsEnhancing(false); }
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Upload */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-3.5">
+    <div className="flex flex-col gap-3.5">
+      {/* ── Upload ── */}
+      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-700/70 shadow-sm p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-brand-600" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <span className="text-xs font-semibold text-zinc-700">产品图片</span>
+        </div>
         {projectId ? (
           <ImageUploadZone projectId={projectId} currentImage={selectedImage} onImageChange={onImageChange} onAccessoryUpload={onAccessoryUpload} accessoryImages={accessoryImages} />
         ) : (
-          <div className="aspect-square rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-sm text-zinc-400">
+          <div className="aspect-square rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-sm text-zinc-400 py-12">
             {t("generate.noProject")}
           </div>
         )}
       </div>
 
-      {/* Platform + Brand */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-3.5 flex flex-col gap-3">
+      {/* ── 发布设置 ── */}
+      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-700/70 shadow-sm p-4 flex flex-col gap-3.5">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-brand-600" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          </div>
+          <span className="text-xs font-semibold text-zinc-700">发布设置</span>
+        </div>
         <PublishDestination value={targetPlatform} onChange={onPlatformChange} language={targetLanguage} onLanguageChange={onLanguageChange} />
         <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
-        {/* Quick tools */}
-        <div className="flex gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-700/50">
+        <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-700/50">
           <button type="button"
             onClick={async () => {
               if (!selectedImage) return;
               toast.promise(
                 fetch("/api/bg-remove", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:selectedImage.originalUrl})})
                   .then(r=>r.json()).then(d=>{if(d.url)onImageChange({...selectedImage,originalUrl:d.url})}),
-                {loading:"Removing...",success:"Done!",error:"Failed"}
+                {loading:"处理中...",success:"完成",error:"失败"}
               );
             }}
-            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-center">{t("generate.backgroundLabel")}</button>
+            className="flex-1 h-8 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer">{t("generate.backgroundLabel")}</button>
           <button type="button"
             onClick={async () => {
               const res = await fetch("/api/listing/generate", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName, sellingPoints:prompt, platform:targetPlatform})});
               const data = await res.json();
               if (data.title) {
                 onPromptChange(`Title: ${data.title}\n\nBullets:\n${(data.bullets||[]).map((b:string)=>`• ${b}`).join("\n")}\n\nDescription: ${data.description}`);
-                toast.success("Listing generated");
-              } else { toast.error("Failed"); }
+                toast.success("Listing 已生成");
+              } else { toast.error("生成失败"); }
             }}
-            className="flex-1 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-center">{t("generate.tabListing")}</button>
+            className="flex-1 h-8 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer">{t("generate.tabListing")}</button>
         </div>
       </div>
 
-      {/* Generation config */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-3.5 flex flex-col gap-4">
+      {/* ── 生成设置 ── */}
+      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-700/70 shadow-sm p-4 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-brand-600" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+          </div>
+          <span className="text-xs font-semibold text-zinc-700">生成设置</span>
+        </div>
+
         {/* Engine */}
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("generate.engineLabel")}</span>
+          <span className="text-[11px] font-medium text-zinc-500">{t("generate.engineLabel")}</span>
           <select value={engineType} onChange={(e) => onEngineChange(e.target.value)}
-            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all">
+            className="w-full h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-700 dark:text-zinc-200 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all">
             <option value="flux">{t("generate.engineFlux")}</option>
-            <option value="flux2">FLUX.2 Pro</option>
             <option value="sdxl">{t("generate.engineSdxl")}</option>
             <option value="playground">{t("generate.enginePlayground")}</option>
           </select>
@@ -118,30 +130,29 @@ export function StudioControlPanel({
 
         {/* Product name */}
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("generate.productLabel")}</span>
+          <span className="text-[11px] font-medium text-zinc-500">{t("generate.productLabel")}</span>
           <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)}
             placeholder={t("generate.productPlaceholder")}
-            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all" />
+            className="w-full h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all" />
         </div>
 
-        {/* Unified Style Picker */}
+        {/* Style */}
         <StylePicker value={activeStyle} onChange={onStyleChange} />
 
-        {/* Prompt + Magic wand */}
+        {/* Prompt + wand */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("generate.sellingPointsLabel")}</span>
+            <span className="text-[11px] font-medium text-zinc-500">{t("generate.sellingPointsLabel")}</span>
             <button type="button" onClick={handleEnhance} disabled={isEnhancing || !selectedImage}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50 cursor-pointer">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20 text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50 cursor-pointer">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               {isEnhancing ? "..." : t("generate.enhancePrompt")}
             </button>
           </div>
           <textarea value={prompt} onChange={(e) => onPromptChange(e.target.value)} rows={2}
             placeholder={t("generate.sellingPointsPlaceholder")}
-            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all resize-y min-h-[60px]" />
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-xs text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all resize-y min-h-[56px]" />
         </div>
-
       </div>
 
       {/* CTA */}
