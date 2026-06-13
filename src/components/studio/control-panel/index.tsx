@@ -138,15 +138,15 @@ export function StudioControlPanel({
 
         {/* Style presets */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Style</span>
+          <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("landing.nav.styles")}</span>
           <div className="flex flex-wrap gap-1.5">
             {[
-              { label: "纯白", en: "White BG", prompt: "Place the product centered on a pure white background, soft studio lighting, realistic shadow directly under the product, e-commerce packshot style, no props, 4K detail" },
-              { label: "影棚", en: "Studio", prompt: "Professional studio product shot, dramatic key light with soft fill, dark moody background, rim lighting, high-end commercial photography, magazine quality" },
-              { label: "自然光", en: "Outdoor", prompt: "Product in natural outdoor setting, golden hour sunlight, blurred green foliage background, lifestyle photography style, warm tones, candid feel" },
-              { label: "大理石", en: "Marble", prompt: "Product placed on elegant white marble surface, soft natural window light, shallow depth of field, luxury aesthetic, professional product photography" },
-              { label: "生活", en: "Lifestyle", prompt: "Natural lifestyle scene showing product in real use context, warm home or cafe environment, candid photography style, relatable and authentic, soft natural lighting" },
-              { label: "北欧", en: "Nordic", prompt: "Product in a bright Scandinavian interior, minimal decor, natural wood textures, soft diffused daylight, clean composition, editorial e-commerce photography" },
+              { label: "纯白底", prompt: "Place the product centered on a pure white background, soft studio lighting, realistic shadow directly under the product, e-commerce packshot style, no props, 4K detail" },
+              { label: "影棚光", prompt: "Professional studio product shot, dramatic key light with soft fill, dark moody background, rim lighting, high-end commercial photography, magazine quality" },
+              { label: "自然光", prompt: "Product in natural outdoor setting, golden hour sunlight, blurred green foliage background, lifestyle photography style, warm tones, candid feel" },
+              { label: "大理石", prompt: "Product placed on elegant white marble surface, soft natural window light, shallow depth of field, luxury aesthetic, professional product photography" },
+              { label: "生活感", prompt: "Natural lifestyle scene showing product in real use context, warm home or cafe environment, candid photography style, relatable and authentic, soft natural lighting" },
+              { label: "北欧风", prompt: "Product in a bright Scandinavian interior, minimal decor, natural wood textures, soft diffused daylight, clean composition, editorial e-commerce photography" },
             ].map((s) => (
               <button key={s.label} type="button"
                 onClick={() => onPromptChange(s.prompt)}
