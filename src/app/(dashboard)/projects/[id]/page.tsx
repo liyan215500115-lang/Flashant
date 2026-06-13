@@ -451,16 +451,6 @@ export default function ProductDetailPage() {
                       ))}
                     </div>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-2 mt-3"
-                      onClick={() => handleGenerate(pi.id)}
-                      disabled={isGenerating}
-                    >
-                      <RefreshCw size={14} />
-                      {t("detail.regenerate")}
-                    </Button>
                   </div>
                 )}
               </CardContent>
