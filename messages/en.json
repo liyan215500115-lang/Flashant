@@ -269,7 +269,9 @@
     "desc": "Upload product images, AI generates multi-scene e-commerce photos",
     "preparing": "Preparing...",
     "retry": "Retry",
-    "projectError": "Failed to create project"
+    "projectError": "Failed to create project",
+    "detailImages": "Detail Images",
+    "detailImagesDesc": "Generate 7 types of product listing detail images"
   },
   "onboarding": {
     "welcome": "Welcome to Flashant",

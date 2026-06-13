@@ -269,7 +269,9 @@
     "desc": "上传产品图，选风格，一键生成商品图",
     "preparing": "正在准备...",
     "retry": "重试",
-    "projectError": "创建项目失败"
+    "projectError": "创建项目失败",
+    "detailImages": "详情图",
+    "detailImagesDesc": "生成 7 种类型的商品详情长图"
   },
   "onboarding": {
     "welcome": "欢迎使用闪象",
