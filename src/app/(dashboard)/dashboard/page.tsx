@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Package, Image, ArrowRight, ChevronRight, Zap, TrendingUp } from "lucide-react";
+import { Sparkles, Package, Image, ArrowRight, ChevronRight, Zap, TrendingUp, Play } from "lucide-react";
 import zh from "../../../../messages/zh.json";
 import en from "../../../../messages/en.json";
 
@@ -146,6 +146,12 @@ export default async function DashboardPage() {
                       )}
                       <div className="absolute top-3 left-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusClass}`}>{t(`status.${project.status}`)}</span>
+                      </div>
+                      {/* Hover: quick actions */}
+                      <div className="absolute inset-0 bg-black/0 group-hover/card:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover/card:opacity-100">
+                        <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-lg">
+                          <Play size={12} /> {t("dashboard.enterStudio")}
+                        </span>
                       </div>
                     </div>
                     <div className="p-3.5">

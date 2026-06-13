@@ -68,8 +68,8 @@
     "assets": "资产",
     "management": "管理",
     "dashboard": "控制台",
-    "studio": "AI 创作",
-    "products": "项目库",
+    "studio": "新建项目",
+    "products": "我的项目",
     "integrations": "平台链接",
     "assetsCenter": "素材中心",
     "settings": "系统设置",
@@ -86,12 +86,12 @@
     "generatedImages": "已生成图片",
     "currentPlan": "当前套餐",
     "free": "免费",
-    "enterStudio": "进入 AI 创作",
+    "enterStudio": "新建项目",
     "viewAllProjects": "查看所有项目",
     "recentProjects": "最近项目",
     "noProjects": "还没有项目",
-    "noProjectsDesc": "前往 AI 创作，上传产品图开始 AI 生成",
-    "startFirstProject": "开始第一个项目"
+    "noProjectsDesc": "新建项目，上传产品图开始生成",
+    "startFirstProject": "新建项目"
   },
   "batch": {
     "selectAll": "全选",
@@ -265,8 +265,8 @@
     "APPROVED": "已审核"
   },
   "studio": {
-    "title": "AI 创作",
-    "desc": "上传产品图，AI 智能生成多场景商品图",
+    "title": "新建项目",
+    "desc": "上传产品图，选风格，一键生成商品图",
     "preparing": "正在准备...",
     "retry": "重试",
     "projectError": "创建项目失败"
