@@ -22,6 +22,8 @@ interface StudioControlPanelProps {
   brandPresetId: string | null; isGenerating: boolean;
   activeStyle: string | null;
   onImageChange: (image: ProductImage) => void;
+  onAccessoryUpload?: (image: ProductImage) => void;
+  accessoryImages?: ProductImage[];
   onPromptChange: (prompt: string) => void;
   onEngineChange: (engine: string) => void;
   onPlatformChange: (platform: string) => void;
@@ -34,7 +36,7 @@ interface StudioControlPanelProps {
 export function StudioControlPanel({
   projectId, selectedImage, prompt,
   engineType, targetPlatform, targetLanguage, brandPresetId, isGenerating,
-  activeStyle, onImageChange, onPromptChange,
+  activeStyle, onImageChange, onAccessoryUpload, accessoryImages, onPromptChange,
   onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
   onStyleChange, onGenerate,
 }: StudioControlPanelProps) {
@@ -63,7 +65,7 @@ export function StudioControlPanel({
       {/* Upload */}
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-3.5">
         {projectId ? (
-          <ImageUploadZone projectId={projectId} currentImage={selectedImage} onImageChange={onImageChange} />
+          <ImageUploadZone projectId={projectId} currentImage={selectedImage} onImageChange={onImageChange} onAccessoryUpload={onAccessoryUpload} accessoryImages={accessoryImages} />
         ) : (
           <div className="aspect-square rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-sm text-zinc-400">
             {t("generate.noProject")}

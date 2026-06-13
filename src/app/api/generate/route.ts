@@ -49,6 +49,7 @@ export async function POST(req: Request) {
     lifestyle: "Natural lifestyle scene showing the product in real use context, warm home environment, candid photography style, relatable and authentic, soft natural lighting, editorial quality",
     scene_atmosphere: "Atmospheric product photography with the product as the hero, dramatic cinematic lighting with fog or warm ambiance, emotional depth, movie poster quality, premium aesthetic",
     color_variants: "Grid layout photography showing the product in multiple color or style variants, consistent lighting and angle, organized arrangement, white background, e-commerce color selection showcase",
+    gift_accessory: "Product photography showing the main product alongside complementary accessories or gift items, clean composition, soft studio lighting, both items in sharp focus, professional e-commerce bundle presentation, white background, 4K",
   };
 
   if (!imageProjectId || !productImageId) {

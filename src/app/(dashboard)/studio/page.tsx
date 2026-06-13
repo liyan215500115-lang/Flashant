@@ -44,6 +44,7 @@ export default function StudioPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
 
+  const [accessoryImages, setAccessoryImages] = useState<ProductImage[]>([]);
   const [latestImage, setLatestImage] = useState<PreviewImage | null>(null);
   const [generationHistory, setGenerationHistory] = useState<PreviewImage[]>([]);
   const [quotaUsed, setQuotaUsed] = useState(0);
@@ -260,6 +261,8 @@ export default function StudioPage() {
               isGenerating={isGenerating}
               activeStyle={activeStyle}
               onImageChange={handleImageChange}
+              onAccessoryUpload={(img) => setAccessoryImages((prev) => [...prev, img])}
+              accessoryImages={accessoryImages}
               onPromptChange={setPrompt}
               onEngineChange={setEngineType}
               onPlatformChange={(p) => {

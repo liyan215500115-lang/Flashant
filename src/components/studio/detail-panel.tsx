@@ -18,6 +18,7 @@ const DETAIL_TYPES = [
   { key: "lifestyle", zh: "使用场景" },
   { key: "flatlay", zh: "平铺展示" },
   { key: "scene_atmosphere", zh: "场景氛围" },
+  { key: "gift_accessory", zh: "配件赠品" },
 ];
 
 interface StudioDetailPanelProps {

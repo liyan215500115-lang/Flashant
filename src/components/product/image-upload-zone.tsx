@@ -17,7 +17,9 @@ interface ImageUploadZoneProps {
   projectId: string | null;
   currentImage: ProductImage | null;
   onImageChange: (image: ProductImage) => void;
+  onAccessoryUpload?: (image: ProductImage) => void;
   allImages?: ProductImage[];
+  accessoryImages?: ProductImage[];
   maxFiles?: number;
   className?: string;
 }
@@ -26,7 +28,9 @@ export function ImageUploadZone({
   projectId,
   currentImage,
   onImageChange,
+  onAccessoryUpload,
   allImages = [],
+  accessoryImages = [],
   maxFiles = 10,
   className,
 }: ImageUploadZoneProps) {
@@ -97,18 +101,15 @@ export function ImageUploadZone({
     }
   }
 
-  async function handleFiles(files: FileList) {
+  async function handleFiles(files: FileList, target?: (img: ProductImage) => void) {
+    const cb = target ?? onImageChange;
     const fileArray = Array.from(files).slice(0, maxFiles);
     setError("");
 
-    // Pre-check file sizes before any upload
     const oversized = fileArray.find((f) => f.size > MAX_FILE_SIZE);
     if (oversized) {
       setError(
-        t("error.fileTooLarge").replace(
-          "{size}",
-          `${(oversized.size / 1024 / 1024).toFixed(1)}MB`
-        ) +
+        t("error.fileTooLarge").replace("{size}", `${(oversized.size / 1024 / 1024).toFixed(1)}MB`) +
           ` (${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB max)`
       );
       return;
@@ -119,10 +120,7 @@ export function ImageUploadZone({
 
     for (let i = 0; i < fileArray.length; i++) {
       const image = await uploadFile(fileArray[i]);
-      if (image) {
-        setUploadCount((c) => c + 1);
-        onImageChange(image);
-      }
+      if (image) { setUploadCount((c) => c + 1); cb(image); }
     }
 
     setUploading(false);
@@ -259,6 +257,26 @@ export function ImageUploadZone({
         </div>
       )}
 
+      {/* Accessory upload area */}
+      {currentImage && onAccessoryUpload && (
+        <div className="pt-1 border-t border-zinc-100 dark:border-zinc-700/50">
+          <p className="text-[10px] text-zinc-400 mb-1.5">配件 / 赠品</p>
+          {accessoryImages.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto pb-1 mb-1.5">
+              {accessoryImages.map((img) => (
+                <div key={img.id} className="shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 relative">
+                  <img src={img.originalUrl} alt={img.fileName} className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" onClick={() => { inputRef.current?.click(); }}
+            className="w-full py-1.5 rounded-lg border border-dashed border-zinc-300 text-[10px] font-medium text-zinc-400 hover:text-zinc-600 hover:border-zinc-400 transition-colors cursor-pointer">
+            + 上传配件照片
+          </button>
+        </div>
+      )}
+
       <input
         ref={inputRef}
         type="file"
@@ -267,7 +285,15 @@ export function ImageUploadZone({
         className="hidden"
         onChange={(e) => {
           const files = e.target.files;
-          if (files && files.length > 0) handleFiles(files);
+          if (files && files.length > 0) {
+            if (currentImage && onAccessoryUpload) {
+              // If main image already exists, treat as accessory upload
+              handleFiles(files, onAccessoryUpload);
+            } else {
+              // First upload = main product image
+              handleFiles(files, onImageChange);
+            }
+          }
           e.target.value = "";
         }}
       />
