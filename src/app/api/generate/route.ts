@@ -27,8 +27,20 @@ export async function POST(req: Request) {
     engineType = "flux",
     targetPlatform,
     title: projectTitle,
-    mode: generationMode,
+    detailType,
+    baseStyle,
   } = await req.json();
+
+  // Detail image type prompts (server-side only)
+  const DETAIL_PROMPTS: Record<string, string> = {
+    selling_points: "Product key selling points infographic, highlighted features, clean callout text, white background, professional layout, 8K",
+    detail: "Extreme macro close-up, texture and material clearly visible, premium product photography, shallow depth of field, 8K",
+    size: "Product size comparison with measurement reference, dimensional guide, clean studio lighting, informative layout",
+    compare: "Before and after comparison, split screen layout, product transformation showcase, professional presentation",
+    craft: "Artisan craftsmanship process, hands making product, workshop environment, warm natural lighting, authentic handmade feel",
+    series: "Product family lineup, multiple variants displayed together, organized grid layout, premium brand presentation",
+    scene: "Product in real-life use scenario, lifestyle photography, natural environment, candid authentic moment, magazine quality",
+  };
 
   if (!imageProjectId || !productImageId) {
     return NextResponse.json(
@@ -92,7 +104,10 @@ export async function POST(req: Request) {
 
   // Prompt resolution
   let prompt = "Professional product photography, studio lighting, high quality";
-  if (customPrompt) {
+  if (detailType && DETAIL_PROMPTS[detailType]) {
+    prompt = DETAIL_PROMPTS[detailType];
+    if (baseStyle) prompt = `${prompt}, consistent with this style: ${baseStyle}`;
+  } else if (customPrompt) {
     prompt = customPrompt;
   } else if (promptTemplateId) {
     const template = await db.promptTemplate.findUnique({

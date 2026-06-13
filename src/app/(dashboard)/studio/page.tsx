@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StudioControlPanel } from "@/components/studio/control-panel";
 import { StudioPreviewCanvas } from "@/components/studio/preview-canvas";
+import { StudioDetailPanel } from "@/components/studio/detail-panel";
 import { useT } from "@/components/i18n-provider";
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { toast } from "sonner";
@@ -287,6 +288,14 @@ export default function StudioPage() {
             generationError={generationError}
             onDismissError={() => setGenerationError("")}
           />
+
+          {latestImage && projectId && selectedImage && (
+            <StudioDetailPanel
+              projectId={projectId}
+              productImageId={selectedImage.id}
+              basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
+            />
+          )}
         </div>
       </div>
     </div>
