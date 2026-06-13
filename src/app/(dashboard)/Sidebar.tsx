@@ -41,19 +41,20 @@ export function Sidebar() {
       items: [
         { href: "/dashboard", label: t("sidebar.dashboard"), icon: LayoutDashboard },
         { href: "/studio", label: t("sidebar.studio"), icon: Sparkles },
-        { href: "/products", label: t("sidebar.products"), icon: Package },
+        { href: "/projects", label: t("sidebar.products"), icon: Package },
       ],
     },
     {
       label: t("sidebar.assets"),
       items: [
-        { href: "/integrations", label: t("sidebar.integrations"), icon: Plug },
         { href: "/assets", label: t("sidebar.assetsCenter"), icon: FolderOpen },
       ],
     },
     {
       label: t("sidebar.management"),
-      items: [{ href: "/settings", label: t("sidebar.settings"), icon: Settings }],
+      items: [
+        { href: "/settings", label: t("sidebar.settings"), icon: Settings },
+      ],
     },
   ];
 

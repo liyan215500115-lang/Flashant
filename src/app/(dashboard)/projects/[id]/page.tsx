@@ -259,7 +259,7 @@ export default function ProductDetailPage() {
     setDeleting(true);
     try {
       await fetch(`/api/products/${params.id}`, { method: "DELETE" });
-      router.push("/products");
+      router.push("/projects");
     } catch {
       setDeleting(false);
       setDeleteDialogOpen(false);
@@ -289,7 +289,7 @@ export default function ProductDetailPage() {
           </CardContent>
         </Card>
         <div className="mt-4">
-          <Link href="/products">
+          <Link href="/projects">
             <Button variant="outline" size="sm">
               <ArrowLeft size={14} className="mr-1" />
               {t("detail.backToWorkspace")}

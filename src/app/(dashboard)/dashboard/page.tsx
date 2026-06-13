@@ -120,7 +120,7 @@ export default async function DashboardPage() {
       {/* Quick actions + View all */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Link href="/products">
+          <Link href="/projects">
             <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer rounded-xl">{t("dashboard.viewAllProjects")} <ArrowRight size={14} /></Button>
           </Link>
         </div>
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
             {resolvedProjects.map((project) => {
               const statusClass = STATUS_STYLE[project.status] ?? STATUS_STYLE.DRAFT;
               return (
-                <Link key={project.id} href={`/products/${project.id}`} className="group/card block">
+                <Link key={project.id} href={`/projects/${project.id}`} className="group/card block">
                   <div className="rounded-2xl bg-white dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-700/80 hover:border-brand-200 dark:hover:border-zinc-500 hover:shadow-md transition-all duration-300 overflow-hidden">
                     <div className="aspect-[4/3] bg-zinc-50 dark:bg-zinc-700/30 relative overflow-hidden">
                       {project.productImages[0]?.originalUrl ? (
