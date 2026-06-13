@@ -89,13 +89,23 @@ export default function StudioPage() {
         setQuotaLimit(d.limit ?? -1);
       })
       .catch(() => {});
-    // If we got a projectId from URL, load it. Otherwise create a new one.
+    // If we got a projectId from URL, load project + restore history. Otherwise create a new one.
     if (existingId) {
       fetch(`/api/products/${existingId}`)
         .then((r) => r.json())
         .then((d) => {
           const imgs = d.project?.productImages ?? [];
           if (imgs.length > 0) setSelectedImage(imgs[0]);
+          const gens = d.project?.generatedImages ?? [];
+          if (gens.length > 0) {
+            const history = gens
+              .filter((g: any) => g.status === "SUCCEEDED")
+              .map((g: any) => ({ id: g.id, url: g.url, promptUsed: g.promptUsed || "" }));
+            if (history.length > 0) {
+              setLatestImage(history[0]);
+              setGenerationHistory(history);
+            }
+          }
         })
         .catch(() => {});
       setProjectCreating(false);
