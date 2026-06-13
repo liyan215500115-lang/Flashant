@@ -165,14 +165,6 @@ export function StudioControlPanel({
         </div>
 
         <QuantitySlider value={quantity} onChange={onQuantityChange} />
-
-        {/* Recipe save */}
-        <div className="flex gap-1.5">
-          <input type="text" value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="Recipe name"
-            className="flex-1 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:border-brand-500 focus:outline-none transition-all" />
-          <button type="button" onClick={saveRecipe} disabled={!selectedImage}
-            className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 cursor-pointer">Save Recipe</button>
-        </div>
       </div>
 
       {/* CTA */}
