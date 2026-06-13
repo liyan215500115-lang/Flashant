@@ -174,7 +174,8 @@ export default function StudioPage() {
         body: JSON.stringify({
           imageProjectId: pid!,
           productImageId: selectedImage.id,
-          prompt: prompt || undefined,
+          prompt: prompt || (mode === "whiteBg" ? "Pure white background, professional product photography, soft even lighting, high detail clarity" : mode === "model" ? "Fashion model showcasing the product, natural pose, soft natural light, lifestyle setting" : "Product placed in a clean bright setting with natural lighting and premium texture"),
+          mode,
           numOutputs: quantity,
           engineType,
           targetPlatform,
