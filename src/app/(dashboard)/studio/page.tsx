@@ -29,7 +29,7 @@ export default function StudioPage() {
   const searchParams = useSearchParams();
   const existingId = searchParams.get("projectId");
   const [projectId, setProjectId] = useState<string | null>(existingId);
-  const [projectCreating, setProjectCreating] = useState(!existingId);
+  const [projectCreating, setProjectCreating] = useState(false);
   const [projectError, setProjectError] = useState("");
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
