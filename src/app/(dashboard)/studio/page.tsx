@@ -332,8 +332,8 @@ export default function StudioPage() {
             <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4">
               <Link href={`/projects/${projectId}/details`} className="flex items-center justify-between group">
                 <div>
-                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Detail Images</h3>
-                  <p className="text-xs text-zinc-500 mt-0.5">Generate product listing detail images with 7 content types</p>
+                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("studio.detailImages")}</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">{t("studio.detailImagesDesc")}</p>
                 </div>
                 <ChevronRight size={16} className="text-zinc-400 group-hover:text-zinc-600 transition-colors" />
               </Link>
