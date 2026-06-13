@@ -332,6 +332,12 @@ export default function ProductDetailPage() {
               </Button>
             </Link>
           )}
+          <Link href={`/studio?projectId=${project.id}`}>
+            <Button variant="default" size="sm" className="cursor-pointer gap-1.5">
+              <Sparkles size={14} />
+              {locale === "zh" ? "继续制作" : "Continue"}
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="sm"
