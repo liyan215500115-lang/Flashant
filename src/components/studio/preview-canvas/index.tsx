@@ -106,7 +106,7 @@ export function StudioPreviewCanvas({
                 <Download size={13} /> {latestImage.promptUsed ? "下载" : "Download"}
               </a>
               {projectId && (
-                <Link href={`/products/${projectId}/publish`}
+                <Link href={`/projects/${projectId}/publish`}
                   className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-brand-900/90 backdrop-blur-sm text-xs font-medium text-white hover:bg-brand-800 shadow-sm transition-colors">
                   <Send size={13} /> {latestImage.promptUsed ? "发布" : "Publish"}
                 </Link>

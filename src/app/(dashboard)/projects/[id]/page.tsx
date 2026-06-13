@@ -82,7 +82,7 @@ export default function ProductDetailPage() {
 
   const fetchProject = useCallback(async () => {
     try {
-      const res = await fetch(`/api/products/${params.id}`);
+      const res = await fetch(`/api/projects/${params.id}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setProject(data.project);
@@ -258,7 +258,7 @@ export default function ProductDetailPage() {
   async function handleDelete() {
     setDeleting(true);
     try {
-      await fetch(`/api/products/${params.id}`, { method: "DELETE" });
+      await fetch(`/api/projects/${params.id}`, { method: "DELETE" });
       router.push("/projects");
     } catch {
       setDeleting(false);
@@ -326,7 +326,7 @@ export default function ProductDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {project.status === "GENERATED" && (
-            <Link href={`/products/${project.id}/publish`}>
+            <Link href={`/projects/${project.id}/publish`}>
               <Button variant="default" size="sm" className="cursor-pointer">
                 {t("detail.publishToPlatform")}
               </Button>

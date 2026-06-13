@@ -28,7 +28,7 @@ export default function DetailsPage() {
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string }>>([]);
 
   useEffect(() => {
-    fetch(`/api/products/${projectId}`)
+    fetch(`/api/projects/${projectId}`)
       .then((r) => r.json())
       .then((d) => setProductImages(d.project?.productImages ?? []))
       .catch(() => {});
@@ -64,14 +64,14 @@ export default function DetailsPage() {
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
       <div className="flex items-center gap-4 mb-8">
-        <Link href={`/products/${projectId}`} className="text-zinc-500 hover:text-zinc-700">
+        <Link href={`/projects/${projectId}`} className="text-zinc-500 hover:text-zinc-700">
           <ArrowLeft size={18} />
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Detail Images</h1>
           <p className="text-sm text-zinc-500 mt-0.5">Select content types and generate product listing detail images</p>
         </div>
-        <Link href={`/products/${projectId}/publish`}>
+        <Link href={`/projects/${projectId}/publish`}>
           <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
             <Send size={14} /> Publish / Download
           </Button>

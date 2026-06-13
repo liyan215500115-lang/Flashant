@@ -138,7 +138,7 @@ export function PreviewCanvas({
             </h3>
             {projectId && (
               <Link
-                href={`/products/${projectId}/publish`}
+                href={`/projects/${projectId}/publish`}
                 className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors inline-flex items-center gap-1"
               >
                 <ShoppingCart size={12} />
@@ -177,7 +177,7 @@ export function PreviewCanvas({
                   {/* Sync to Shopify */}
                   {projectId && (
                     <Link
-                      href={`/products/${projectId}/publish`}
+                      href={`/projects/${projectId}/publish`}
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/95 hover:bg-white text-[11px] font-medium text-zinc-700 shadow-sm transition-colors"
                       title={t("generate.syncToShopify")}
                     >

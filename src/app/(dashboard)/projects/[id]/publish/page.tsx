@@ -58,7 +58,7 @@ export default function PublishPage() {
 
   const fetchProject = useCallback(async () => {
     try {
-      const res = await fetch(`/api/products/${params.id}`);
+      const res = await fetch(`/api/projects/${params.id}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setProject(data.project);
@@ -229,7 +229,7 @@ export default function PublishPage() {
       <div>
         <Breadcrumb items={[
           { label: t("products.title"), href: "/products" },
-          { label: project.title || t("assets.unnamed"), href: `/products/${project.id}` },
+          { label: project.title || t("assets.unnamed"), href: `/projects/${project.id}` },
           { label: t("publish.publishAndDownload") },
         ]} />
         <h1 className="text-xl font-semibold">{t("publish.publishAndDownload")}</h1>
@@ -424,7 +424,7 @@ export default function PublishPage() {
               ))}
             </div>
             <div className="flex gap-2 mt-5">
-              <Link href={`/products/${project.id}`}>
+              <Link href={`/projects/${project.id}`}>
                 <Button variant="outline" size="sm">
                   {t("publish.backToProject")}
                 </Button>

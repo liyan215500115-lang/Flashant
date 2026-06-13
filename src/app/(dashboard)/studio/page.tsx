@@ -91,7 +91,7 @@ export default function StudioPage() {
       .catch(() => {});
     // If we got a projectId from URL, load its first product image
     if (existingId) {
-      fetch(`/api/products/${existingId}`)
+      fetch(`/api/projects/${existingId}`)
         .then((r) => r.json())
         .then((d) => {
           const imgs = d.project?.productImages ?? [];
@@ -234,7 +234,7 @@ export default function StudioPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{t("studio.title")}</h1>
           {projectId && (
-            <Link href={`/products/${projectId}`} className="text-sm text-brand-600 hover:text-brand-700 font-medium">
+            <Link href={`/projects/${projectId}`} className="text-sm text-brand-600 hover:text-brand-700 font-medium">
               View project →
             </Link>
           )}
@@ -310,7 +310,7 @@ export default function StudioPage() {
           {/* Link to detail page */}
           {generationHistory.length >= 1 && (
             <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4">
-              <Link href={`/products/${projectId}/details`} className="flex items-center justify-between group">
+              <Link href={`/projects/${projectId}/details`} className="flex items-center justify-between group">
                 <div>
                   <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Detail Images</h3>
                   <p className="text-xs text-zinc-500 mt-0.5">Generate product listing detail images with 7 content types</p>

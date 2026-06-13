@@ -58,7 +58,7 @@ export default function ProductsPage() {
     setProjects((prev) => prev.filter((p) => p.id !== id));
 
     try {
-      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) {
         setProjects(snapshot);
         toast.error("Delete failed — project restored");
@@ -78,7 +78,7 @@ export default function ProductsPage() {
   async function handleRegenerate(id: string) {
     toast.success("Regeneration queued");
     try {
-      await fetch("/api/products/batch", {
+      await fetch("/api/projects/batch", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "regenerate", ids: [id] }),
       });
@@ -87,7 +87,7 @@ export default function ProductsPage() {
   }
 
   async function handlePublish(id: string) {
-    window.location.href = `/products/${id}/publish`;
+    window.location.href = `/projects/${id}/publish`;
   }
 
   const filtered = projects
@@ -183,7 +183,7 @@ export default function ProductsPage() {
 
             return (
               <div key={project.id} className={`group/card relative rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 hover:shadow-md transition-all duration-200 ${isDeleting ? "opacity-40 scale-95 pointer-events-none" : ""} ${idx === 0 ? "xl:aspect-auto" : ""}`}>
-                <Link href={`/products/${project.id}`} className="block p-3">
+                <Link href={`/projects/${project.id}`} className="block p-3">
                   <div className="aspect-[4/3] rounded-xl mb-3 overflow-hidden bg-zinc-50 dark:bg-zinc-700/30 relative">
                     {thumbnail ? (
                       <img src={thumbnail} alt={project.title} className="w-full h-full object-cover group-hover/card:scale-[1.03] transition-transform duration-500" />
