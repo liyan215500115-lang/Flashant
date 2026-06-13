@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { GenerateTab } from "@/components/product/generate-tab";
+
 import {
   ArrowLeft,
   Sparkles,
@@ -357,15 +356,7 @@ export default function ProductDetailPage() {
         </div>
       )}
 
-      <Tabs defaultValue="images" className="flex flex-col gap-6">
-        <TabsList>
-          <TabsTrigger value="images">{t("generate.imagesTabLabel")}</TabsTrigger>
-          <TabsTrigger value="generate">{t("generate.tabLabel")}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="images">
-          {/* Product Images + Generate Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {project.productImages.map((pi) => {
           const isGenerating = generatingIds.has(pi.id);
           const imageResults = succeededImages.filter(
@@ -474,30 +465,13 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-          {/* Completed badge */}
-          {project.status === "GENERATED" && succeededImages.length > 0 && (
-            <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 size={16} />
-              {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="generate">
-          <GenerateTab
-            projectId={project.id}
-            productImages={project.productImages}
-            generatedImages={project.generatedImages}
-            quotaUsed={quota.used}
-            quotaLimit={quota.limit}
-            onGenerate={handleGenerateExtended}
-            isGenerating={generatingIds.size > 0}
-            onImageUploaded={() => {
-              fetchProject();
-            }}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* Completed badge */}
+      {project.status === "GENERATED" && succeededImages.length > 0 && (
+        <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 size={16} />
+          {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
+        </div>
+      )}
 
       {/* Delete confirmation dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
