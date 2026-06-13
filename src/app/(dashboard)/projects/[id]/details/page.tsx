@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/components/i18n-provider";
 
 const DETAIL_TYPES = [
   { key: "selling_points", label: "Core Selling Points", labelZh: "核心卖点图", prompt: "Product key selling points infographic style, highlighted features with clean callout text, white background, e-commerce product page section, professional layout, 8K" },
@@ -18,8 +19,9 @@ const DETAIL_TYPES = [
 ];
 
 export default function DetailsPage() {
+  const { t, locale } = useT();
+  const isZh = locale === "zh";
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const projectId = params.id;
 
   const [productImages, setProductImages] = useState<Array<{ id: string; originalUrl: string }>>([]);
@@ -63,23 +65,27 @@ export default function DetailsPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
+      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Link href={`/projects/${projectId}`} className="text-zinc-500 hover:text-zinc-700">
           <ArrowLeft size={18} />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Detail Images</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Select content types and generate product listing detail images</p>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{t("studio.detailImages")}</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">{t("studio.detailImagesDesc")}</p>
         </div>
         <Link href={`/projects/${projectId}/publish`}>
           <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
-            <Send size={14} /> Publish / Download
+            <Send size={14} /> {t("publish.publishAndDownload")}
           </Button>
         </Link>
       </div>
 
+      {/* Content type selector */}
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-6 mb-6">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Select Content Types</h2>
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+          {isZh ? "选择内容类型" : "Select Content Types"}
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           {DETAIL_TYPES.map((dt) => (
             <button key={dt.key} type="button"
@@ -89,7 +95,7 @@ export default function DetailsPage() {
                   ? "bg-brand-100 border-brand-300 text-brand-800 dark:bg-brand-900/30 dark:border-brand-600 dark:text-brand-300"
                   : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400"
               }`}>
-              <span className="block">{dt.label}</span>
+              <span className="block">{isZh ? dt.labelZh : dt.label}</span>
               <span className="block text-[10px] text-zinc-400 mt-1 line-clamp-2">{dt.prompt}</span>
             </button>
           ))}
@@ -97,13 +103,16 @@ export default function DetailsPage() {
         <Button onClick={handleGenerate} disabled={selectedPt.size === 0 || generating}
           className="bg-brand-900 hover:bg-brand-800 text-white cursor-pointer gap-2 rounded-xl">
           {generating && <Loader2 size={14} className="animate-spin" />}
-          {generating ? "Generating..." : `Generate ${selectedPt.size || 0} Detail Images`}
+          {generating ? t("detail.generating") : `${isZh ? "生成" : "Generate"} ${selectedPt.size || 0} ${isZh ? "张详情图" : " Detail Images"}`}
         </Button>
       </div>
 
+      {/* Results */}
       {results.length > 0 && (
         <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-6">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Results ({results.length})</h2>
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+            {isZh ? "生成结果" : "Results"} ({results.length})
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {results.map((r, i) => (
               <div key={i} className="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 group/img">
