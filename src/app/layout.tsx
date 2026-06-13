@@ -28,12 +28,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getServerLocale();
   return (
-    <html lang={locale} className="scroll-smooth">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
+    <html lang={locale} className="scroll-smooth" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
       <body className="min-h-screen flex flex-col">
         <Providers>{children}</Providers>
       </body>
