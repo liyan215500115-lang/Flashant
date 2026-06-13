@@ -7,12 +7,14 @@ import { useT } from "@/components/i18n-provider";
 interface QuantitySliderProps {
   value: number;
   onChange: (value: number) => void;
+  max?: number;
   className?: string;
 }
 
 export function QuantitySlider({
   value,
   onChange,
+  max = 4,
   className,
 }: QuantitySliderProps) {
   const { t } = useT();
@@ -27,13 +29,13 @@ export function QuantitySlider({
         value={[value]}
         onValueChange={(v) => onChange(Array.isArray(v) ? v[0] : v)}
         min={1}
-        max={4}
+        max={max}
         step={1}
         className="mt-1"
       />
       <div className="flex justify-between text-xs text-zinc-400 dark:text-zinc-500">
         <span>1</span>
-        <span>4</span>
+        <span>{max}</span>
       </div>
     </div>
   );

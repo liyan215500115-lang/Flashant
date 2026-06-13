@@ -33,10 +33,10 @@ export default function StudioPage() {
   const [projectError, setProjectError] = useState("");
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
-  const [mode, setMode] = useState("scene");
+  const [activeStyle, setActiveStyle] = useState<string | null>(null);
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [quantity, setQuantity] = useState(4);
+  const [quantity, setQuantity] = useState(1);
   const [engineType, setEngineType] = useState("flux");
   const [targetPlatform, setTargetPlatform] = useState("SHOPIFY");
   const [targetLanguage, setTargetLanguage] = useState("en");
@@ -179,8 +179,7 @@ export default function StudioPage() {
         body: JSON.stringify({
           imageProjectId: pid!,
           productImageId: selectedImage.id,
-          prompt: prompt || (mode === "whiteBg" ? "Pure white background, professional product photography, soft even lighting, high detail clarity" : mode === "model" ? "Fashion model showcasing the product, natural pose, soft natural light, lifestyle setting" : "Product placed in a clean bright setting with natural lighting and premium texture"),
-          mode,
+          prompt: prompt,
           title: productName,
           numOutputs: quantity,
           engineType,
@@ -253,7 +252,6 @@ export default function StudioPage() {
             <StudioControlPanel
               projectId={projectId}
               selectedImage={selectedImage}
-              mode={mode}
               prompt={prompt}
               quantity={quantity}
               engineType={engineType}
@@ -261,8 +259,8 @@ export default function StudioPage() {
               targetLanguage={targetLanguage}
               brandPresetId={brandPresetId}
               isGenerating={isGenerating}
+              activeStyle={activeStyle}
               onImageChange={handleImageChange}
-              onModeChange={setMode}
               onPromptChange={setPrompt}
               onQuantityChange={setQuantity}
               onEngineChange={setEngineType}
@@ -273,6 +271,7 @@ export default function StudioPage() {
               }}
               onLanguageChange={setTargetLanguage}
               onBrandPresetChange={setBrandPresetId}
+              onStyleChange={(key, prompt) => { setActiveStyle(key); setPrompt(prompt); }}
               onGenerate={handleGenerate}
             />
           )}
