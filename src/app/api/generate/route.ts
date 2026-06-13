@@ -240,72 +240,86 @@ export async function POST(req: Request) {
     }
   }
 
-  // ── Flux (Replicate) path: single-call img2img ──
+  // ── Flux (Replicate) path: loop for multi-output (single-prediction limit is 1) ──
   try {
-    const prediction = await provider.createPrediction({
-      prompt,
-      productImageUrl: sharedImageUrl,
-      numOutputs,
-      modelVersion,
-    });
+    const generatedIds: string[] = [];
 
-    await db.task.update({
-      where: { id: task.id },
-      data: { predictionId: prediction.predictionId, status: "PROCESSING" },
-    });
+    for (let i = 0; i < numOutputs; i++) {
+      const prediction = await provider.createPrediction({
+        prompt: `${prompt} ${i > 0 ? `(variant ${i + 1})` : ""}`,
+        productImageUrl: sharedImageUrl,
+        numOutputs: 1,
+        modelVersion,
+      });
 
-    const placeholder = await db.generatedImage.create({
-      data: {
-        imageProjectId, productImageId,
-        s3Key: "pending", url: "", promptUsed: prompt,
-        aiProvider: engineType, status: "PROCESSING",
-        webhookId: prediction.predictionId,
-      },
-    });
+      await db.task.update({
+        where: { id: task.id },
+        data: { predictionId: prediction.predictionId, status: "PROCESSING" },
+      });
 
-    // Poll until complete
-    let imageResult = await provider.getPrediction(prediction.predictionId);
-    let polls = 0;
-    while (imageResult.status === "processing" && polls < 30) {
-      await new Promise((r) => setTimeout(r, 1000));
-      imageResult = await provider.getPrediction(prediction.predictionId);
-      polls++;
-    }
-
-    if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
-      const output = imageResult.outputs[0];
-      await db.generatedImage.update({
-        where: { id: placeholder.id },
+      const placeholder = await db.generatedImage.create({
         data: {
-          url: output.url, s3Key: output.url,
-          fileSize: output.fileSize ?? 0, mimeType: output.mimeType ?? "image/png",
-          width: output.width ?? 1024, height: output.height ?? 1024,
-          status: "SUCCEEDED", completedAt: new Date(),
+          imageProjectId, productImageId,
+          s3Key: "pending", url: "", promptUsed: prompt,
+          aiProvider: engineType, status: "PROCESSING",
+          webhookId: prediction.predictionId,
         },
       });
 
-      let finalUrl = output.url;
-      const presetLogo = brandPreset?.logoUrl;
-      if (presetLogo && quota.tier !== "FREE") {
-        try {
-          const imageBuf = await fetchImageBuffer(output.url);
-          const logoUrl = await getSignedGetUrl(presetLogo).catch(() => presetLogo);
-          const logoBuf = await fetchImageBuffer(logoUrl);
-          const overlaid = await overlayLogo(imageBuf, logoBuf);
-          if (hasS3Config()) {
-            const { publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
-            await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newUrl } });
-            finalUrl = newUrl;
-          }
-        } catch { /* keep original */ }
+      // Poll until complete
+      let imageResult = await provider.getPrediction(prediction.predictionId);
+      let polls = 0;
+      while (imageResult.status === "processing" && polls < 30) {
+        await new Promise((r) => setTimeout(r, 1000));
+        imageResult = await provider.getPrediction(prediction.predictionId);
+        polls++;
       }
 
-      await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: finalUrl } });
+      if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
+        const output = imageResult.outputs[0];
+        await db.generatedImage.update({
+          where: { id: placeholder.id },
+          data: {
+            url: output.url, s3Key: output.url,
+            fileSize: output.fileSize ?? 0, mimeType: output.mimeType ?? "image/png",
+            width: output.width ?? 1024, height: output.height ?? 1024,
+            status: "SUCCEEDED", completedAt: new Date(),
+          },
+        });
+
+        let finalUrl = output.url;
+        const presetLogo = brandPreset?.logoUrl;
+        if (presetLogo && quota.tier !== "FREE") {
+          try {
+            const imageBuf = await fetchImageBuffer(output.url);
+            const logoUrl = await getSignedGetUrl(presetLogo).catch(() => presetLogo);
+            const logoBuf = await fetchImageBuffer(logoUrl);
+            const overlaid = await overlayLogo(imageBuf, logoBuf);
+            if (hasS3Config()) {
+              const { publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
+              await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newUrl } });
+              finalUrl = newUrl;
+            }
+          } catch { /* keep original */ }
+        }
+        generatedIds.push(placeholder.id);
+      } else {
+        generatedIds.push("");
+      }
+    }
+
+    const succeeded = generatedIds.filter(Boolean);
+    if (succeeded.length > 0) {
+      const firstId = succeeded[0];
+      const firstImg = await db.generatedImage.findUnique({ where: { id: firstId } });
+
+      await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: firstImg?.url ?? "" } });
       await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
 
       return NextResponse.json({
         taskId: task.id, status: "succeeded",
-        generatedImageId: placeholder.id, url: finalUrl,
+        generatedImageId: firstId, url: firstImg?.url ?? "",
+        count: succeeded.length,
       });
     }
 
