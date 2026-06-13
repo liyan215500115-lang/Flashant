@@ -323,12 +323,10 @@ export async function POST(req: Request) {
       });
     }
 
-    await db.generatedImage.update({
-      where: { id: placeholder.id },
-      data: { status: "FAILED", errorMessage: imageResult.error ?? "Failed" },
-    });
+    // All generations failed
+    await db.task.update({ where: { id: task.id }, data: { status: "FAILED" } });
     return NextResponse.json(
-      { error: "generation_failed", message: imageResult.error ?? "Timed out" },
+      { error: "generation_failed", message: "All attempts failed" },
       { status: 500 }
     );
   } catch (error) {
