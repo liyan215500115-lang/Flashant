@@ -116,9 +116,14 @@ export async function POST(req: Request) {
     }
   }
 
-  // Platform-specific prompt injection
+  // Platform-specific prompt injection and dimensions
+  let genWidth = 1024;
+  let genHeight = 1024;
   if (targetPlatform && PLATFORM_SPECS[targetPlatform]) {
-    prompt = `${prompt}, ${PLATFORM_SPECS[targetPlatform].promptSuffix}`;
+    const spec = PLATFORM_SPECS[targetPlatform];
+    prompt = `${prompt}, ${spec.promptSuffix}`;
+    genWidth = spec.width;
+    genHeight = spec.height;
   }
 
   const numOutputs = customNumOutputs ?? 2;
@@ -251,6 +256,8 @@ export async function POST(req: Request) {
         prompt: `${prompt} ${i > 0 ? `(variant ${i + 1})` : ""}`,
         productImageUrl: sharedImageUrl,
         numOutputs: 1,
+        width: genWidth,
+        height: genHeight,
         modelVersion,
       });
 

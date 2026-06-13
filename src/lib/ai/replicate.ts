@@ -30,7 +30,8 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
       const inputPayload: Record<string, unknown> = {
         prompt: input.prompt,
         num_outputs: input.numOutputs ?? 1,
-        aspect_ratio: "1:1",
+        width: input.width ?? 1024,
+        height: input.height ?? 1024,
         output_format: "png",
         output_quality: 90,
         safety_tolerance: 2,
