@@ -46,14 +46,8 @@ export default function StudioPage() {
 
   const [latestImage, setLatestImage] = useState<PreviewImage | null>(null);
   const [generationHistory, setGenerationHistory] = useState<PreviewImage[]>([]);
-  const [assetImages, setAssetImages] = useState<PreviewImage[]>([]);
-  const [activeTab, setActiveTab] = useState("main");
-
   const [quotaUsed, setQuotaUsed] = useState(0);
   const [quotaLimit, setQuotaLimit] = useState(-1);
-
-  // Detail: tracking
-  const [detailGen, setDetailGen] = useState<Record<string,boolean>>({});
 
   async function createProject() {
     setProjectCreating(true);
@@ -315,30 +309,12 @@ export default function StudioPage() {
             latestImage={latestImage}
             generationHistory={generationHistory}
             onHistorySelect={(img) => setLatestImage(img)}
-            assetImages={assetImages}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            onAssetSave={handleAssetSave}
-            onBatchDownload={handleBatchDownload}
             projectId={projectId}
             quotaUsed={quotaUsed}
             quotaLimit={quotaLimit}
             generationError={generationError}
             onDismissError={() => setGenerationError("")}
           />
-
-          {/* Link to detail page */}
-          {generationHistory.length >= 1 && (
-            <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-4">
-              <Link href={`/projects/${projectId}/details`} className="flex items-center justify-between group">
-                <div>
-                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("studio.detailImages")}</h3>
-                  <p className="text-xs text-zinc-500 mt-0.5">{t("studio.detailImagesDesc")}</p>
-                </div>
-                <ChevronRight size={16} className="text-zinc-400 group-hover:text-zinc-600 transition-colors" />
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </div>

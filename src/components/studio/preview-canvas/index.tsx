@@ -1,12 +1,10 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, AlertTriangle, X, Download, Send, ShoppingCart } from "lucide-react";
+import { Sparkles, AlertTriangle, X, Download, Send, FileText } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
-import { SecondaryTabs } from "./secondary-tabs";
-import { AssetGrid } from "./asset-grid";
 
 interface PreviewImage {
   id: string;
@@ -19,11 +17,6 @@ interface StudioPreviewCanvasProps {
   latestImage: PreviewImage | null;
   generationHistory?: PreviewImage[];
   onHistorySelect?: (image: PreviewImage) => void;
-  assetImages: PreviewImage[];
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-  onAssetSave?: (id: string) => void;
-  onBatchDownload?: () => void;
   quotaUsed: number;
   quotaLimit: number;
   generationError?: string;
@@ -36,11 +29,6 @@ export function StudioPreviewCanvas({
   latestImage,
   generationHistory = [],
   onHistorySelect,
-  assetImages,
-  activeTab,
-  onTabChange,
-  onAssetSave,
-  onBatchDownload,
   quotaUsed,
   quotaLimit,
   generationError,
@@ -55,9 +43,6 @@ export function StudioPreviewCanvas({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Secondary tabs */}
-      <SecondaryTabs value={activeTab} onChange={onTabChange} />
-
       {/* Error banner */}
       {generationError && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-3">
@@ -67,10 +52,7 @@ export function StudioPreviewCanvas({
             <p className="text-sm text-red-600 mt-0.5">{generationError}</p>
           </div>
           {onDismissError && (
-            <button
-              onClick={onDismissError}
-              className="text-red-400 hover:text-red-600 shrink-0"
-            >
+            <button onClick={onDismissError} className="text-red-400 hover:text-red-600 shrink-0">
               <X size={14} />
             </button>
           )}
@@ -86,11 +68,7 @@ export function StudioPreviewCanvas({
               <div className="bg-white rounded-xl px-6 py-4 text-center shadow-sm border border-zinc-200">
                 <div className="flex gap-1.5 justify-center mb-2">
                   {[0, 1, 2].map((i) => (
-                    <span
-                      key={i}
-                      className="w-2 h-2 rounded-full bg-brand-500 animate-bounce"
-                      style={{ animationDelay: `${i * 150}ms` }}
-                    />
+                    <span key={i} className="w-2 h-2 rounded-full bg-brand-500 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
                   ))}
                 </div>
                 <p className="text-sm font-medium text-zinc-700">{t("generate.generatingOverlay")}</p>
@@ -98,17 +76,17 @@ export function StudioPreviewCanvas({
             </div>
           </div>
         ) : latestImage ? (
-          <div className="group/preview relative w-full h-full">
+          <div className="relative w-full h-full">
             <img src={latestImage.url} alt={latestImage.promptUsed ?? t("generate.generatedAlt")} className="w-full h-full object-cover" />
             <div className="absolute bottom-3 right-3 flex gap-1.5">
               <a href={latestImage.url} download target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-white/90 backdrop-blur-sm text-xs font-medium text-zinc-700 hover:bg-white shadow-sm transition-colors">
-                <Download size={13} /> {latestImage.promptUsed ? "下载" : "Download"}
+                <Download size={13} /> {t("generate.downloadImage")}
               </a>
               {projectId && (
                 <Link href={`/projects/${projectId}/publish`}
                   className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-brand-900/90 backdrop-blur-sm text-xs font-medium text-white hover:bg-brand-800 shadow-sm transition-colors">
-                  <Send size={13} /> {latestImage.promptUsed ? "发布" : "Publish"}
+                  <Send size={13} /> {t("publish.publishBtn")}
                 </Link>
               )}
             </div>
@@ -130,25 +108,31 @@ export function StudioPreviewCanvas({
       {generationHistory.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1" style={{ maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }}>
           {generationHistory.map((img) => (
-            <button
-              key={img.id}
-              type="button"
-              onClick={() => onHistorySelect?.(img)}
+            <button key={img.id} type="button" onClick={() => onHistorySelect?.(img)}
               className={cn(
                 "shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all",
                 latestImage?.id === img.id
                   ? "border-brand-600 ring-1 ring-brand-600/20"
                   : "border-zinc-200 hover:border-zinc-300 opacity-60 hover:opacity-100"
-              )}
-            >
-              <img
-                src={img.url}
-                alt=""
-                className="w-full h-full object-cover"
-              />
+              )}>
+              <img src={img.url} alt="" className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
+      )}
+
+      {/* Detail images link — shown after generation */}
+      {latestImage && projectId && (
+        <Link href={`/projects/${projectId}/details`}
+          className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 hover:shadow-sm transition-shadow">
+          <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
+            <FileText size={16} className="text-brand-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-zinc-700">{t("studio.detailImages")}</p>
+            <p className="text-xs text-zinc-400">{t("studio.detailImagesDesc")}</p>
+          </div>
+        </Link>
       )}
 
       {/* Quota badge */}
@@ -157,9 +141,6 @@ export function StudioPreviewCanvas({
           {t("generate.quotaLabel")}：{quotaText}
         </span>
       </div>
-
-      {/* Asset grid */}
-      <AssetGrid images={assetImages} onSave={onAssetSave} onBatchDownload={onBatchDownload} />
     </div>
   );
 }
