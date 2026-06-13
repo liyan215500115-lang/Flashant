@@ -76,7 +76,7 @@ export default function DetailsPage() {
         </div>
         <Link href={`/projects/${projectId}/publish`}>
           <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
-            <Send size={14} /> {t("publish.publishAndDownload")}
+            <Send size={14} /> {isZh ? "发布/下载" : "Publish / Download"}
           </Button>
         </Link>
       </div>
