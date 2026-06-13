@@ -26,6 +26,8 @@ export async function POST(req: Request) {
     numOutputs: customNumOutputs,
     engineType = "flux",
     targetPlatform,
+    title: projectTitle,
+    mode: generationMode,
   } = await req.json();
 
   if (!imageProjectId || !productImageId) {
@@ -152,10 +154,10 @@ export async function POST(req: Request) {
     },
   });
 
-  // Update project to GENERATING
+  // Update project title + status
   await db.imageProject.update({
     where: { id: imageProjectId },
-    data: { status: "GENERATING" },
+    data: { status: "GENERATING", title: projectTitle || undefined },
   });
 
   if (engineType === "openai") {

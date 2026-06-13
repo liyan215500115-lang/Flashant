@@ -181,6 +181,7 @@ export default function StudioPage() {
           productImageId: selectedImage.id,
           prompt: prompt || (mode === "whiteBg" ? "Pure white background, professional product photography, soft even lighting, high detail clarity" : mode === "model" ? "Fashion model showcasing the product, natural pose, soft natural light, lifestyle setting" : "Product placed in a clean bright setting with natural lighting and premium texture"),
           mode,
+          title: productName,
           numOutputs: quantity,
           engineType,
           targetPlatform,
