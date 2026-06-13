@@ -1,7 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, AlertTriangle, X, Download, Send, FileText } from "lucide-react";
+import { Sparkles, AlertTriangle, X, Download, Send } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
@@ -119,20 +119,6 @@ export function StudioPreviewCanvas({
             </button>
           ))}
         </div>
-      )}
-
-      {/* Detail images link — shown after generation */}
-      {latestImage && projectId && (
-        <Link href={`/projects/${projectId}/details`}
-          className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 hover:shadow-sm transition-shadow">
-          <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
-            <FileText size={16} className="text-brand-600" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-zinc-700">{t("studio.detailImages")}</p>
-            <p className="text-xs text-zinc-400">{t("studio.detailImagesDesc")}</p>
-          </div>
-        </Link>
       )}
 
       {/* Quota badge */}
