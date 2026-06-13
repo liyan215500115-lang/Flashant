@@ -100,15 +100,15 @@ export function StudioPreviewCanvas({
         ) : latestImage ? (
           <div className="group/preview relative w-full h-full">
             <img src={latestImage.url} alt={latestImage.promptUsed ?? t("generate.generatedAlt")} className="w-full h-full object-cover" />
-            <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover/preview:opacity-100 transition-opacity">
+            <div className="absolute bottom-3 right-3 flex gap-1.5">
               <a href={latestImage.url} download target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-white/90 backdrop-blur-sm text-xs font-medium text-zinc-700 hover:bg-white shadow-sm transition-colors">
-                <Download size={13} /> Download
+                <Download size={13} /> {latestImage.promptUsed ? "下载" : "Download"}
               </a>
               {projectId && (
                 <Link href={`/products/${projectId}/publish`}
                   className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-brand-900/90 backdrop-blur-sm text-xs font-medium text-white hover:bg-brand-800 shadow-sm transition-colors">
-                  <Send size={13} /> Publish
+                  <Send size={13} /> {latestImage.promptUsed ? "发布" : "Publish"}
                 </Link>
               )}
             </div>
