@@ -26,7 +26,7 @@ interface PreviewImage {
 export default function StudioPage() {
   const { t } = useT();
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [projectCreating, setProjectCreating] = useState(true);
+  const [projectCreating, setProjectCreating] = useState(false);
   const [projectError, setProjectError] = useState("");
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
@@ -79,18 +79,14 @@ export default function StudioPage() {
   }
 
   useEffect(() => {
-    let cancelled = false;
-    createProject().then(() => {
-      if (cancelled) return;
-      fetch("/api/quota")
-        .then((r) => r.json())
-        .then((d) => {
-          setQuotaUsed(d.used ?? 0);
-          setQuotaLimit(d.limit ?? -1);
-        })
-        .catch(() => {});
-    });
-    return () => { cancelled = true; };
+    // Load quota on mount — no auto project creation
+    fetch("/api/quota")
+      .then((r) => r.json())
+      .then((d) => {
+        setQuotaUsed(d.used ?? 0);
+        setQuotaLimit(d.limit ?? -1);
+      })
+      .catch(() => {});
   }, []);
 
   const pollTask = useCallback(
@@ -132,7 +128,21 @@ export default function StudioPage() {
   );
 
   async function handleGenerate() {
-    if (!projectId || !selectedImage || isGenerating) return;
+    if (!selectedImage || isGenerating) return;
+
+    // Auto-create project on first generate if needed
+    let pid = projectId;
+    if (!pid) {
+      setProjectCreating(true);
+      try {
+        const r = await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+        const d = await r.json();
+        if (d.project?.id) { pid = d.project.id; setProjectId(pid); }
+        else { setProjectError("Failed to create project"); setProjectCreating(false); return; }
+      } catch (e) { setProjectError("Network error"); setProjectCreating(false); return; }
+      setProjectCreating(false);
+    }
+
     setIsGenerating(true);
     setGenerationError("");
 
@@ -141,7 +151,7 @@ export default function StudioPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageProjectId: projectId,
+          imageProjectId: pid!,
           productImageId: selectedImage.id,
           prompt: prompt || undefined,
           numOutputs: 1,

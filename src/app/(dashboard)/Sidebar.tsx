@@ -100,17 +100,6 @@ export function Sidebar() {
           </div>
         ))}
 
-        <div className="mt-2">
-          <Link href="/studio">
-            <Button
-              className="w-full justify-start gap-2 bg-brand-900 hover:bg-brand-800 text-white cursor-pointer shadow-sm"
-              size="sm"
-            >
-              <Plus size={15} strokeWidth={2} />
-              {t("sidebar.newProject")}
-            </Button>
-          </Link>
-        </div>
       </nav>
 
       {/* Utility bar */}
