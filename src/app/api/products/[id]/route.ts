@@ -70,6 +70,20 @@ export async function GET(
   });
 }
 
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  const project = await db.imageProject.findUnique({ where: { id } });
+  if (!project || project.userId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const body = await req.json();
+  await db.imageProject.update({ where: { id }, data: { title: body.title } });
+  return NextResponse.json({ updated: true });
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

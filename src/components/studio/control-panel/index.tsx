@@ -14,7 +14,7 @@ interface ProductImage {
 
 interface StudioControlPanelProps {
   projectId: string | null; selectedImage: ProductImage | null;
-  prompt: string;
+  prompt: string; productName: string;
   engineType: string; targetPlatform: string; targetLanguage: string;
   brandPresetId: string | null; isGenerating: boolean;
   activeStyle: string | null;
@@ -22,6 +22,7 @@ interface StudioControlPanelProps {
   onAccessoryUpload?: (image: ProductImage) => void;
   accessoryImages?: ProductImage[];
   onPromptChange: (prompt: string) => void;
+  onProductNameChange: (name: string) => void;
   onEngineChange: (engine: string) => void;
   onPlatformChange: (platform: string) => void;
   onLanguageChange: (language: string) => void;
@@ -31,14 +32,13 @@ interface StudioControlPanelProps {
 }
 
 export function StudioControlPanel({
-  projectId, selectedImage, prompt,
+  projectId, selectedImage, prompt, productName,
   engineType, targetPlatform, targetLanguage, brandPresetId, isGenerating,
   activeStyle, onImageChange, onAccessoryUpload, accessoryImages, onPromptChange,
-  onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
+  onProductNameChange, onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
   onStyleChange, onGenerate,
 }: StudioControlPanelProps) {
-  const { t } = useT();
-  const [productName, setProductName] = useState("");
+  const { t, locale } = useT();
   const [isEnhancing, setIsEnhancing] = useState(false);
 
   async function handleEnhance() {
@@ -47,7 +47,7 @@ export function StudioControlPanel({
     try {
       const res = await fetch("/api/prompts/enhance", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: activeStyle ?? "scene", targetLanguage }),
+        body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: activeStyle ?? "scene", targetLanguage: locale }),
       });
       if (res.ok) { const data = await res.json(); onPromptChange(data.enhanced); }
     } catch { /* fallback */ }
@@ -108,7 +108,7 @@ export function StudioControlPanel({
         {/* Product name */}
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-medium text-zinc-500">{t("generate.productLabel")}</span>
-          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)}
+          <input type="text" value={productName} onChange={(e) => onProductNameChange(e.target.value)}
             placeholder={t("generate.productPlaceholder")}
             className="w-full h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all" />
         </div>

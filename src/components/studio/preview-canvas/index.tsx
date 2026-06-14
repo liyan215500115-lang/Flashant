@@ -93,7 +93,7 @@ export function StudioPreviewCanvas({
       </div>
 
       {/* Generation history thumbnails */}
-      {generationHistory.length > 1 && (
+      {generationHistory.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1" style={{ maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }}>
           {generationHistory.map((img) => (
             <button key={img.id} type="button" onClick={() => onHistorySelect?.(img)}

@@ -44,6 +44,17 @@ export default function StudioPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
 
+  // Sync product name to project title (debounced)
+  function handleProductNameChange(name: string) {
+    setProductName(name);
+    if (projectId && name.trim()) {
+      fetch(`/api/products/${projectId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: name }),
+      }).catch(() => {});
+    }
+  }
+
   const [accessoryImages, setAccessoryImages] = useState<ProductImage[]>([]);
   const [latestImage, setLatestImage] = useState<PreviewImage | null>(null);
   const [generationHistory, setGenerationHistory] = useState<PreviewImage[]>([]);
@@ -254,6 +265,7 @@ export default function StudioPage() {
               projectId={projectId}
               selectedImage={selectedImage}
               prompt={prompt}
+              productName={productName}
               engineType={engineType}
               targetPlatform={targetPlatform}
               targetLanguage={targetLanguage}
@@ -264,6 +276,7 @@ export default function StudioPage() {
               onAccessoryUpload={(img) => setAccessoryImages((prev) => [...prev, img])}
               accessoryImages={accessoryImages}
               onPromptChange={setPrompt}
+              onProductNameChange={handleProductNameChange}
               onEngineChange={setEngineType}
               onPlatformChange={(p) => {
                 setTargetPlatform(p);
