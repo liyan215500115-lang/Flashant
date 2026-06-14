@@ -109,8 +109,25 @@ export function StudioPreviewCanvas({
         </div>
       )}
 
-      {/* Quota badge */}
-      <div className="flex items-center justify-end">
+      {/* Actions + Quota */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          {latestImage && (
+            <button type="button"
+              onClick={async () => {
+                const toast = (await import("sonner")).toast;
+                toast.promise(
+                  fetch("/api/upscale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: latestImage.url }) })
+                    .then(r => r.json())
+                    .then(d => { if (d.url && onHistorySelect) { onHistorySelect({ ...latestImage, url: d.url }); } }),
+                  { loading: "超清增强中...", success: "增强完成", error: "增强失败" }
+                );
+              }}
+              className="text-xs text-zinc-400 hover:text-brand-600 cursor-pointer transition-colors">
+              {t("generate.engineFlux").includes("Pro") ? "超清增强" : "Upscale 4x"}
+            </button>
+          )}
+        </div>
         <span className="text-xs text-zinc-400">
           {t("generate.quotaLabel")}：{quotaText}
         </span>
