@@ -487,7 +487,7 @@
     "engineFlux": "FLUX.2 Pro（推荐）",
     "engineFlux2": "FLUX.2 Pro（推荐）",
     "engineOpenai": "GPT (DALL·E 3)",
-    "engineSdxl": "SDXL",
+    "engineSdxl": "SDXL（快速模式）",
     "enginePlayground": "Playground v2.5",
     "platformLabel": "目标平台",
     "platformNone": "不指定平台（仅生成）",

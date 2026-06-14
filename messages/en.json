@@ -487,7 +487,7 @@
     "engineFlux": "FLUX.2 Pro (Recommended)",
     "engineFlux2": "FLUX.2 Pro (Recommended)",
     "engineOpenai": "GPT (DALL·E 3)",
-    "engineSdxl": "SDXL",
+    "engineSdxl": "SDXL (Fast)",
     "enginePlayground": "Playground v2.5",
     "platformLabel": "Target Platform",
     "platformNone": "No platform (generate only)",
