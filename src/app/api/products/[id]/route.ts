@@ -84,6 +84,23 @@ export async function PATCH(
   return NextResponse.json({ updated: true });
 }
 
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  const project = await db.imageProject.findUnique({ where: { id } });
+  if (!project || project.userId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { order } = await req.json();
+  if (!Array.isArray(order)) return NextResponse.json({ error: "order array required" }, { status: 400 });
+  for (const img of order) {
+    await db.generatedImage.update({ where: { id: img.id }, data: { sortOrder: img.sortOrder } });
+  }
+  return NextResponse.json({ updated: true });
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

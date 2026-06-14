@@ -264,6 +264,17 @@ export default function ProductDetailPage() {
     } catch {}
   }
 
+  async function handleReorder(from: number, to: number) {
+    const reordered = [...succeededImages];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    const order = reordered.map((img, i) => ({ id: img.id, sortOrder: i }));
+    try {
+      await fetch(`/api/products/${params.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order }) });
+      fetchProject();
+    } catch {}
+  }
+
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -389,14 +400,28 @@ export default function ProductDetailPage() {
                   </Button>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {imageResults.map((img) => (
+                    {imageResults.map((img, idx) => (
                       <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-pointer"
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover" />
-                        <button type="button" onClick={() => handleDeleteImage(img.id)}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-md bg-white/90 hover:bg-red-50 hover:text-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Trash2 size={12} />
-                        </button>
+                        <div className="absolute top-1 left-1 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {idx > 0 && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleReorder(idx, idx - 1); }} className="w-5 h-5 rounded bg-white/90 hover:bg-white shadow-sm flex items-center justify-center text-[10px] font-bold text-zinc-500">↑</button>
+                          )}
+                          {idx < imageResults.length - 1 && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleReorder(idx, idx + 1); }} className="w-5 h-5 rounded bg-white/90 hover:bg-white shadow-sm flex items-center justify-center text-[10px] font-bold text-zinc-500">↓</button>
+                          )}
+                        </div>
+                        <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: img.url, name: "generated" }); }}
+                            className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 flex items-center gap-0.5">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>编辑
+                          </button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteImage(img.id); }}
+                            className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-red-50 hover:text-red-600 shadow-sm text-[10px] font-medium flex items-center gap-0.5">
+                            <Trash2 size={10} />删除
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
