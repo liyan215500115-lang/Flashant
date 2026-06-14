@@ -132,10 +132,15 @@ export async function POST(req: Request) {
   let prompt = "Professional product photography, studio lighting, high quality";
   if (detailType && DETAIL_PROMPTS[detailType]) {
     prompt = DETAIL_PROMPTS[detailType];
-    if (baseStyle) prompt = `${prompt}, consistent with this style: ${baseStyle}`;
-    if (customDesc) prompt = `${prompt}. Additional instructions: ${customDesc}`;
-    // Keep person consistent — reference the main generated image URL
-    if (referenceImageUrl) prompt = `${prompt}. Keep the same person/product as in the reference image, only change the scene, pose, or context.`;
+    if (baseStyle) {
+      // Match the main image's lighting, color palette, and overall aesthetic
+      prompt = `${prompt}. Match the exact lighting quality, color temperature, and overall aesthetic from this reference style: ${baseStyle}. Maintain consistent visual identity but vary the composition, angle, or content.`;
+    }
+    if (customDesc) prompt = `${prompt}. ${customDesc}`;
+    // Keep product and person faithful to reference image
+    if (referenceImageUrl) {
+      prompt = `${prompt}. Keep the product and any person visually identical to the reference image—same face, same build, same product appearance. Only change the pose, framing, or background context.`;
+    }
   } else if (customPrompt) {
     prompt = customPrompt;
   } else if (promptTemplateId) {
