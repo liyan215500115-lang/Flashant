@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { ImageEditor } from "@/components/project/image-editor";
 
 import {
   ArrowLeft,
@@ -76,6 +77,7 @@ export default function ProductDetailPage() {
   const pollTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingImage, setEditingImage] = useState<{url:string; name:string} | null>(null);
   const router = useRouter();
   const { t, locale } = useT();
 
@@ -368,10 +370,14 @@ export default function ProductDetailPage() {
           const imageResults = succeededImages.filter((img) => img.productImageId === pi.id);
           return (
             <div key={pi.id} className="flex flex-col md:flex-row gap-5 items-start">
-              <div className="w-full md:w-[240px] flex-shrink-0">
+              <div className="w-full md:w-[240px] flex-shrink-0 relative group">
                 <div className="aspect-square rounded-xl overflow-hidden bg-muted border border-zinc-200">
                   <img src={pi.originalUrl} alt={pi.fileName} className="w-full h-full object-cover" />
                 </div>
+                <button type="button" onClick={(e) => { e.preventDefault(); setEditingImage({ url: pi.originalUrl, name: pi.fileName }); }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-white/90 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-zinc-600"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                </button>
               </div>
               <div className="flex-1 min-w-0">
                 {imageResults.length === 0 ? (
@@ -415,6 +421,16 @@ export default function ProductDetailPage() {
           <CheckCircle2 size={16} />
           {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
         </div>
+      )}
+
+      {/* Image Editor */}
+      {editingImage && (
+        <ImageEditor
+          imageUrl={editingImage.url}
+          fileName={editingImage.name}
+          onSave={(newUrl) => { setEditingImage(null); }}
+          onClose={() => setEditingImage(null)}
+        />
       )}
 
       {/* Delete confirmation dialog */}
