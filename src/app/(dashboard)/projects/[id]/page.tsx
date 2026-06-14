@@ -268,7 +268,7 @@ export default function ProductDetailPage() {
     const reordered = [...succeededImages];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(to, 0, moved);
-    const order = reordered.map((img, i) => ({ id: img.id, sortOrder: i }));
+    const order = reordered.map((img) => img.id);
     try {
       await fetch(`/api/products/${params.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order }) });
       fetchProject();

@@ -95,8 +95,8 @@ export async function PUT(
   if (!project || project.userId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const { order } = await req.json();
   if (!Array.isArray(order)) return NextResponse.json({ error: "order array required" }, { status: 400 });
-  for (const img of order) {
-    await db.generatedImage.update({ where: { id: img.id }, data: { sortOrder: img.sortOrder } });
+  for (let i = 0; i < order.length; i++) {
+    await db.generatedImage.update({ where: { id: order[i] }, data: { createdAt: new Date(Date.now() - (order.length - i) * 1000) } });
   }
   return NextResponse.json({ updated: true });
 }
