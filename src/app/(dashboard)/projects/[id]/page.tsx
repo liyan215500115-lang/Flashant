@@ -402,17 +402,13 @@ export default function ProductDetailPage() {
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {imageResults.map((img, idx) => (
-                      <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-pointer"
+                      <div key={img.id} draggable
+                        onDragStart={(e) => { e.dataTransfer.setData("text/plain", String(idx)); }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => { e.preventDefault(); const from = Number(e.dataTransfer.getData("text/plain")); if (from !== idx) handleReorder(from, idx); }}
+                        className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all"
                         onClick={() => setLightboxUrl(img.url)}>
-                        <img src={img.url} alt="" className="w-full h-full object-cover" />
-                        <div className="absolute top-1 left-1 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {idx > 0 && (
-                            <button type="button" onClick={(e) => { e.stopPropagation(); handleReorder(idx, idx - 1); }} className="w-5 h-5 rounded bg-white/90 hover:bg-white shadow-sm flex items-center justify-center text-[10px] font-bold text-zinc-500">↑</button>
-                          )}
-                          {idx < imageResults.length - 1 && (
-                            <button type="button" onClick={(e) => { e.stopPropagation(); handleReorder(idx, idx + 1); }} className="w-5 h-5 rounded bg-white/90 hover:bg-white shadow-sm flex items-center justify-center text-[10px] font-bold text-zinc-500">↓</button>
-                          )}
-                        </div>
+                        <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
                         <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: img.url, name: "generated" }); }}
                             className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 flex items-center gap-0.5">
