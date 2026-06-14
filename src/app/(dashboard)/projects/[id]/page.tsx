@@ -28,6 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useT } from "@/components/i18n-provider";
+import { toast } from "sonner";
 
 
 interface ProductImage {
@@ -264,6 +265,19 @@ export default function ProductDetailPage() {
     } catch {}
   }
 
+  async function handleRegenerateImage(promptUsed: string, productImageId: string) {
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageProjectId: project!.id, productImageId, prompt: promptUsed, numOutputs: 1 }),
+      });
+      if (res.ok) {
+        toast.success("Regenerating...");
+        fetchProject();
+      }
+    } catch {}
+  }
+
   async function handleReorder(from: number, to: number) {
     // Optimistic local update — swap order immediately
     const reordered = [...succeededImages];
@@ -418,6 +432,11 @@ export default function ProductDetailPage() {
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
                         <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); handleRegenerateImage(img.promptUsed || prompt, pi.id); }}
+                            className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-brand-50 hover:text-brand-600 shadow-sm text-[10px] font-medium flex items-center gap-0.5"
+                            title="Regenerate">
+                            <RefreshCw size={10} />重生成
+                          </button>
                           <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: img.url, name: "generated" }); }}
                             className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 flex items-center gap-0.5">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>编辑
