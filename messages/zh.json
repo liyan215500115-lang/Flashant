@@ -418,7 +418,7 @@
         "free": {
           "name": "Free",
           "desc": "试用体验",
-          "feature1": "20 次 / 月",
+          "feature1": "10 次 AI 生图 / 月",
           "feature2": "5 种场景模板",
           "feature3": "14 平台下载",
           "feature4": "AI 提示词辅助"
@@ -426,7 +426,7 @@
         "pro": {
           "name": "Pro",
           "desc": "在增长的品牌",
-          "feature1": "500 次 / 月",
+          "feature1": "100 次 AI 生图 / 月",
           "feature2": "全部模板 + HD",
           "feature3": "Shopify 一键发布",
           "feature4": "品牌 Logo 叠加",
@@ -435,7 +435,7 @@
         "business": {
           "name": "Business",
           "desc": "品牌团队",
-          "feature1": "2,000 次 / 月",
+          "feature1": "1,000 次 AI 生图 / 月",
           "feature2": "全部模板 + HD",
           "feature3": "Shopify 一键发布",
           "feature4": "品牌 Logo 叠加",

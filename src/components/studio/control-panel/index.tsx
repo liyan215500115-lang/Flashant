@@ -102,6 +102,8 @@ export function StudioControlPanel({
             className="w-full h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-700 dark:text-zinc-200 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all">
             <option value="gemini">{t("generate.engineGemini")}</option>
             <option value="flux">{t("generate.engineFlux")}</option>
+            <option value="gpt-image">GPT Image 2 ($0.03)</option>
+            <option value="flux-flex">FLUX.2 Flex ($0.06)</option>
           </select>
         </div>
 

@@ -24,12 +24,12 @@ export function initProviders(): void {
     }
   }
 
-  // Nano Banana 2 via laozhang.ai — fast, $0.07/image, good text rendering
+  // All image models via laozhang.ai
   if (process.env.NANO_BANANA_API_KEY) {
     try {
-      const bananaProvider = createGeminiProvider({ model: "gemini-3.1-flash-image" });
-      registerProvider("gemini", bananaProvider);
-      registerProvider("banana", bananaProvider);
+      registerProvider("gemini", createGeminiProvider({ model: "gemini-3.1-flash-image" }));
+      registerProvider("gpt-image", createGeminiProvider({ model: "gpt-image-2" }));
+      registerProvider("flux-flex", createGeminiProvider({ model: "flux-2-flex" }));
     } catch {}
   }
 
