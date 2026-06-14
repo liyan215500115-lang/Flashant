@@ -28,6 +28,7 @@ interface StudioControlPanelProps {
   onLanguageChange: (language: string) => void;
   onBrandPresetChange: (presetId: string | null) => void;
   onStyleChange: (key: string, prompt: string) => void;
+  onStyleReferenceChange?: (url: string | null) => void;
   onGenerate: () => void;
 }
 
@@ -36,7 +37,7 @@ export function StudioControlPanel({
   engineType, targetPlatform, targetLanguage, brandPresetId, isGenerating,
   activeStyle, onImageChange, onAccessoryUpload, accessoryImages, onPromptChange,
   onProductNameChange, onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
-  onStyleChange, onGenerate,
+  onStyleChange, onStyleReferenceChange, onGenerate,
 }: StudioControlPanelProps) {
   const { t, locale } = useT();
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -114,7 +115,7 @@ export function StudioControlPanel({
         </div>
 
         {/* Style */}
-        <StylePicker value={activeStyle} onChange={onStyleChange} />
+        <StylePicker value={activeStyle} onChange={onStyleChange} onReferenceImage={onStyleReferenceChange} />
 
         {/* Prompt + wand */}
         <div className="flex flex-col gap-1.5">

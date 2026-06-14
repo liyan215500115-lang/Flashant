@@ -1,6 +1,7 @@
 "use client";
 
-import { Square, Image, User, Gem, Sun, Home, Coffee, Check } from "lucide-react";
+import { useState, useRef } from "react";
+import { Square, Image, User, Gem, Sun, Home, Coffee } from "lucide-react";
 import { useT } from "@/components/i18n-provider";
 
 interface StyleDef {
@@ -25,11 +26,28 @@ const STYLES: StyleDef[] = [
 interface StylePickerProps {
   value: string | null;
   onChange: (key: string, prompt: string) => void;
+  onReferenceImage?: (url: string | null) => void;
 }
 
-export function StylePicker({ value, onChange }: StylePickerProps) {
+export function StylePicker({ value, onChange, onReferenceImage }: StylePickerProps) {
   const { t, locale } = useT();
   const isZh = locale === "zh";
+  const [refUrl, setRefUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleRefUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setRefUrl(url);
+    onReferenceImage?.(url);
+    e.target.value = "";
+  }
+
+  function clearRef() {
+    setRefUrl(null);
+    onReferenceImage?.(null);
+  }
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -54,6 +72,19 @@ export function StylePicker({ value, onChange }: StylePickerProps) {
             </button>
           );
         })}
+      </div>
+      {/* Reference image upload */}
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={() => fileInputRef.current?.click()}
+          className="flex-1 flex items-center justify-center gap-1 h-7 rounded-lg border border-dashed border-zinc-300 text-[10px] text-zinc-400 hover:text-zinc-600 hover:border-zinc-400 transition-colors cursor-pointer">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          {refUrl ? "已上传参考图" : isZh ? "参考风格图" : "Style Reference"}
+        </button>
+        {refUrl && (
+          <button type="button" onClick={clearRef}
+            className="text-[10px] text-red-400 hover:text-red-600 px-1">清除</button>
+        )}
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleRefUpload} />
       </div>
     </div>
   );

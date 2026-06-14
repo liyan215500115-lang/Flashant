@@ -41,6 +41,7 @@ export default function StudioPage() {
   const [targetPlatform, setTargetPlatform] = useState("SHOPIFY");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [brandPresetId, setBrandPresetId] = useState<string | null>(null);
+  const [styleReferenceUrl, setStyleReferenceUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
 
@@ -198,6 +199,7 @@ export default function StudioPage() {
           targetPlatform,
           targetLanguage,
           brandPresetId: brandPresetId || undefined,
+          referenceImageUrl: styleReferenceUrl || undefined,
         }),
       });
       const data = await res.json();
@@ -286,6 +288,7 @@ export default function StudioPage() {
               onLanguageChange={setTargetLanguage}
               onBrandPresetChange={setBrandPresetId}
               onStyleChange={(key, prompt) => { setActiveStyle(key); setPrompt(prompt); }}
+              onStyleReferenceChange={setStyleReferenceUrl}
               onGenerate={handleGenerate}
             />
           )}
