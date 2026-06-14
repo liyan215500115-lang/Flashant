@@ -40,7 +40,7 @@ export async function GET() {
         p.productImages.map(async (img) => ({
           ...img,
           originalUrl: isR2Key(img.s3Key)
-            ? `${process.env.S3_PUBLIC_URL ?? ""}/${img.s3Key}`
+            ? await getSignedGetUrl(img.s3Key!)
             : img.originalUrl,
         }))
       ),
@@ -48,7 +48,7 @@ export async function GET() {
         p.generatedImages.map(async (img) => ({
           ...img,
           url: isR2Key(img.s3Key)
-            ? `${process.env.S3_PUBLIC_URL ?? ""}/${img.s3Key}`
+            ? await getSignedGetUrl(img.s3Key!)
             : img.url,
         }))
       ),
