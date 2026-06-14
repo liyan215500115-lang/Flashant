@@ -82,6 +82,8 @@ export default function ProductDetailPage() {
   const [editingImage, setEditingImage] = useState<{url:string; name:string} | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [imageTexts, setImageTexts] = useState<Record<string, string | undefined>>({});
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const router = useRouter();
   const { t, locale } = useT();
 
@@ -406,7 +408,7 @@ export default function ProductDetailPage() {
           const imageResults = succeededImages.filter((img) => img.productImageId === pi.id);
           return (
             <div key={pi.id} className="flex flex-col md:flex-row gap-5 items-start">
-              <div className="w-full md:w-[240px] flex-shrink-0 relative group">
+              <div className="w-full md:w-[280px] flex-shrink-0 relative group">
                 <div className="aspect-square rounded-xl overflow-hidden bg-muted border border-zinc-200 cursor-pointer"
                   draggable
                   onDragStart={(e) => { e.dataTransfer.setData("source", "product"); e.dataTransfer.setData("url", pi.originalUrl); e.dataTransfer.setData("name", pi.fileName); }}
@@ -427,11 +429,17 @@ export default function ProductDetailPage() {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {imageResults.map((img, idx) => (
-                      <div key={img.id} draggable
-                        onDragStart={(e) => { e.dataTransfer.setData("source", "generated"); e.dataTransfer.setData("id", img.id); }}
-                        onDragOver={(e) => { e.preventDefault(); }}
-                        onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData("source"); if (src === "generated") { handleReorder(e.dataTransfer.getData("id"), img.id); } if (src === "product") { setEditingImage({ url: e.dataTransfer.getData("url"), name: e.dataTransfer.getData("name") }); } }}
-                        className="relative group w-[120px] h-[120px] rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-grab active:cursor-grabbing"
+                      <div key={img.id} draggable title="拖拽可调整顺序"
+                        onDragStart={(e) => { e.dataTransfer.setData("source", "generated"); e.dataTransfer.setData("id", img.id); setDragId(img.id); }}
+                        onDragOver={(e) => { e.preventDefault(); setDropTargetId(img.id); }}
+                        onDragEnd={() => { setDragId(null); setDropTargetId(null); }}
+                        onDragLeave={() => { setDropTargetId(null); }}
+                        onDrop={(e) => { e.preventDefault(); setDragId(null); setDropTargetId(null); const src = e.dataTransfer.getData("source"); if (src === "generated") { handleReorder(e.dataTransfer.getData("id"), img.id); } if (src === "product") { setEditingImage({ url: e.dataTransfer.getData("url"), name: e.dataTransfer.getData("name") }); } }}
+                        className={`relative group w-[160px] h-[160px] rounded-lg overflow-hidden bg-muted border-2 border-zinc-200 cursor-grab active:cursor-grabbing active:scale-105 active:shadow-lg transition-all ${
+                          img.id === dragId ? "opacity-40 scale-95 border-dashed" : ""
+                        } ${
+                          img.id === dropTargetId && img.id !== dragId ? "ring-2 ring-brand-500 border-brand-500" : ""
+                        }`}
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
                         <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
