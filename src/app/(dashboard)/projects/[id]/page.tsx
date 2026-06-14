@@ -78,6 +78,7 @@ export default function ProductDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editingImage, setEditingImage] = useState<{url:string; name:string} | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const router = useRouter();
   const { t, locale } = useT();
 
@@ -371,7 +372,8 @@ export default function ProductDetailPage() {
           return (
             <div key={pi.id} className="flex flex-col md:flex-row gap-5 items-start">
               <div className="w-full md:w-[240px] flex-shrink-0 relative group">
-                <div className="aspect-square rounded-xl overflow-hidden bg-muted border border-zinc-200">
+                <div className="aspect-square rounded-xl overflow-hidden bg-muted border border-zinc-200 cursor-pointer"
+                  onClick={() => setLightboxUrl(pi.originalUrl)}>
                   <img src={pi.originalUrl} alt={pi.fileName} className="w-full h-full object-cover" />
                 </div>
                 <button type="button" onClick={(e) => { e.preventDefault(); setEditingImage({ url: pi.originalUrl, name: pi.fileName }); }}
@@ -387,7 +389,8 @@ export default function ProductDetailPage() {
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {imageResults.map((img) => (
-                      <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200">
+                      <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-pointer"
+                        onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover" />
                         <button type="button" onClick={() => handleDeleteImage(img.id)}
                           className="absolute top-1 right-1 w-6 h-6 rounded-md bg-white/90 hover:bg-red-50 hover:text-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -420,6 +423,13 @@ export default function ProductDetailPage() {
         <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600 dark:text-emerald-400">
           <CheckCircle2 size={16} />
           {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center cursor-pointer" onClick={() => setLightboxUrl(null)}>
+          <img src={lightboxUrl} alt="" className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl" />
         </div>
       )}
 
