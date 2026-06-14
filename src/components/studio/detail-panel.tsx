@@ -80,20 +80,24 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     const setSeed = lockStyle ? Math.floor(Math.random() * 100000) : undefined;
     const promises = types.map(async (t) => {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
         const res = await fetch("/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, targetPlatform, numOutputs: 1, seed: setSeed }),
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
         const detailRes = await res.json() as { url?: string };
-        const genUrl = detailRes.url;
-        if (genUrl) {
-          const overlayedUrl = await overlayTextOnImage(genUrl, customDesc, t.zh).catch(() => genUrl);
-          return { key: t.key, url: overlayedUrl, rawUrl: genUrl, label: t.zh };
+        if (detailRes.url) {
+          const overlayedUrl = await overlayTextOnImage(detailRes.url, customDesc, t.zh).catch(() => detailRes.url);
+          return { key: t.key, url: overlayedUrl, rawUrl: detailRes.url, label: t.zh };
         }
       } catch {}
       return null;
     });
-    const out = (await Promise.all(promises)).filter(Boolean) as NonNullable<Awaited<typeof promises[number]>>[];
+    const settled = await Promise.allSettled(promises);
+    const out = settled.filter((r) => r.status === "fulfilled" && r.value).map((r) => (r as PromiseFulfilledResult<any>).value);
     setResults((prev) => [...out, ...prev]);
     setGenerating(false);
     onDetailGenerated?.(out);

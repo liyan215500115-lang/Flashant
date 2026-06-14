@@ -138,7 +138,7 @@ export async function POST(req: Request) {
       const seedSuffix = seed ? `_{seed=${seed}}` : "";
       prompt = `${prompt}. All images in this set MUST share identical lighting quality, color temperature, and visual style: ${baseStyle}.${seedSuffix} Keep the aesthetic perfectly consistent across every frame like a professional photoshoot set.`;
     }
-    if (customDesc) prompt = `${prompt}. Additionally, overlay the following text clearly on the image: "${customDesc}". The text should be clean, readable, and professionally placed on the image.`;
+    // Text overlay is handled client-side via Canvas — not requested in prompt
     // Keep product and person faithful to reference image
     if (referenceImageUrl) {
       prompt = `${prompt}. Keep the product and any person visually identical to the reference image—same face, same build, same product appearance. Only change the pose, framing, or background context.`;
