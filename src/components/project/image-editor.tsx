@@ -116,14 +116,14 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
           {tool === "brightness" && (
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xs text-zinc-500 w-10">亮度</span>
-              <Slider value={[brightness]} onValueChange={([v]) => setBrightness(v)} min={50} max={200} step={1} className="flex-1" />
+              <Slider value={[brightness]} onValueChange={(v) => setBrightness(Array.isArray(v) ? v[0] : v)} min={50} max={200} step={1} className="flex-1" />
               <span className="text-xs text-zinc-500 w-8 text-right">{brightness}%</span>
             </div>
           )}
           {tool === "contrast" && (
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xs text-zinc-500 w-10">对比度</span>
-              <Slider value={[contrast]} onValueChange={([v]) => setContrast(v)} min={50} max={200} step={1} className="flex-1" />
+              <Slider value={[contrast]} onValueChange={(v) => setContrast(Array.isArray(v) ? v[0] : v)} min={50} max={200} step={1} className="flex-1" />
               <span className="text-xs text-zinc-500 w-8 text-right">{contrast}%</span>
             </div>
           )}
@@ -144,7 +144,7 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
                 className="w-full h-9 rounded-lg border border-zinc-200 px-3 text-xs focus:border-brand-500 focus:outline-none" />
               <div className="flex items-center gap-3">
                 <span className="text-xs text-zinc-500">大小</span>
-                <Slider value={[textSize]} onValueChange={([v]) => setTextSize(v)} min={12} max={72} step={1} className="flex-1" />
+                <Slider value={[textSize]} onValueChange={(v) => setTextSize(Array.isArray(v) ? v[0] : v)} min={12} max={72} step={1} className="flex-1" />
                 <span className="text-xs text-zinc-500 w-8 text-right">{textSize}px</span>
               </div>
               <div className="flex items-center gap-2">
