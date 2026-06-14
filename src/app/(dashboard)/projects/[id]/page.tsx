@@ -429,16 +429,14 @@ export default function ProductDetailPage() {
                     {imageResults.map((img, idx) => (
                       <div key={img.id} draggable
                         onDragStart={(e) => { e.dataTransfer.setData("source", "generated"); e.dataTransfer.setData("id", img.id); }}
-                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2','ring-brand-400'); }}
-                        onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2','ring-brand-400'); }}
-                        onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2','ring-brand-400'); const src = e.dataTransfer.getData("source"); if (src === "generated") { handleReorder(e.dataTransfer.getData("id"), img.id); } if (src === "product") { setEditingImage({ url: e.dataTransfer.getData("url"), name: e.dataTransfer.getData("name") }); } }}
-                        className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all"
+                        onDragOver={(e) => { e.preventDefault(); }}
+                        onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData("source"); if (src === "generated") { handleReorder(e.dataTransfer.getData("id"), img.id); } if (src === "product") { setEditingImage({ url: e.dataTransfer.getData("url"), name: e.dataTransfer.getData("name") }); } }}
+                        className="relative group w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-grab active:cursor-grabbing"
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
                         <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button type="button" onClick={(e) => { e.stopPropagation(); handleRegenerateImage(img.promptUsed || "", pi.id); }}
-                            className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-brand-50 hover:text-brand-600 shadow-sm text-[10px] font-medium flex items-center gap-0.5"
-                            title="Regenerate">
+                            className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-brand-50 hover:text-brand-600 shadow-sm text-[10px] font-medium flex items-center gap-0.5">
                             <RefreshCw size={10} />重生成
                           </button>
                           <button type="button" onClick={(e) => { e.stopPropagation(); setImageTexts((prev) => ({ ...prev, [img.id]: prev[img.id] !== undefined ? undefined : "" })); }}
@@ -450,6 +448,30 @@ export default function ProductDetailPage() {
                             <Trash2 size={10} />删除
                           </button>
                         </div>
+                        {imageTexts[img.id] !== undefined && (
+                          <div className="mt-1 flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <input type="text" value={imageTexts[img.id] ?? ""}
+                              onChange={(e) => setImageTexts((prev) => ({ ...prev, [img.id]: e.target.value }))}
+                              placeholder="输入文字覆盖到图上..."
+                              className="flex-1 h-7 rounded-lg border border-zinc-200 px-2 text-[11px] focus:border-brand-500 focus:outline-none" />
+                            <button type="button" onClick={async () => {
+                              const text = imageTexts[img.id];
+                              if (!text) return;
+                              const canvas = document.createElement("canvas");
+                              const base = await new Promise<HTMLImageElement>((r) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.src = img.url; });
+                              canvas.width = base.width; canvas.height = base.height;
+                              const ctx = canvas.getContext("2d")!;
+                              ctx.drawImage(base, 0, 0);
+                              const fs = Math.max(24, Math.floor(base.width / 20));
+                              ctx.font = `700 ${fs}px Inter, sans-serif`;
+                              ctx.fillStyle = "#1a1a1a";
+                              ctx.textAlign = "center";
+                              ctx.fillText(text, base.width / 2, base.height / 2 + fs * 0.3);
+                              canvas.toBlob((b) => { if (b) { const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = "image-text.png"; a.click(); } }, "image/png");
+                            }}
+                              className="h-7 px-2 rounded-lg bg-brand-900 text-white text-[11px] font-medium cursor-pointer">保存</button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
