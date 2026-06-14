@@ -458,7 +458,7 @@ export default function ProductDetailPage() {
                               const text = imageTexts[img.id];
                               if (!text) return;
                               const canvas = document.createElement("canvas");
-                              const base = await new Promise<HTMLImageElement>((r) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.src = img.url; });
+                              const base = await new Promise<HTMLImageElement>((r) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.onerror = () => r(i); i.src = img.url; });
                               canvas.width = base.width; canvas.height = base.height;
                               const ctx = canvas.getContext("2d")!;
                               ctx.drawImage(base, 0, 0);
