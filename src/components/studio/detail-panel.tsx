@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, FileText } from "lucide-react";
+import { useState, useRef } from "react";
+import { Loader2, FileText, Type, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/i18n-provider";
 
@@ -30,13 +30,46 @@ interface StudioDetailPanelProps {
   onDetailGenerated?: (results: Array<{key:string;url:string;label:string}>) => void;
 }
 
+/** Draw text onto a canvas and return as blob URL */
+async function overlayTextOnImage(imageUrl: string, text: string, label: string): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => resolve(i); i.onerror = reject; i.src = imageUrl;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, 0, 0);
+
+  if (text.trim()) {
+    const fontSize = Math.max(18, Math.floor(img.width / 25));
+    ctx.font = `600 ${fontSize}px Inter, -apple-system, sans-serif`;
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    // Background bar at bottom
+    const barHeight = fontSize * 2;
+    ctx.fillRect(0, img.height - barHeight, img.width, barHeight);
+    // Text
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText(text, img.width / 2, img.height - barHeight / 2 + fontSize * 0.35);
+    // Label at top-left
+    ctx.font = `${Math.max(11, Math.floor(fontSize * 0.55))}px Inter, -apple-system, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.textAlign = "left";
+    const labelPad = Math.floor(fontSize * 0.4);
+    ctx.fillText(`  ${label}  `, labelPad, labelPad + fontSize * 0.55);
+  }
+
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(URL.createObjectURL(b!)), "image/png", 1.0));
+}
+
 export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, targetPlatform, onDetailGenerated }: StudioDetailPanelProps) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [customDesc, setCustomDesc] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [results, setResults] = useState<Array<{ key: string; url: string; label: string }>>([]);
+  const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   async function handleGenerate() {
@@ -51,7 +84,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, targetPlatform, numOutputs: 1 }),
         });
         const detailRes = await res.json() as { url?: string };
-        if (detailRes.url) out.push({ key: t.key, url: detailRes.url, label: t.zh });
+        if (detailRes.url) {
+          // Overlay customDesc text on the generated image
+          const overlayedUrl = await overlayTextOnImage(detailRes.url, customDesc, t.zh).catch(() => detailRes.url);
+          out.push({ key: t.key, url: overlayedUrl, rawUrl: detailRes.url, label: t.zh });
+        }
       } catch {}
     }
     setResults((prev) => [...out, ...prev]);
@@ -60,7 +97,6 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   }
 
   const selectedCount = selected.size;
-
   if (!projectId) return null;
 
   return (
@@ -82,13 +118,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
                 onClick={() => setSelected((prev) => { const n = new Set(prev); n.has(d.key) ? n.delete(d.key) : n.add(d.key); return n; })}
                 className={`text-[10px] px-2 py-1.5 rounded-lg border transition-colors text-center cursor-pointer ${
                   selected.has(d.key) ? "bg-brand-100 border-brand-300 text-brand-700" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50"
-                }`}>
-                {d.zh}
-              </button>
+                }`}>{d.zh}</button>
             ))}
           </div>
           <textarea value={customDesc} onChange={(e) => setCustomDesc(e.target.value)}
-            placeholder="补充描述，如：突出金属材质的反光感、深色背景、夏季海边场景..."
+            placeholder="文字将叠加在图片上，如：材质：925纯银、高35cm×宽20cm..."
             rows={2}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none resize-none mb-2" />
           <Button onClick={handleGenerate} disabled={selectedCount === 0 || generating}
