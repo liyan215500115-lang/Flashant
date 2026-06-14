@@ -177,6 +177,11 @@ export async function POST(req: Request) {
     genHeight = spec.height;
   }
 
+  // SDXL / fast models: simplify prompt to keyword format for better results
+  if (engineType === "sdxl" || engineType === "playground") {
+    prompt = prompt.replace(/[.,;!?]/g, " ").replace(/\s+/g, " ").split(" ").slice(0, 77).join(" ").trim();
+  }
+
   const numOutputs = customNumOutputs ?? 2;
 
   // Model version mapping for alternative engines (all routed through Replicate)
