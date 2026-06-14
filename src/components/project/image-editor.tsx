@@ -28,8 +28,9 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => { imgRef.current = img; setLoading(false); redraw(); };
-    img.onerror = () => setLoading(false);
-    img.src = imageUrl;
+    img.onerror = (e) => { console.error("Image load failed", e); setLoading(false); };
+    // Add timestamp to bypass cache/CORS issues
+    img.src = imageUrl.startsWith("http") ? imageUrl : imageUrl + (imageUrl.includes("?") ? "&" : "?") + "_t=" + Date.now();
   }, [imageUrl]);
 
   const redraw = useCallback(() => {
@@ -71,6 +72,7 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
   }
 
   if (loading) return <div className="text-center py-12 text-zinc-400">加载中...</div>;
+  if (!imgRef.current) return <div className="text-center py-12 text-zinc-400">图片加载失败，请重试</div>;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
