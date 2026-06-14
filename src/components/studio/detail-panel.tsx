@@ -84,10 +84,10 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, targetPlatform, numOutputs: 1 }),
         });
         const detailRes = await res.json() as { url?: string };
-        if (detailRes.url) {
-          // Overlay customDesc text on the generated image
-          const overlayedUrl = await overlayTextOnImage(detailRes.url, customDesc, t.zh).catch(() => detailRes.url);
-          out.push({ key: t.key, url: overlayedUrl, rawUrl: detailRes.url, label: t.zh });
+        const genUrl = detailRes.url;
+        if (genUrl) {
+          const overlayedUrl = await overlayTextOnImage(genUrl, customDesc, t.zh).catch(() => genUrl);
+          out.push({ key: t.key, url: overlayedUrl, rawUrl: genUrl, label: t.zh });
         }
       } catch {}
     }
