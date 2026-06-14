@@ -48,7 +48,7 @@ export function StudioControlPanel({
     try {
       const res = await fetch("/api/prompts/enhance", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: activeStyle ?? "scene", targetLanguage: locale }),
+        body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: activeStyles[0] ?? "scene", targetLanguage: locale }),
       });
       if (res.ok) { const data = await res.json(); onPromptChange(data.enhanced); }
     } catch { /* fallback */ }
