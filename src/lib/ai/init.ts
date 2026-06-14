@@ -29,7 +29,6 @@ export function initProviders(): void {
     try {
       registerProvider("gemini", createGeminiProvider({ model: "gemini-3.1-flash-image" }));
       registerProvider("gpt-image", createGeminiProvider({ model: "gpt-image-2" }));
-      registerProvider("flux-flex", createGeminiProvider({ model: "flux-2-flex" }));
     } catch {}
   }
 

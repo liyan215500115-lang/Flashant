@@ -103,7 +103,6 @@ export function StudioControlPanel({
             <option value="gemini">{t("generate.engineGemini")}</option>
             <option value="flux">{t("generate.engineFlux")}</option>
             <option value="gpt-image">GPT Image 2 ($0.03)</option>
-            <option value="flux-flex">FLUX.2 Flex ($0.06)</option>
           </select>
         </div>
 
