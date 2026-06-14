@@ -28,7 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useT } from "@/components/i18n-provider";
-import { Breadcrumb } from "@/components/ui/breadcrumb";
+
 
 interface ProductImage {
   id: string;
@@ -302,7 +302,9 @@ export default function ProductDetailPage() {
   if (!project || error === t("error.loadFailed")) {
     return (
       <div className="max-w-[960px] mx-auto py-8">
-        <Breadcrumb items={[{ label: t("products.title"), href: "/projects" }]} />
+        <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 mb-4">
+          <ArrowLeft size={14} /> {t("products.title")}
+        </Link>
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="p-6">
             <p className="text-sm text-destructive font-medium">{t("detail.projectNotFound")}</p>
@@ -330,10 +332,9 @@ export default function ProductDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Breadcrumb items={[
-            { label: t("products.title"), href: "/projects" },
-            { label: project.title || t("workspace.noName") },
-          ]} />
+          <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 mb-2 transition-colors">
+            <ArrowLeft size={14} /> 我的项目
+          </Link>
           <h1 className="text-xl font-semibold">{project.title || t("workspace.noName")}</h1>
           <div className="flex items-center gap-2 mt-1">
             <StatusBadge status={project.status} />
