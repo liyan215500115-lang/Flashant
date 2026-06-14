@@ -485,7 +485,7 @@
     "historyLabel": "History ({count})",
     "engineLabel": "AI Engine",
     "engineFlux": "FLUX.2 Pro",
-    "engineGemini": "Nano Banana 2 (Recommended)",
+    "engineGemini": "Nano Banana 2 (Fast)",
     "engineFlux2": "FLUX.2 Pro (Recommended)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL (Fast)",

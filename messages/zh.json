@@ -417,8 +417,8 @@
       "plans": {
         "free": {
           "name": "Free",
-          "desc": "刚起步的卖家",
-          "feature1": "10 次 / 月",
+          "desc": "试用体验",
+          "feature1": "20 次 / 月",
           "feature2": "5 种场景模板",
           "feature3": "14 平台下载",
           "feature4": "AI 提示词辅助"
@@ -426,7 +426,7 @@
         "pro": {
           "name": "Pro",
           "desc": "在增长的品牌",
-          "feature1": "100 次 / 月",
+          "feature1": "500 次 / 月",
           "feature2": "全部模板 + HD",
           "feature3": "Shopify 一键发布",
           "feature4": "品牌 Logo 叠加",
@@ -435,7 +435,7 @@
         "business": {
           "name": "Business",
           "desc": "品牌团队",
-          "feature1": "200 次 / 月",
+          "feature1": "2,000 次 / 月",
           "feature2": "全部模板 + HD",
           "feature3": "Shopify 一键发布",
           "feature4": "品牌 Logo 叠加",
@@ -486,7 +486,7 @@
     "engineLabel": "AI 算力引擎",
     "engineFlux": "FLUX.2 Pro",
     "engineFlux2": "FLUX.2 Pro",
-    "engineGemini": "Nano Banana 2（推荐）",
+    "engineGemini": "Nano Banana 2（快速模式）",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL（快速模式）",
     "enginePlayground": "Playground v2.5",
