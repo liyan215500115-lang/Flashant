@@ -17,7 +17,7 @@ interface StudioControlPanelProps {
   prompt: string; productName: string;
   engineType: string; targetPlatform: string; targetLanguage: string;
   brandPresetId: string | null; isGenerating: boolean;
-  activeStyles: string[];
+  activeStyle: string | null;
   onImageChange: (image: ProductImage) => void;
   onAccessoryUpload?: (image: ProductImage) => void;
   accessoryImages?: ProductImage[];
@@ -27,7 +27,7 @@ interface StudioControlPanelProps {
   onPlatformChange: (platform: string) => void;
   onLanguageChange: (language: string) => void;
   onBrandPresetChange: (presetId: string | null) => void;
-  onStyleChange: (keys: string[], prompts: string[]) => void;
+  onStyleChange: (key: string, prompt: string) => void;
   onStyleReferenceChange?: (url: string | null) => void;
   onGenerate: () => void;
 }
@@ -35,7 +35,7 @@ interface StudioControlPanelProps {
 export function StudioControlPanel({
   projectId, selectedImage, prompt, productName,
   engineType, targetPlatform, targetLanguage, brandPresetId, isGenerating,
-  activeStyles, onImageChange, onAccessoryUpload, accessoryImages, onPromptChange,
+  activeStyle, onImageChange, onAccessoryUpload, accessoryImages, onPromptChange,
   onProductNameChange, onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
   onStyleChange, onStyleReferenceChange, onGenerate,
 }: StudioControlPanelProps) {
@@ -48,7 +48,7 @@ export function StudioControlPanel({
     try {
       const res = await fetch("/api/prompts/enhance", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: activeStyles[0] ?? "scene", targetLanguage: locale }),
+        body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: activeStyle ?? "scene", targetLanguage: locale }),
       });
       if (res.ok) { const data = await res.json(); onPromptChange(data.enhanced); }
     } catch { /* fallback */ }
@@ -113,7 +113,7 @@ export function StudioControlPanel({
         </div>
 
         {/* Style */}
-        <StylePicker values={activeStyles} onChange={onStyleChange} onReferenceImage={onStyleReferenceChange} />
+        <StylePicker value={activeStyle} onChange={onStyleChange} onReferenceImage={onStyleReferenceChange} />
 
         {/* Prompt + wand */}
         <div className="flex flex-col gap-1.5">

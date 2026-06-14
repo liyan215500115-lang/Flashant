@@ -24,25 +24,20 @@ const STYLES: StyleDef[] = [
 ];
 
 interface StylePickerProps {
-  values: string[];
-  onChange: (keys: string[], prompts: string[]) => void;
+  value: string | null;
+  onChange: (key: string, prompt: string) => void;
   onReferenceImage?: (url: string | null) => void;
 }
 
-export function StylePicker({ values, onChange, onReferenceImage }: StylePickerProps) {
+export function StylePicker({ value, onChange, onReferenceImage }: StylePickerProps) {
   const { t, locale } = useT();
   const isZh = locale === "zh";
   const [refUrl, setRefUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function toggle(s: StyleDef) {
-    if (values.includes(s.key)) {
-      const next = values.filter((k) => k !== s.key);
-      onChange(next, next.map((k) => STYLES.find((x) => x.key === k)!.prompt));
-    } else {
-      const next = [...values, s.key];
-      onChange(next, next.map((k) => (isZh ? STYLES.find((x) => x.key === k)!.promptZh : STYLES.find((x) => x.key === k)!.prompt)));
-    }
+  function select(s: StyleDef) {
+    const prompt = isZh ? s.promptZh : s.prompt;
+    onChange(s.key === value ? "" : s.key, s.key === value ? "" : prompt);
   }
 
   function handleRefUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -56,16 +51,13 @@ export function StylePicker({ values, onChange, onReferenceImage }: StylePickerP
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("landing.nav.styles")}</span>
-        {values.length > 0 && <span className="text-[10px] text-brand-600 font-medium">{values.length} selected</span>}
-      </div>
+      <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t("landing.nav.styles")}</span>
       <div className="grid grid-cols-4 gap-1.5">
         {STYLES.map((s) => {
           const Icon = s.icon;
-          const isActive = values.includes(s.key);
+          const isActive = value === s.key;
           return (
-            <button key={s.key} type="button" onClick={() => toggle(s)}
+            <button key={s.key} type="button" onClick={() => select(s)}
               className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all cursor-pointer ${
                 isActive ? "border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500/20" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600"
               }`}>
@@ -75,7 +67,7 @@ export function StylePicker({ values, onChange, onReferenceImage }: StylePickerP
           );
         })}
       </div>
-      {values.length > 1 && <p className="text-[10px] text-zinc-400">将生成 {values.length} 张不同风格的图</p>}
+
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => fileInputRef.current?.click()}
           className="flex-1 flex items-center justify-center gap-1 h-7 rounded-lg border border-dashed border-zinc-300 text-[10px] text-zinc-400 hover:text-zinc-600 hover:border-zinc-400 transition-colors cursor-pointer">

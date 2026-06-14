@@ -34,8 +34,7 @@ export default function StudioPage() {
   const [projectError, setProjectError] = useState("");
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
-  const [activeStyles, setActiveStyles] = useState<string[]>([]);
-  const [stylePrompts, setStylePrompts] = useState<string[]>([]);
+  const [activeStyle, setActiveStyle] = useState<string | null>(null);
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [engineType, setEngineType] = useState("flux");
@@ -186,7 +185,7 @@ export default function StudioPage() {
     setIsGenerating(true);
     setGenerationError("");
 
-    const promptsToGenerate = stylePrompts.length > 0 ? stylePrompts : [prompt];
+    const promptsToGenerate = [prompt];
 
     try {
       for (const p of promptsToGenerate) {
@@ -278,7 +277,7 @@ export default function StudioPage() {
               targetLanguage={targetLanguage}
               brandPresetId={brandPresetId}
               isGenerating={isGenerating}
-              activeStyles={activeStyles}
+              activeStyle={activeStyle}
               onImageChange={handleImageChange}
               onAccessoryUpload={(img) => setAccessoryImages((prev) => [...prev, img])}
               accessoryImages={accessoryImages}
@@ -292,7 +291,7 @@ export default function StudioPage() {
               }}
               onLanguageChange={setTargetLanguage}
               onBrandPresetChange={setBrandPresetId}
-              onStyleChange={(keys, prompts) => { setActiveStyles(keys); setStylePrompts(prompts); if (prompts.length === 1) setPrompt(prompts[0]); }}
+              onStyleChange={(key, prompt) => { setActiveStyle(key); setPrompt(prompt); }}
               onStyleReferenceChange={setStyleReferenceUrl}
               onGenerate={handleGenerate}
             />
@@ -317,7 +316,7 @@ export default function StudioPage() {
             <StudioDetailPanel
               projectId={projectId}
               productImageId={selectedImage.id}
-              basePrompt={prompt || `Product in ${activeStyles.length > 0 ? activeStyles.join(", ") : "clean"} style`}
+              basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
               referenceImageUrl={latestImage.url}
               targetPlatform={targetPlatform}
             />
