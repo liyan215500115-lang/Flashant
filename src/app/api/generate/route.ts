@@ -136,7 +136,7 @@ export async function POST(req: Request) {
       // Match the main image's lighting, color palette, and overall aesthetic
       prompt = `${prompt}. Match the exact lighting quality, color temperature, and overall aesthetic from this reference style: ${baseStyle}. Maintain consistent visual identity but vary the composition, angle, or content.`;
     }
-    if (customDesc) prompt = `${prompt}. ${customDesc}`;
+    if (customDesc) prompt = `${prompt}. Additionally, overlay the following text clearly on the image: "${customDesc}". The text should be clean, readable, and professionally placed on the image.`;
     // Keep product and person faithful to reference image
     if (referenceImageUrl) {
       prompt = `${prompt}. Keep the product and any person visually identical to the reference image—same face, same build, same product appearance. Only change the pose, framing, or background context.`;
