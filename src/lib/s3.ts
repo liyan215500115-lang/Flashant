@@ -33,6 +33,7 @@ async function getClient(): Promise<S3Client> {
     region: process.env.S3_REGION ?? "auto",
     endpoint: process.env.S3_ENDPOINT!,
     credentials: { accessKeyId, secretAccessKey },
+    forcePathStyle: true,
     requestChecksumCalculation: "WHEN_REQUIRED",
     responseChecksumValidation: "WHEN_REQUIRED",
   });
