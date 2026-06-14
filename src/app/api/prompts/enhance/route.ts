@@ -15,13 +15,29 @@ export async function POST(req: Request) {
   const points = sellingPoints || "";
   const lang = targetLanguage || "en";
 
-  // Scene descriptions
+  // Scene-aware descriptions — each scene has a distinct visual goal
   const scenes: Record<string, string> = {
-    scene: "placed in a naturally lit premium setting with soft shadows and clean composition",
-    white_bg: "shot on a pure white infinity background with studio lighting, no shadows on backdrop",
-    model: "worn by a model in a lifestyle setting, natural ambient light, candid editorial style",
+    white: "shot on a pure white infinity background with soft studio lighting, no shadows on backdrop, e-commerce packshot style",
+    scene: "placed in a naturally lit premium setting with soft shadows and clean composition, professional product photography",
+    model: "worn by a model in a lifestyle setting, natural ambient light, candid editorial style, fashion photography",
+    natural: "shot outdoors in golden hour sunlight with natural green bokeh background, warm tones, lifestyle photography",
+    marble: "placed on an elegant white marble surface with soft window light, shallow depth of field, luxury aesthetic",
+    nordic: "set in a bright Scandinavian interior with minimal decor, natural wood textures, soft diffused daylight",
+    lifestyle: "captured in a real home or cafe environment, candid photography, relatable authentic, soft natural lighting",
   };
   const sceneDesc = scenes[sceneMode] ?? scenes.scene;
+
+  // Scene-specific system prompts for the AI copywriter
+  const sceneGuidance: Record<string, string> = {
+    white: "Focus on the product's shape, color accuracy, materials, and fine details. Describe how the pure background makes every edge and surface visible. This is a factual product description.",
+    scene: "Focus on how the product fits into a lifestyle — its emotional appeal, how it looks in a real room, the aspirational mood it creates. Describe the setting and atmosphere.",
+    model: "Focus on how the product looks on the person — fit, drape, proportion, movement. Describe the model's expression, pose, and the connection between the product and the wearer.",
+    natural: "Focus on the product's relationship with nature — how light plays on its surface, the organic textures, the outdoor harmony. Evoke a sense of freedom and freshness.",
+    marble: "Focus on luxury — the premium materials, the glossy reflections, the high-end feel. Describe the color palette and the upscale, exclusive atmosphere.",
+    nordic: "Focus on minimalism and purity — clean lines, functional beauty, the calm and organized aesthetic. Describe how the setting enhances the product's simplicity.",
+    lifestyle: "Focus on authenticity — how a real person would use this product in their daily life. Describe the genuine, unstaged moment and the comfort it brings.",
+  };
+  const guidance = sceneGuidance[sceneMode] ?? sceneGuidance.scene;
 
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
 
@@ -35,31 +51,38 @@ export async function POST(req: Request) {
         fetch: isProd ? undefined : createSocksFetch(),
       });
 
-      // Ask DeepSeek to OUTPUT a visual description of the product.
-      // We'll wrap it into a photography prompt ourselves.
       const langInstruction = lang === "zh"
-        ? "用中文回答"
-        : lang === "ja" ? "日本語で回答" : "Answer in English";
+        ? "用中文回答，输出一个完整句子"
+        : lang === "ja" ? "日本語で回答" : "Answer in English, output one complete sentence";
 
       const response = await client.chat.completions.create({
         model: "deepseek-chat",
         messages: [
           {
             role: "system",
-            content: `You are a luxury e-commerce copywriter writing product descriptions for AI photography. Given product info, write ONE sentence (under 100 words, ${langInstruction}) focused on unique materials, craftsmanship, tactile textures, and visual beauty. CRITICAL: vary your vocabulary every time — never reuse the same adjectives, lighting descriptions, or camera angles. Focus on different aspects each time (one time materials, next time lighting, next time texture). Output only the sentence.`,
+            content: `You are an expert e-commerce product photography director. Your job is to write ONE visually descriptive sentence that will be used as an AI image generation prompt.
+
+${guidance}
+
+Rules:
+- Write in ${langInstruction}
+- Be specific and visual — name materials, textures, colors, lighting quality
+- Vary your vocabulary — never reuse the same adjectives across invocations
+- Output ONLY the sentence, no preamble, no quotes
+- Under 80 words`,
           },
           {
             role: "user",
-            content: `Product: ${name}.${points ? ` Key features: ${points}.` : ""}`,
+            content: `Product: ${name}.${points ? ` Key selling points: ${points}.` : ""}`,
           },
         ],
-        temperature: 0.8,
-        max_tokens: 250,
+        temperature: 0.9,
+        max_tokens: 300,
       });
 
       const description = response.choices[0]?.message?.content?.trim();
       if (description && description.length > 10) {
-        const enhancedPrompt = `${description}. ${sceneDesc}, 8K, professional product photography.`;
+        const enhancedPrompt = `${description}. ${sceneDesc}, 8K, sharp focus.`;
         return NextResponse.json({ enhanced: enhancedPrompt });
       }
     } catch {
@@ -69,6 +92,5 @@ export async function POST(req: Request) {
 
   // Template fallback
   const fallback = `${name}${points ? ", " + points : ""}. ${sceneDesc}, 8K, professional product photography.`;
-
   return NextResponse.json({ enhanced: fallback });
 }
