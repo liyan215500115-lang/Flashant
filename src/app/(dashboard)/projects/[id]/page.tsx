@@ -458,15 +458,16 @@ export default function ProductDetailPage() {
                               const text = imageTexts[img.id];
                               if (!text) return;
                               const canvas = document.createElement("canvas");
-                              const base = await new Promise<HTMLImageElement>((r) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.onerror = () => r(i); i.src = img.url; });
-                              canvas.width = base.width; canvas.height = base.height;
+                              const i = new Image(); i.crossOrigin = "anonymous";
+                              await new Promise<void>((r) => { i.onload = () => r(); i.onerror = () => r(); i.src = img.url; });
+                              canvas.width = i.width; canvas.height = i.height;
                               const ctx = canvas.getContext("2d")!;
-                              ctx.drawImage(base, 0, 0);
-                              const fs = Math.max(24, Math.floor(base.width / 20));
+                              ctx.drawImage(i, 0, 0);
+                              const fs = Math.max(24, Math.floor(i.width / 20));
                               ctx.font = `700 ${fs}px Inter, sans-serif`;
                               ctx.fillStyle = "#1a1a1a";
                               ctx.textAlign = "center";
-                              ctx.fillText(text, base.width / 2, base.height / 2 + fs * 0.3);
+                              ctx.fillText(text, i.width / 2, i.height / 2 + fs * 0.3);
                               canvas.toBlob((b) => { if (b) { const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = "image-text.png"; a.click(); } }, "image/png");
                             }}
                               className="h-7 px-2 rounded-lg bg-brand-900 text-white text-[11px] font-medium cursor-pointer">保存</button>
