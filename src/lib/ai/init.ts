@@ -3,6 +3,7 @@ import "server-only";
 import { registerProvider } from "./registry";
 import { createReplicateProvider } from "./replicate";
 import { createOpenAIProvider } from "./openai";
+import { createGeminiProvider } from "./gemini";
 
 let initialized = false;
 
@@ -21,6 +22,15 @@ export function initProviders(): void {
     } catch {
       // Provider not available — skip registration
     }
+  }
+
+  // Nano Banana 2 via laozhang.ai — fast, $0.07/image, good text rendering
+  if (process.env.NANO_BANANA_API_KEY) {
+    try {
+      const bananaProvider = createGeminiProvider({ model: "gemini-3.1-flash-image" });
+      registerProvider("gemini", bananaProvider);
+      registerProvider("banana", bananaProvider);
+    } catch {}
   }
 
   if (process.env.OPENAI_API_KEY) {

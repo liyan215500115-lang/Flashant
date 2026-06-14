@@ -435,7 +435,7 @@
         "business": {
           "name": "Business",
           "desc": "Brand teams",
-          "feature1": "1,000 / month",
+          "feature1": "200 / month",
           "feature2": "All templates + HD",
           "feature3": "Shopify one-click",
           "feature4": "Brand logo overlay",
@@ -484,7 +484,8 @@
     "unlimited": "Unlimited",
     "historyLabel": "History ({count})",
     "engineLabel": "AI Engine",
-    "engineFlux": "FLUX.2 Pro (Recommended)",
+    "engineFlux": "FLUX.2 Pro",
+    "engineGemini": "Nano Banana 2 (Recommended)",
     "engineFlux2": "FLUX.2 Pro (Recommended)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL (Fast)",

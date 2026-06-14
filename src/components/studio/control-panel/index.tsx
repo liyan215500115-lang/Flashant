@@ -100,6 +100,7 @@ export function StudioControlPanel({
           <span className="text-[11px] font-medium text-zinc-500">{t("generate.engineLabel")}</span>
           <select value={engineType} onChange={(e) => onEngineChange(e.target.value)}
             className="w-full h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-700 dark:text-zinc-200 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all">
+            <option value="gemini">{t("generate.engineGemini")}</option>
             <option value="flux">{t("generate.engineFlux")}</option>
           </select>
         </div>

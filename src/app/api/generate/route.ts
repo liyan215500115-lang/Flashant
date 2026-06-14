@@ -221,6 +221,37 @@ export async function POST(req: Request) {
     data: { status: "GENERATING", title: projectTitle || undefined },
   });
 
+  // Gemini / synchronous providers — result returned immediately
+  if (engineType === "gemini" || engineType === "banana") {
+    try {
+      const result = await provider.createPrediction({
+        prompt,
+        productImageUrl: sharedImageUrl,
+        numOutputs: 1,
+        width: genWidth,
+        height: genHeight,
+      });
+
+      if ((result as any).outputs?.[0]?.url) {
+        const imgUrl = (result as any).outputs[0].url;
+        const saved = await db.generatedImage.create({
+          data: {
+            imageProjectId, productImageId,
+            s3Key: imgUrl, url: imgUrl, promptUsed: prompt,
+            aiProvider: engineType, status: "SUCCEEDED", completedAt: new Date(),
+          },
+        });
+        await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: imgUrl } });
+        await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
+        return NextResponse.json({ taskId: task.id, status: "succeeded", generatedImageId: saved.id, url: imgUrl });
+      }
+      return NextResponse.json({ error: "No image generated" }, { status: 500 });
+    } catch (e) {
+      await db.task.update({ where: { id: task.id }, data: { status: "FAILED" } });
+      return NextResponse.json({ error: "generation_failed", message: (e as Error).message }, { status: 500 });
+    }
+  }
+
   if (engineType === "openai") {
     // ── OpenAI synchronous path ──
     try {
