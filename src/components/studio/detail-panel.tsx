@@ -71,16 +71,18 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lockStyle, setLockStyle] = useState(false);
 
   async function handleGenerate() {
     if (selected.size === 0 || !projectId) return;
     setGenerating(true);
     const types = DETAIL_TYPES.filter((d) => selected.has(d.key));
+    const setSeed = lockStyle ? Math.floor(Math.random() * 100000) : undefined;
     const promises = types.map(async (t) => {
       try {
         const res = await fetch("/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, targetPlatform, numOutputs: 1 }),
+          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, targetPlatform, numOutputs: 1, seed: setSeed }),
         });
         const detailRes = await res.json() as { url?: string };
         const genUrl = detailRes.url;
@@ -126,6 +128,10 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
             placeholder="文字将叠加在图片上，如：材质：925纯银、高35cm×宽20cm..."
             rows={2}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none resize-none mb-2" />
+          <label className="flex items-center gap-2 mb-2 cursor-pointer">
+            <input type="checkbox" checked={lockStyle} onChange={(e) => setLockStyle(e.target.checked)} className="w-3.5 h-3.5 rounded accent-brand-600" />
+            <span className="text-[11px] text-zinc-500">锁定风格一致性（套图模式）</span>
+          </label>
           <Button onClick={handleGenerate} disabled={selectedCount === 0 || generating}
             size="sm" className="w-full gap-1.5 cursor-pointer rounded-xl bg-brand-900 hover:bg-brand-800 text-white">
             {generating && <Loader2 size={12} className="animate-spin" />}

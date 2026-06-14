@@ -31,6 +31,7 @@ export async function POST(req: Request) {
     baseStyle,
     customDesc,
     referenceImageUrl,
+    seed,
   } = await req.json();
 
   // Detail image type prompts (server-side only)
@@ -133,8 +134,9 @@ export async function POST(req: Request) {
   if (detailType && DETAIL_PROMPTS[detailType]) {
     prompt = DETAIL_PROMPTS[detailType];
     if (baseStyle) {
-      // Match the main image's lighting, color palette, and overall aesthetic
-      prompt = `${prompt}. Match the exact lighting quality, color temperature, and overall aesthetic from this reference style: ${baseStyle}. Maintain consistent visual identity but vary the composition, angle, or content.`;
+      // Match the main image's lighting, color palette, and overall aesthetic — lock across the entire set
+      const seedSuffix = seed ? `_{seed=${seed}}` : "";
+      prompt = `${prompt}. All images in this set MUST share identical lighting quality, color temperature, and visual style: ${baseStyle}.${seedSuffix} Keep the aesthetic perfectly consistent across every frame like a professional photoshoot set.`;
     }
     if (customDesc) prompt = `${prompt}. Additionally, overlay the following text clearly on the image: "${customDesc}". The text should be clean, readable, and professionally placed on the image.`;
     // Keep product and person faithful to reference image
