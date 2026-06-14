@@ -38,7 +38,7 @@ export async function GET(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  // Resolve signed GET URLs for private R2 objects
+  // Resolve presigned GET URLs for private R2 objects
   function isR2Key(key: string | null): boolean {
     return !!(key && (key.startsWith("products/") || key.startsWith("generated/")));
   }
@@ -47,7 +47,7 @@ export async function GET(
     project.productImages.map(async (img) => ({
       ...img,
       originalUrl: isR2Key(img.s3Key)
-        ? await getSignedGetUrl(img.s3Key!)
+        ? `${process.env.S3_PUBLIC_URL ?? ""}/${img.s3Key}`
         : img.originalUrl,
     }))
   );
@@ -56,7 +56,7 @@ export async function GET(
     project.generatedImages.map(async (img) => ({
       ...img,
       url: isR2Key(img.s3Key)
-        ? await getSignedGetUrl(img.s3Key!)
+        ? `${process.env.S3_PUBLIC_URL ?? ""}/${img.s3Key}`
         : img.url,
     }))
   );
