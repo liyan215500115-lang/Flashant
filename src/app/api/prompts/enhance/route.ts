@@ -17,25 +17,24 @@ export async function POST(req: Request) {
 
   // Scene-aware descriptions — each scene has a distinct visual goal
   const scenes: Record<string, string> = {
-    white: "shot on a pure white infinity background with soft studio lighting, no shadows on backdrop, e-commerce packshot style",
-    scene: "placed in a naturally lit premium setting with soft shadows and clean composition, professional product photography",
-    model: "worn by a model in a lifestyle setting, natural ambient light, candid editorial style, fashion photography",
+    white: "shot on a pure white infinity background with soft studio lighting, subtle natural shadow beneath, e-commerce packshot style",
+    scene: "styled in a clean, aspirational setting appropriate to the product's use, professional interior photography",
+    in_use: "being actively used by a person, natural interaction, candid moment, authentic lifestyle photography",
+    marble: "placed on an elegant surface with soft directional light, premium luxury aesthetic, high-end commercial photography",
     natural: "shot outdoors in golden hour sunlight with natural green bokeh background, warm tones, lifestyle photography",
-    marble: "placed on an elegant white marble surface with soft window light, shallow depth of field, luxury aesthetic",
-    nordic: "set in a bright Scandinavian interior with minimal decor, natural wood textures, soft diffused daylight",
-    lifestyle: "captured in a real home or cafe environment, candid photography, relatable authentic, soft natural lighting",
+    cosy: "set in a warm inviting home interior with soft warm lighting, textiles and natural materials, Scandinavian style",
+    dark_moody: "dramatically lit against a dark background, single key light creating striking shadows, cinematic product photography",
   };
   const sceneDesc = scenes[sceneMode] ?? scenes.scene;
 
-  // Scene-specific system prompts for the AI copywriter
   const sceneGuidance: Record<string, string> = {
-    white: "Focus on the product's shape, color accuracy, materials, and fine details. Describe how the pure background makes every edge and surface visible. This is a factual product description.",
-    scene: "Focus on how the product fits into a lifestyle — its emotional appeal, how it looks in a real room, the aspirational mood it creates. Describe the setting and atmosphere.",
-    model: "Focus on how the product looks on the person — fit, drape, proportion, movement. Describe the model's expression, pose, and the connection between the product and the wearer.",
-    natural: "Focus on the product's relationship with nature — how light plays on its surface, the organic textures, the outdoor harmony. Evoke a sense of freedom and freshness.",
-    marble: "Focus on luxury — the premium materials, the glossy reflections, the high-end feel. Describe the color palette and the upscale, exclusive atmosphere.",
-    nordic: "Focus on minimalism and purity — clean lines, functional beauty, the calm and organized aesthetic. Describe how the setting enhances the product's simplicity.",
-    lifestyle: "Focus on authenticity — how a real person would use this product in their daily life. Describe the genuine, unstaged moment and the comfort it brings.",
+    white: "Focus on the product's shape, color accuracy, materials, and fine details. The pure background makes every edge visible. Factual, precise product description.",
+    scene: "Focus on how the product fits into an aspirational lifestyle. Describe the room, the mood, the emotional appeal. Make the setting feel attainable yet desirable.",
+    in_use: "Focus on the user experience — how the product feels to wear, hold, or operate. Describe the natural interaction, the fit, the ease of use. Make the reader imagine themselves using it.",
+    marble: "Focus on luxury and exclusivity. Describe the glossy reflections, the premium materials, the rich color palette. Every word should evoke quality and refinement.",
+    natural: "Focus on the harmony between the product and nature. Describe how sunlight interacts with surfaces, the organic textures, the sense of freedom and freshness.",
+    cosy: "Focus on comfort and belonging. Describe the warmth, the soft textures, the feeling of being at home. Make the product feel like a natural part of daily life.",
+    dark_moody: "Focus on drama and intensity. Describe the interplay of shadow and light, the cinematic atmosphere, the sense of mystery and sophistication.",
   };
   const guidance = sceneGuidance[sceneMode] ?? sceneGuidance.scene;
 

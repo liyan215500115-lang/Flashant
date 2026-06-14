@@ -35,29 +35,37 @@ export async function POST(req: Request) {
 
   // Detail image type prompts (server-side only)
   const DETAIL_PROMPTS: Record<string, string> = {
-    // TikTok Shop 9-step Detail Page framework: Scene→Selling→Size→Material→Usage→Compare→Packaging
-    // 1. 场景图：产品在生活场景中
-    lifestyle: "Natural lifestyle scene showing the product in real use context. For skincare/beauty: a person holding or applying the product in a bright bathroom or vanity setting, showing satisfaction. For fashion: worn by a model in an urban setting. Soft natural lighting, candid photography, relatable and authentic, editorial quality, 4K",
-    scene_atmosphere: "Atmospheric product photography with the product as the hero, dramatic cinematic lighting with warm ambiance, emotional depth, premium commercial photography, 4K. For skincare: the product centered on a marble vanity, soft morning light, elegant composition",
-    // 2. 核心卖点：每张图一个卖点
-    selling_points: "Product key selling points infographic, ONE FEATURE per image. Highlighted features with clean callout text, white background, professional e-commerce layout, 8K, sharp detail. For skincare: highlight one ingredient benefit per image (e.g., Hyaluronic Acid = Deep Hydration)",
-    // 3. 尺寸规格：比例对比
-    size: "Product size comparison with measurement reference and scale objects (coin, ruler, hand for scale), dimensional guide overlay, clean studio lighting, informative layout, white background, e-commerce sizing reference. Show product in real hand or next to common object for intuitive scale",
-    // 4. 材质/成分：微观细节
-    material: "Product detail shot focused on material texture and ingredients. For skincare/beauty: show the cream/lotion texture on a fingertip or glass spatula—highlight consistency (whipped, glossy, creamy, gel). For clothing: show fabric weave, stitching detail. Macro lens, soft studio lighting, informative product page layout, white background, 4K",
-    detail: "Extreme macro close-up product detail shot, texture and material clearly visible. Show what makes the product feel premium—fine grain, smooth surface, precise edges. Premium product photography, shallow depth of field, soft studio lighting, 4K",
-    // 5. 使用步骤/指南
-    craft: "Step-by-step product usage guide in a clean composition. Show hands demonstrating how to use the product correctly. For skincare: applying cream on face/hand with arrows or numbered steps. Warm natural lighting, workshop/vanity environment, authentic instructional style, editorial quality",
-    // 6. 效果对比
-    compare: "Before and after comparison, split screen layout. For skincare: left side shows before, right side shows after application. For other products: old vs new, competitor vs ours. Clean composition, professional presentation, convincing visual evidence",
-    // 7. 多角度展示
-    multi_angle: "Professional product photography showing the product at multiple angles composited into one image: front view, back view, side view, top-down, 45-degree angle. Consistent lighting across angles, white background, e-commerce multi-angle set, 4K",
-    // 8. 颜色/款式变体
-    color_variants: "Grid layout photography showing the product in all available color or style variants, consistent lighting and angle across all variants, organized arrangement, white background, e-commerce color selection showcase. For beauty: show different shades or formulations side by side",
-    flatlay: "Overhead flat lay photography of the product surrounded by carefully arranged complementary items (ingredients, tools, lifestyle props), clean white surface, soft even lighting, organized composition with intentional negative space, editorial catalog style",
-    // 9. 包装/配件/信任
-    brand_story: "Brand storytelling image featuring the product packaging alongside key ingredients or brand elements, warm emotional lighting, trust-building visual, editorial brand campaign photography, premium aesthetic. Show packaging quality—box material, seal, included accessories",
-    gift_accessory: "Product photography showing the main product alongside complementary accessories or gift items included in the purchase, clean composition, soft studio lighting, all items in sharp focus, professional e-commerce bundle presentation, white background, 4K",
+    // TikTok Shop 9-step + Shopify PDP framework: Scene→Selling→Size→Detail→Usage→Compare→Packaging
+
+    // ── 场景与使用 ──
+    lifestyle: "Natural lifestyle scene showing the product in its intended environment. For electronics/earbuds: a person wearing them in a city street or gym. For furniture: styled in a bright modern room. For beauty: on a bathroom vanity in morning light. Soft natural lighting, candid photography, relatable and authentic, editorial quality, 4K",
+    scene_atmosphere: "Atmospheric product photography with the product as the hero. Dramatic yet natural lighting. For electronics: product glowing on a dark desk. For home fragrance: candle flickering in a dim cozy room. For fashion: garment blowing in wind. Emotional depth, premium commercial photography, 4K",
+
+    // ── 使用展示 ──
+    in_use: "The product being actively used or worn. For earbuds/headphones: worn by a model, showing how they fit and look. For smartwatches/wearables: on a wrist, showing the display. For kitchen tools: hands actively cooking. For beauty tools: applying on skin. Natural interaction, candid moment, soft daylight, authentic lifestyle, 4K",
+
+    // ── 卖点与功能 ──
+    selling_points: "Product key selling points infographic, ONE FEATURE per image with clean callout text and icon. For electronics: highlight battery life, noise cancellation, waterproof rating. For appliances: energy efficiency, capacity, smart features. For furniture: material quality, weight capacity, assembly ease. White background, professional layout, 8K",
+    compare: "Before and after comparison, split screen layout. For beauty/skincare: visible improvement. For cleaning products: dirty vs clean surface. For electronics: old device vs new device. For furniture: empty room vs styled room. Clean composition, professional presentation, convincing visual evidence",
+
+    // ── 尺寸与多角度 ──
+    size: "Product size comparison with measurement reference. Product held in a real hand or next to a common object (phone, coin, banana for scale). For furniture: a person sitting/standing next to it showing proportions. For appliances: on a kitchen counter with other items. Clean studio lighting, dimensional guide, white background, 4K",
+    multi_angle: "Professional product photography showing multiple angles in one composited image: front, back, side, top-down, and 45-degree angle. For wearables: also show it being worn from different angles. Consistent lighting, white background, e-commerce multi-angle set, 4K",
+
+    // ── 材质与细节 ──
+    material: "Product detail shot focused on material quality and texture. For electronics: brushed metal surface, precision buttons, cable quality. For furniture: wood grain, fabric weave, stitching detail. For appliances: control panel, handle finish, interior compartment. Macro lens, soft studio lighting, white background, 4K",
+    detail: "Extreme macro close-up emphasizing premium craftsmanship. For earbuds: ear tip texture, charging contacts. For watches: dial detail, clasp mechanism. For bags/luggage: zipper quality, leather grain. For kitchenware: blade edge, non-stick surface. Shallow depth of field, professional product photography, 4K",
+
+    // ── 使用说明 ──
+    craft: "Step-by-step usage guide or assembly instruction in a clean visual layout. Numbered steps with icons showing how to set up, operate, or maintain the product. For electronics: pairing and charging guide. For furniture: assembly overview. For appliances: control panel walkthrough. Clean white background, instructional diagram style, 4K",
+
+    // ── 颜色与搭配 ──
+    color_variants: "Grid layout photography showing the product in all available color or finish options. Consistent lighting and angle across all variants. For electronics: silver/black/blue variants. For fashion: all color options. For furniture: all wood/stain choices. Organized arrangement, white background, 4K",
+    flatlay: "Overhead flat lay photography of the product surrounded by carefully curated complementary accessories and lifestyle props. For electronics: cables, case, charger, desk items. For beauty: brushes, other products, flowers. For food: ingredients, utensils, linens. Clean surface, soft even lighting, editorial catalog style, 4K",
+
+    // ── 包装与信任 ──
+    brand_story: "Brand storytelling image showing the product packaging alongside its contents. Premium unboxing experience. For electronics: box, inserts, device, cable, manual all neatly arranged. For luxury goods: gift box, ribbon, dust bag. Warm emotional lighting, trust-building visual, 4K",
+    gift_accessory: "Product photography showing the main product with all included accessories, cables, adapters, or complementary items that come in the box. Everything clearly visible and labeled. For electronics: device + charger + cable + case + manual. Clean composition, soft studio lighting, white background, 4K",
   };
 
   if (!imageProjectId || !productImageId) {
