@@ -80,8 +80,7 @@ export default function ProductDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [editingImage, setEditingImage] = useState<{url:string; name:string} | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [imageTexts, setImageTexts] = useState<Record<string, string>>({});
-  const [imageFontColors, setImageFontColors] = useState<Record<string, string>>({});
+  const [imageTexts, setImageTexts] = useState<Record<string, string | undefined>>({});
   const router = useRouter();
   const { t, locale } = useT();
 
@@ -434,7 +433,7 @@ export default function ProductDetailPage() {
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
                         <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleRegenerateImage(img.promptUsed || prompt, pi.id); }}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); handleRegenerateImage(img.promptUsed || "", pi.id); }}
                             className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-brand-50 hover:text-brand-600 shadow-sm text-[10px] font-medium flex items-center gap-0.5"
                             title="Regenerate">
                             <RefreshCw size={10} />重生成
