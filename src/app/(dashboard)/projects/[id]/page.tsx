@@ -363,107 +363,46 @@ export default function ProductDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="flex flex-col gap-6">
         {project.productImages.map((pi) => {
-          const isGenerating = generatingIds.has(pi.id);
-          const imageResults = succeededImages.filter(
-            (img) => img.productImageId === pi.id
-          );
-          const hasResults = imageResults.length > 0;
-
+          const imageResults = succeededImages.filter((img) => img.productImageId === pi.id);
           return (
-            <Card key={pi.id}>
-              <CardContent className="p-4">
-                {/* Source Image */}
-                <div
-                  className="aspect-square rounded-lg mb-4 overflow-hidden"
-                  style={{ background: "var(--muted)" }}
-                >
-                  <img
-                    src={pi.originalUrl}
-                    alt={pi.fileName}
-                    className="w-full h-full object-cover"
-                  />
+            <div key={pi.id} className="flex flex-col md:flex-row gap-5 items-start">
+              <div className="w-full md:w-[240px] flex-shrink-0">
+                <div className="aspect-square rounded-xl overflow-hidden bg-muted border border-zinc-200">
+                  <img src={pi.originalUrl} alt={pi.fileName} className="w-full h-full object-cover" />
                 </div>
-
-                {/* Generate Button / Results */}
-                {!hasResults && !isGenerating && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full gap-2"
-                    onClick={() => handleGenerate(pi.id)}
-                  >
-                    <Sparkles size={14} />
-                    {t("detail.generateScene")}
+              </div>
+              <div className="flex-1 min-w-0">
+                {imageResults.length === 0 ? (
+                  <Button variant="default" size="sm" className="gap-2" onClick={() => handleGenerate(pi.id)} disabled={generatingIds.has(pi.id)}>
+                    <Sparkles size={14} /> {t("detail.generateScene")}
                   </Button>
-                )}
-
-                {!hasResults && isGenerating && (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1">
-                      <RefreshCw size={12} className="animate-spin" />
-                      {t("detail.generating")}
-                    </p>
-                    <Skeleton className="h-40 rounded-lg" />
-                  </div>
-                )}
-
-                {hasResults && (
-                  <div>
-                    {isGenerating && (
-                      <div className="mb-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <RefreshCw size={12} className="animate-spin text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{t("detail.moreGenerating")}</span>
-                        </div>
-                        <Skeleton className="h-32 rounded-lg" />
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {imageResults.map((img) => (
+                      <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200">
+                        <img src={img.url} alt="" className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => handleDeleteImage(img.id)}
+                          className="absolute top-1 right-1 w-6 h-6 rounded-md bg-white/90 hover:bg-red-50 hover:text-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Trash2 size={12} />
+                        </button>
                       </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {imageResults.map((img) => (
-                        <div key={img.id} className="relative group">
-                          <div
-                            className="aspect-square rounded-lg overflow-hidden"
-                            style={{ background: "var(--muted)" }}
-                          >
-                            <img
-                              src={img.url}
-                              alt="Generated"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteImage(img.id)}
-                              className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-background/90 hover:bg-red-50 hover:text-red-600 shadow-sm transition-colors"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
+                    ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           );
         })}
 
-        {/* Empty state — no product images yet */}
         {project.productImages.length === 0 && (
           <Card className="border-dashed md:col-span-2">
-            <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
+            <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
               <Image size={40} className="text-muted-foreground" />
               <div>
                 <h3 className="text-lg font-semibold">{t("detail.noImages")}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {t("detail.noImagesDesc")}
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">{t("detail.noImagesDesc")}</p>
               </div>
             </CardContent>
           </Card>
