@@ -280,12 +280,13 @@ export default function ProductDetailPage() {
     } catch {}
   }
 
-  async function handleReorder(from: number, to: number) {
-    // Optimistic local update — swap order immediately
+    async function handleReorder(dragId: string, dropId: string) {
+    const fromIdx = succeededImages.findIndex((img) => img.id === dragId);
+    const toIdx = succeededImages.findIndex((img) => img.id === dropId);
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
     const reordered = [...succeededImages];
-    const [moved] = reordered.splice(from, 1);
-    reordered.splice(to, 0, moved);
-    // Update local state for instant feedback
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
     if (project) {
       const updated = reordered.map((img, i) => ({ ...img, createdAt: new Date(Date.now() - (reordered.length - i) * 1000).toISOString() }));
       const allImages = project.generatedImages.map(g => updated.find(u => u.id === g.id) || g);
@@ -427,10 +428,10 @@ export default function ProductDetailPage() {
                   <div className="flex flex-wrap gap-2">
                     {imageResults.map((img, idx) => (
                       <div key={img.id} draggable
-                        onDragStart={(e) => { e.dataTransfer.setData("source", "generated"); e.dataTransfer.setData("index", String(idx)); }}
+                        onDragStart={(e) => { e.dataTransfer.setData("source", "generated"); e.dataTransfer.setData("id", img.id); }}
                         onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2','ring-brand-400'); }}
                         onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2','ring-brand-400'); }}
-                        onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2','ring-brand-400'); const src = e.dataTransfer.getData("source"); if (src === "generated") { const from = Number(e.dataTransfer.getData("index")); if (from !== idx) handleReorder(from, idx); } if (src === "product") { const url = e.dataTransfer.getData("url"); const name = e.dataTransfer.getData("name"); setEditingImage({ url, name }); } }}
+                        onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2','ring-brand-400'); const src = e.dataTransfer.getData("source"); if (src === "generated") { handleReorder(e.dataTransfer.getData("id"), img.id); } if (src === "product") { setEditingImage({ url: e.dataTransfer.getData("url"), name: e.dataTransfer.getData("name") }); } }}
                         className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all"
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
