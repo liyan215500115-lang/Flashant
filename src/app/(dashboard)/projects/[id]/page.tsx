@@ -80,6 +80,8 @@ export default function ProductDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [editingImage, setEditingImage] = useState<{url:string; name:string} | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [imageTexts, setImageTexts] = useState<Record<string, string>>({});
+  const [imageFontColors, setImageFontColors] = useState<Record<string, string>>({});
   const router = useRouter();
   const { t, locale } = useT();
 
@@ -437,9 +439,9 @@ export default function ProductDetailPage() {
                             title="Regenerate">
                             <RefreshCw size={10} />重生成
                           </button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: img.url, name: "generated" }); }}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setImageTexts((prev) => ({ ...prev, [img.id]: prev[img.id] !== undefined ? undefined : "" })); }}
                             className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 flex items-center gap-0.5">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>编辑
+                            <Type size={10} />加文字
                           </button>
                           <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteImage(img.id); }}
                             className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-red-50 hover:text-red-600 shadow-sm text-[10px] font-medium flex items-center gap-0.5">

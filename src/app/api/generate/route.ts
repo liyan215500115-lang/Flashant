@@ -35,8 +35,18 @@ export async function POST(req: Request) {
   } = await req.json();
 
   // Detail image type prompts (server-side only)
+  // Types that should be clean white-bg + Canvas text overlay (no AI text generation)
+  const INFO_TYPES = new Set(["selling_points", "material", "size", "craft", "compare"]);
+
   const DETAIL_PROMPTS: Record<string, string> = {
     // TikTok Shop 9-step + Shopify PDP framework: Scene→Selling→Size→Detail→Usage→Compare→Packaging
+
+    // ── 信息类型：白底图 + Canvas文字 ──
+    selling_points: "Product centered on pure white background, soft studio lighting, no text, no labels, no watermarks, clean e-commerce product photography, 4K",
+    material: "Extreme macro close-up of the product on white background, texture clearly visible, no text, no labels, clean product detail photography, 4K",
+    size: "Product on pure white background with a common object (coin or ruler) for scale comparison, clean studio lighting, no text overlay, no labels, 4K",
+    craft: "Product on a clean white surface, hands-free still life style, no text, no people, clean studio photography, 4K",
+    compare: "Split screen layout showing two views of the same product side by side on white background, clean comparison, no text overlay, no labels, 4K",
 
     // ── 场景与使用 ──
     lifestyle: "Natural lifestyle scene showing the product in its intended environment. For electronics/earbuds: a person wearing them in a city street or gym. For furniture: styled in a bright modern room. For beauty: on a bathroom vanity in morning light. Soft natural lighting, candid photography, relatable and authentic, editorial quality, 4K",

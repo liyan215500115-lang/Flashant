@@ -31,7 +31,9 @@ interface StudioDetailPanelProps {
 }
 
 /** Draw text onto a canvas and return as blob URL */
-async function overlayTextOnImage(imageUrl: string, text: string, label: string): Promise<string> {
+const INFO_TYPES = new Set(["selling_points", "material", "size", "craft", "compare"]);
+
+async function overlayTextOnImage(imageUrl: string, text: string, label: string, isInfoType: boolean): Promise<string> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => resolve(i); i.onerror = reject; i.src = imageUrl;
   });
@@ -42,22 +44,35 @@ async function overlayTextOnImage(imageUrl: string, text: string, label: string)
   ctx.drawImage(img, 0, 0);
 
   if (text.trim()) {
-    const fontSize = Math.max(18, Math.floor(img.width / 25));
-    ctx.font = `600 ${fontSize}px Inter, -apple-system, sans-serif`;
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    // Background bar at bottom
-    const barHeight = fontSize * 2;
-    ctx.fillRect(0, img.height - barHeight, img.width, barHeight);
-    // Text
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.fillText(text, img.width / 2, img.height - barHeight / 2 + fontSize * 0.35);
+    if (isInfoType) {
+      // Info type: large centered text on clean white bg
+      const fontSize = Math.max(32, Math.floor(img.width / 18));
+      ctx.font = `700 ${fontSize}px Inter, -apple-system, sans-serif`;
+      ctx.fillStyle = "#1a1a1a";
+      ctx.textAlign = "center";
+      const lines = text.split("\n");
+      const lineHeight = fontSize * 1.4;
+      const startY = img.height / 2 - (lines.length * lineHeight) / 2;
+      lines.forEach((line, i) => ctx.fillText(line, img.width / 2, startY + i * lineHeight));
+      ctx.textAlign = "left";
+    } else {
+      // Regular overlay: subtle bottom bar
+      const fontSize = Math.max(18, Math.floor(img.width / 25));
+      ctx.font = `600 ${fontSize}px Inter, -apple-system, sans-serif`;
+      const barHeight = fontSize * 2;
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillRect(0, img.height - barHeight, img.width, barHeight);
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.fillText(text, img.width / 2, img.height - barHeight / 2 + fontSize * 0.35);
+      ctx.textAlign = "left";
+    }
     // Label at top-left
-    ctx.font = `${Math.max(11, Math.floor(fontSize * 0.55))}px Inter, -apple-system, sans-serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.textAlign = "left";
-    const labelPad = Math.floor(fontSize * 0.4);
-    ctx.fillText(`  ${label}  `, labelPad, labelPad + fontSize * 0.55);
+    const labelFontSize = Math.max(11, Math.floor(Math.max(18, Math.floor(img.width / 25)) * 0.55));
+    ctx.font = `${labelFontSize}px Inter, -apple-system, sans-serif`;
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    const labelPad = Math.floor(labelFontSize * 0.5);
+    ctx.fillText(label, labelPad, labelPad + labelFontSize);
   }
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(URL.createObjectURL(b!)), "image/png", 1.0));
@@ -90,7 +105,8 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         clearTimeout(timeout);
         const detailRes = await res.json() as { url?: string };
         if (detailRes.url) {
-          const overlayedUrl = await overlayTextOnImage(detailRes.url, customDesc, t.zh).catch(() => detailRes.url);
+          const isInfo = INFO_TYPES.has(t.key);
+          const overlayedUrl = await overlayTextOnImage(detailRes.url, customDesc, t.zh, isInfo).catch(() => detailRes.url);
           return { key: t.key, url: overlayedUrl, rawUrl: detailRes.url, label: t.zh };
         }
       } catch {}
