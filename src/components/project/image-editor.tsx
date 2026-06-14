@@ -25,7 +25,7 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
   const [textSize, setTextSize] = useState(32);
 
   useEffect(() => {
-    const img = new Image();
+    const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => { imgRef.current = img; setLoading(false); redraw(); };
     img.onerror = (e) => { console.error("Image load failed", e); setLoading(false); };

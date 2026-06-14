@@ -35,7 +35,7 @@ const INFO_TYPES = new Set(["selling_points", "material", "size", "craft", "comp
 
 async function overlayTextOnImage(imageUrl: string, text: string, label: string, isInfoType: boolean): Promise<string> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => resolve(i); i.onerror = reject; i.src = imageUrl;
+    const i = new window.Image(); i.crossOrigin = "anonymous"; i.onload = () => resolve(i); i.onerror = reject; i.src = imageUrl;
   });
   const canvas = document.createElement("canvas");
   canvas.width = img.width;

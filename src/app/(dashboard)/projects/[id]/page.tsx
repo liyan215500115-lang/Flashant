@@ -458,7 +458,7 @@ export default function ProductDetailPage() {
                               const text = imageTexts[img.id];
                               if (!text) return;
                               const canvas = document.createElement("canvas");
-                              const i = new Image(); i.crossOrigin = "anonymous";
+                              const i = document.createElement("img"); i.crossOrigin = "anonymous";
                               await new Promise<void>((r) => { i.onload = () => r(); i.onerror = () => r(); i.src = img.url; });
                               canvas.width = i.width; canvas.height = i.height;
                               const ctx = canvas.getContext("2d")!;
