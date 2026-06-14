@@ -290,7 +290,7 @@ export default function ProductDetailPage() {
   if (!project || error === t("error.loadFailed")) {
     return (
       <div className="max-w-[960px] mx-auto py-8">
-        <Breadcrumb items={[{ label: t("products.title"), href: "/products" }]} />
+        <Breadcrumb items={[{ label: t("products.title"), href: "/projects" }]} />
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="p-6">
             <p className="text-sm text-destructive font-medium">{t("detail.projectNotFound")}</p>
@@ -319,7 +319,7 @@ export default function ProductDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <Breadcrumb items={[
-            { label: t("products.title"), href: "/products" },
+            { label: t("products.title"), href: "/projects" },
             { label: project.title || t("workspace.noName") },
           ]} />
           <h1 className="text-xl font-semibold">{project.title || t("workspace.noName")}</h1>
