@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Crop, RotateCw, Sun, Contrast, Download, X, Check } from "lucide-react";
+import { RotateCw, Sun, Contrast, Download, X, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 
@@ -20,6 +20,9 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
   const [contrast, setContrast] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [textInput, setTextInput] = useState("");
+  const [textColor, setTextColor] = useState("#ffffff");
+  const [textSize, setTextSize] = useState(32);
 
   useEffect(() => {
     const img = new Image();
@@ -48,7 +51,14 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
     }
     ctx.restore();
     ctx.filter = "none";
-  }, [brightness, contrast, rotation]);
+    if (textInput.trim()) {
+      ctx.font = `600 ${textSize}px Inter, -apple-system, sans-serif`;
+      ctx.fillStyle = textColor;
+      ctx.textAlign = "center";
+      ctx.fillText(textInput, img.width / 2, img.height * 0.85);
+      ctx.textAlign = "left";
+    }
+  }, [brightness, contrast, rotation, textInput, textColor, textSize]);
 
   function handleSave() {
     const canvas = canvasRef.current;
@@ -94,7 +104,11 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tool === "contrast" ? "bg-brand-100 text-brand-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}>
               <Contrast size={13} className="inline mr-1" />对比度
             </button>
-            <button onClick={() => { setRotation(0); setBrightness(100); setContrast(100); }}
+            <button onClick={() => setTool(tool === "text" ? null : "text")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tool === "text" ? "bg-brand-100 text-brand-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}>
+              <Type size={13} className="inline mr-1" />文字
+            </button>
+            <button onClick={() => { setTool(null); setRotation(0); setBrightness(100); setContrast(100); setTextInput(""); }}
               className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700">
               <X size={13} className="inline mr-1" />重置
             </button>
@@ -121,6 +135,29 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
                   {deg}°
                 </button>
               ))}
+            </div>
+          )}
+          {tool === "text" && (
+            <div className="flex flex-col gap-2 mb-2">
+              <input type="text" value={textInput} onChange={(e) => setTextInput(e.target.value)}
+                placeholder="输入要显示的文字..."
+                className="w-full h-9 rounded-lg border border-zinc-200 px-3 text-xs focus:border-brand-500 focus:outline-none" />
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-zinc-500">大小</span>
+                <Slider value={[textSize]} onValueChange={([v]) => setTextSize(v)} min={12} max={72} step={1} className="flex-1" />
+                <span className="text-xs text-zinc-500 w-8 text-right">{textSize}px</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">颜色</span>
+                <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer border-0 p-0" />
+                <div className="flex gap-1">
+                  {["#ffffff","#000000","#2563EB","#DC2626","#F59E0B","#10B981"].map((c) => (
+                    <button key={c} type="button" onClick={() => setTextColor(c)}
+                      className={`w-6 h-6 rounded-full border-2 transition-colors ${textColor === c ? "border-brand-500" : "border-zinc-200"}`} style={{background:c}} />
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
