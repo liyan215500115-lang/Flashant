@@ -35,6 +35,7 @@ export default function StudioPage() {
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
   const [activeStyles, setActiveStyles] = useState<string[]>([]);
+  const [stylePrompts, setStylePrompts] = useState<string[]>([]);
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [engineType, setEngineType] = useState("flux");
@@ -185,11 +186,10 @@ export default function StudioPage() {
     setIsGenerating(true);
     setGenerationError("");
 
-    const STYLE_MAP: Record<string, string> = { white: "Product centered on pure white background, soft even studio lighting, 4K", scene: "Product styled in a clean aspirational setting, professional interior photography, 4K", in_use: "Product being actively used by a person, natural interaction, candid moment, 4K", marble: "Product on elegant marble surface with soft directional light, luxury aesthetic, 4K", natural: "Product in natural outdoor setting, golden hour sunlight, lifestyle photography, 4K", cosy: "Product in warm home interior, soft warm lighting, Scandinavian style, 4K", dark_moody: "Product dramatically lit against dark background, cinematic photography, 4K", cyberpunk: "Product in cyberpunk aesthetic — neon rim lighting, dark background with grid lines, reflective surfaces, 4K", magazine: "Shot on Canon R5 100mm macro, f/4, softbox left, fill reflector right, editorial magazine quality, 4K", text_overlay: "Product on white background with elegant minimalist text overlay describing key features, 8K" };
-    const stylePrompts = activeStyles.length > 0 ? activeStyles.map((k) => STYLE_MAP[k] || prompt) : [prompt];
+    const promptsToGenerate = stylePrompts.length > 0 ? stylePrompts : [prompt];
 
     try {
-      for (const p of stylePrompts) {
+      for (const p of promptsToGenerate) {
         const res = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -292,7 +292,7 @@ export default function StudioPage() {
               }}
               onLanguageChange={setTargetLanguage}
               onBrandPresetChange={setBrandPresetId}
-              onStyleChange={(keys, prompts) => { setActiveStyles(keys); if (prompts.length === 1) setPrompt(prompts[0]); else if (prompts.length > 1) setPrompt(prompts.join(" | ")); }}
+              onStyleChange={(keys, prompts) => { setActiveStyles(keys); setStylePrompts(prompts); if (prompts.length === 1) setPrompt(prompts[0]); }}
               onStyleReferenceChange={setStyleReferenceUrl}
               onGenerate={handleGenerate}
             />
