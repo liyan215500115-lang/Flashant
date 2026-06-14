@@ -221,7 +221,7 @@ export async function POST(req: Request) {
     data: { status: "GENERATING", title: projectTitle || undefined },
   });
 
-  // Gemini / synchronous providers — result returned immediately
+  // Gemini / synchronous providers — fallback to Flux on failure
   if (engineType === "gemini" || engineType === "banana") {
     try {
       const result = await provider.createPrediction({
@@ -245,11 +245,12 @@ export async function POST(req: Request) {
         await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
         return NextResponse.json({ taskId: task.id, status: "succeeded", generatedImageId: saved.id, url: imgUrl });
       }
-      return NextResponse.json({ error: "No image generated" }, { status: 500 });
-    } catch (e) {
-      await db.task.update({ where: { id: task.id }, data: { status: "FAILED" } });
-      return NextResponse.json({ error: "generation_failed", message: (e as Error).message }, { status: 500 });
+    } catch {
+      // Fallback to Flux
     }
+    // Gemini failed — fall back to Flux
+    const fluxProvider = getProvider("flux");
+    provider = fluxProvider;
   }
 
   if (engineType === "openai") {
