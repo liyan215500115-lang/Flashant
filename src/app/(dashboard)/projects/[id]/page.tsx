@@ -424,12 +424,13 @@ export default function ProductDetailPage() {
                     <Sparkles size={14} /> {t("detail.generateScene")}
                   </Button>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {imageResults.map((img, idx) => (
                       <div key={img.id} draggable
                         onDragStart={(e) => { e.dataTransfer.setData("source", "generated"); e.dataTransfer.setData("index", String(idx)); }}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData("source"); if (src === "generated") { const from = Number(e.dataTransfer.getData("index")); if (from !== idx) handleReorder(from, idx); } if (src === "product") { const url = e.dataTransfer.getData("url"); const name = e.dataTransfer.getData("name"); setEditingImage({ url, name }); } }}
+                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2','ring-brand-400'); }}
+                        onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2','ring-brand-400'); }}
+                        onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2','ring-brand-400'); const src = e.dataTransfer.getData("source"); if (src === "generated") { const from = Number(e.dataTransfer.getData("index")); if (from !== idx) handleReorder(from, idx); } if (src === "product") { const url = e.dataTransfer.getData("url"); const name = e.dataTransfer.getData("name"); setEditingImage({ url, name }); } }}
                         className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all"
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
