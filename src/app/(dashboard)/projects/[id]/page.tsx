@@ -431,7 +431,7 @@ export default function ProductDetailPage() {
                         onDragStart={(e) => { e.dataTransfer.setData("source", "generated"); e.dataTransfer.setData("id", img.id); }}
                         onDragOver={(e) => { e.preventDefault(); }}
                         onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData("source"); if (src === "generated") { handleReorder(e.dataTransfer.getData("id"), img.id); } if (src === "product") { setEditingImage({ url: e.dataTransfer.getData("url"), name: e.dataTransfer.getData("name") }); } }}
-                        className="relative group w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-grab active:cursor-grabbing"
+                        className="relative group w-[120px] h-[120px] rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-grab active:cursor-grabbing"
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
                         <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
