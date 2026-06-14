@@ -265,13 +265,19 @@ export default function ProductDetailPage() {
   }
 
   async function handleReorder(from: number, to: number) {
+    // Optimistic local update — swap order immediately
     const reordered = [...succeededImages];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(to, 0, moved);
+    // Update local state for instant feedback
+    if (project) {
+      const updated = reordered.map((img, i) => ({ ...img, createdAt: new Date(Date.now() - (reordered.length - i) * 1000).toISOString() }));
+      const allImages = project.generatedImages.map(g => updated.find(u => u.id === g.id) || g);
+      setProject({ ...project, generatedImages: allImages as any });
+    }
     const order = reordered.map((img) => img.id);
     try {
       await fetch(`/api/products/${params.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order }) });
-      fetchProject();
     } catch {}
   }
 
@@ -385,8 +391,10 @@ export default function ProductDetailPage() {
             <div key={pi.id} className="flex flex-col md:flex-row gap-5 items-start">
               <div className="w-full md:w-[240px] flex-shrink-0 relative group">
                 <div className="aspect-square rounded-xl overflow-hidden bg-muted border border-zinc-200 cursor-pointer"
+                  draggable
+                  onDragStart={(e) => { e.dataTransfer.setData("source", "product"); e.dataTransfer.setData("url", pi.originalUrl); e.dataTransfer.setData("name", pi.fileName); }}
                   onClick={() => setLightboxUrl(pi.originalUrl)}>
-                  <img src={pi.originalUrl} alt={pi.fileName} className="w-full h-full object-cover" />
+                  <img src={pi.originalUrl} alt={pi.fileName} className="w-full h-full object-cover pointer-events-none" />
                 </div>
                 <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: pi.originalUrl, name: pi.fileName }); }}
                   className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 hover:text-zinc-800 transition-all flex items-center gap-1">
@@ -403,9 +411,9 @@ export default function ProductDetailPage() {
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {imageResults.map((img, idx) => (
                       <div key={img.id} draggable
-                        onDragStart={(e) => { e.dataTransfer.setData("text/plain", String(idx)); }}
+                        onDragStart={(e) => { e.dataTransfer.setData("source", "generated"); e.dataTransfer.setData("index", String(idx)); }}
                         onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => { e.preventDefault(); const from = Number(e.dataTransfer.getData("text/plain")); if (from !== idx) handleReorder(from, idx); }}
+                        onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData("source"); if (src === "generated") { const from = Number(e.dataTransfer.getData("index")); if (from !== idx) handleReorder(from, idx); } }}
                         className="relative group aspect-square rounded-lg overflow-hidden bg-muted border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all"
                         onClick={() => setLightboxUrl(img.url)}>
                         <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none" />
