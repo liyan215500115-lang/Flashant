@@ -37,7 +37,7 @@ export default function StudioPage() {
   const [activeStyle, setActiveStyle] = useState<string | null>(null);
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [engineType, setEngineType] = useState("flux");
+  const [engineType, setEngineType] = useState("gemini");
   const [targetPlatform, setTargetPlatform] = useState("SHOPIFY");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [brandPresetId, setBrandPresetId] = useState<string | null>(null);
