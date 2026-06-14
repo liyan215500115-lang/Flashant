@@ -15,7 +15,7 @@ interface ImageEditorProps {
 export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const [tool, setTool] = useState<"crop" | "rotate" | "brightness" | "contrast" | null>(null);
+  const [tool, setTool] = useState<"crop" | "rotate" | "brightness" | "contrast" | "text" | null>(null);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const [rotation, setRotation] = useState(0);
