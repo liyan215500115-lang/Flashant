@@ -12,7 +12,11 @@ export function initProviders(): void {
 
   if (process.env.REPLICATE_API_KEY) {
     try {
-      registerProvider("flux", createReplicateProvider());
+      const fluxProvider = createReplicateProvider();
+      registerProvider("flux", fluxProvider);
+      registerProvider("flux2", fluxProvider);
+      registerProvider("sdxl", createReplicateProvider({ modelVersion: "stability-ai/sdxl" }));
+      registerProvider("playground", createReplicateProvider({ modelVersion: "playgroundai/playground-v2.5-1024px-aesthetic" }));
     } catch {
       // Provider not available — skip registration
     }
