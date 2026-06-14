@@ -26,16 +26,18 @@ interface StudioDetailPanelProps {
   productImageId: string;
   basePrompt: string;
   referenceImageUrl?: string;
+  targetPlatform?: string;
   onDetailGenerated?: (results: Array<{key:string;url:string;label:string}>) => void;
 }
 
-export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, onDetailGenerated }: StudioDetailPanelProps) {
+export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, targetPlatform, onDetailGenerated }: StudioDetailPanelProps) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [customDesc, setCustomDesc] = useState("");
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string }>>([]);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   async function handleGenerate() {
     if (selected.size === 0 || !projectId) return;
@@ -46,7 +48,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       try {
         const res = await fetch("/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, numOutputs: 1 }),
+          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, targetPlatform, numOutputs: 1 }),
         });
         const detailRes = await res.json() as { url?: string };
         if (detailRes.url) out.push({ key: t.key, url: detailRes.url, label: t.zh });
@@ -97,11 +99,17 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           {results.length > 0 && (
             <div className="grid grid-cols-4 gap-1.5 mt-3">
               {results.map((r, i) => (
-                <div key={i} className="rounded-lg overflow-hidden border border-zinc-200">
+                <button key={i} type="button" onClick={() => setLightbox(r.url)}
+                  className="rounded-lg overflow-hidden border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all">
                   <img src={r.url} alt={r.label} className="aspect-square object-cover w-full" />
                   <p className="text-[9px] p-1 text-zinc-600">{r.label}</p>
-                </div>
+                </button>
               ))}
+            </div>
+          )}
+          {lightbox && (
+            <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center cursor-pointer" onClick={() => setLightbox(null)}>
+              <img src={lightbox} alt="" className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl" />
             </div>
           )}
         </>

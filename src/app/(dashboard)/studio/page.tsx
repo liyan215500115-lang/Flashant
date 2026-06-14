@@ -311,6 +311,7 @@ export default function StudioPage() {
               productImageId={selectedImage.id}
               basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
               referenceImageUrl={latestImage.url}
+              targetPlatform={targetPlatform}
             />
           )}
 
