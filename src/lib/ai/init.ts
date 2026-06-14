@@ -15,8 +15,9 @@ export function initProviders(): void {
       const fluxProvider = createReplicateProvider();
       registerProvider("flux", fluxProvider);
       registerProvider("flux2", fluxProvider);
-      registerProvider("sdxl", createReplicateProvider({ modelVersion: "stability-ai/sdxl" }));
-      registerProvider("playground", createReplicateProvider({ modelVersion: "playgroundai/playground-v2.5-1024px-aesthetic" }));
+      // SDXL / Playground — disabled until model version is verified
+      // registerProvider("sdxl", createReplicateProvider({ modelVersion: "stability-ai/sdxl" }));
+      // registerProvider("playground", createReplicateProvider({ modelVersion: "playgroundai/playground-v2.5-1024px-aesthetic" }));
     } catch {
       // Provider not available — skip registration
     }
