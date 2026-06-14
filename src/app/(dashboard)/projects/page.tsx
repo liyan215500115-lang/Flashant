@@ -172,7 +172,7 @@ export default function ProductsPage() {
       )}
 
       {/* Project grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 [&>*:first-child]:xl:col-span-2 [&>*:first-child]:xl:row-span-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
         {filtered.length === 0 && projects.length > 0 ? (
           <div className="col-span-full text-center py-12 text-sm text-zinc-400">{t("products.noResults")}</div>
         ) : (
@@ -182,7 +182,7 @@ export default function ProductsPage() {
             const isDeleting = deletingIds.has(project.id);
 
             return (
-              <div key={project.id} className={`group/card relative rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 hover:shadow-md transition-all duration-200 ${isDeleting ? "opacity-40 scale-95 pointer-events-none" : ""} ${idx === 0 ? "xl:aspect-auto" : ""}`}>
+              <div key={project.id} className={`group/card relative rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ${isDeleting ? "opacity-40 scale-95 pointer-events-none" : ""}`}>
                 <Link href={`/projects/${project.id}`} className="block p-3">
                   <div className="aspect-[4/3] rounded-xl mb-3 overflow-hidden bg-zinc-50 dark:bg-zinc-700/30 relative">
                     {thumbnail ? (
