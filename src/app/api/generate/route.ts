@@ -35,23 +35,29 @@ export async function POST(req: Request) {
 
   // Detail image type prompts (server-side only)
   const DETAIL_PROMPTS: Record<string, string> = {
-    // ── 功能卖点 ──
-    selling_points: "Product key selling points infographic, highlighted features with clean callout text, white background, professional e-commerce layout, 8K, sharp detail",
-    detail: "Extreme macro close-up product detail shot, texture and material clearly visible, premium product photography, shallow depth of field, soft studio lighting, 8K. For creams and lotions: show the actual texture—whipped, glossy, creamy, or gel consistency—with a small amount on a fingertip or spatula.",
-    size: "Product size comparison with measurement reference, dimensional guide overlay, clean studio lighting, informative layout, scale reference, white background",
-    compare: "Before and after comparison, split screen layout, product transformation showcase, side by side, professional presentation, clean composition",
-    // ── 工艺品牌 ──
-    craft: "Artisan craftsmanship process scene, hands carefully making the product, workshop environment, warm natural lighting, authentic handmade feel, documentary style, editorial quality",
-    material: "Product detail shot focused on material texture and ingredients. For skincare: show the cream texture, consistency, and quality. For liquids: show viscosity and clarity. Macro lens, soft studio lighting, informative product page layout, white background, professional e-commerce photography",
-    brand_story: "Brand storytelling image featuring the product in an aspirational setting, warm emotional lighting, relatable human element, authentic connection, editorial brand campaign photography, premium aesthetic, 4K",
-    // ── 多角度 ──
-    multi_angle: "Professional product photography showing the product at multiple angles: front view, back view, side profile, 45-degree angle, consistent lighting across angles, white background, e-commerce multi-angle set, 4K",
-    flatlay: "Overhead flat lay photography of the product surrounded by carefully arranged complementary items, clean white surface, soft even lighting, organized composition with intentional negative space, editorial catalog style",
-    // ── 场景氛围 ──
-    lifestyle: "Natural lifestyle scene showing the product in real use context, warm bathroom or vanity setting, soft natural lighting, candid photography style, relatable and authentic, editorial quality. For skincare: a person applying cream on their face, showing satisfaction.",
-    scene_atmosphere: "Atmospheric product photography with the product as the hero, dramatic cinematic lighting with fog or warm ambiance, emotional depth, movie poster quality, premium aesthetic",
-    color_variants: "Grid layout photography showing the product in multiple color or style variants, consistent lighting and angle, organized arrangement, white background, e-commerce color selection showcase",
-    gift_accessory: "Product photography showing the main product alongside complementary accessories or gift items, clean composition, soft studio lighting, both items in sharp focus, professional e-commerce bundle presentation, white background, 4K",
+    // TikTok Shop 9-step Detail Page framework: Scene→Selling→Size→Material→Usage→Compare→Packaging
+    // 1. 场景图：产品在生活场景中
+    lifestyle: "Natural lifestyle scene showing the product in real use context. For skincare/beauty: a person holding or applying the product in a bright bathroom or vanity setting, showing satisfaction. For fashion: worn by a model in an urban setting. Soft natural lighting, candid photography, relatable and authentic, editorial quality, 4K",
+    scene_atmosphere: "Atmospheric product photography with the product as the hero, dramatic cinematic lighting with warm ambiance, emotional depth, premium commercial photography, 4K. For skincare: the product centered on a marble vanity, soft morning light, elegant composition",
+    // 2. 核心卖点：每张图一个卖点
+    selling_points: "Product key selling points infographic, ONE FEATURE per image. Highlighted features with clean callout text, white background, professional e-commerce layout, 8K, sharp detail. For skincare: highlight one ingredient benefit per image (e.g., Hyaluronic Acid = Deep Hydration)",
+    // 3. 尺寸规格：比例对比
+    size: "Product size comparison with measurement reference and scale objects (coin, ruler, hand for scale), dimensional guide overlay, clean studio lighting, informative layout, white background, e-commerce sizing reference. Show product in real hand or next to common object for intuitive scale",
+    // 4. 材质/成分：微观细节
+    material: "Product detail shot focused on material texture and ingredients. For skincare/beauty: show the cream/lotion texture on a fingertip or glass spatula—highlight consistency (whipped, glossy, creamy, gel). For clothing: show fabric weave, stitching detail. Macro lens, soft studio lighting, informative product page layout, white background, 4K",
+    detail: "Extreme macro close-up product detail shot, texture and material clearly visible. Show what makes the product feel premium—fine grain, smooth surface, precise edges. Premium product photography, shallow depth of field, soft studio lighting, 4K",
+    // 5. 使用步骤/指南
+    craft: "Step-by-step product usage guide in a clean composition. Show hands demonstrating how to use the product correctly. For skincare: applying cream on face/hand with arrows or numbered steps. Warm natural lighting, workshop/vanity environment, authentic instructional style, editorial quality",
+    // 6. 效果对比
+    compare: "Before and after comparison, split screen layout. For skincare: left side shows before, right side shows after application. For other products: old vs new, competitor vs ours. Clean composition, professional presentation, convincing visual evidence",
+    // 7. 多角度展示
+    multi_angle: "Professional product photography showing the product at multiple angles composited into one image: front view, back view, side view, top-down, 45-degree angle. Consistent lighting across angles, white background, e-commerce multi-angle set, 4K",
+    // 8. 颜色/款式变体
+    color_variants: "Grid layout photography showing the product in all available color or style variants, consistent lighting and angle across all variants, organized arrangement, white background, e-commerce color selection showcase. For beauty: show different shades or formulations side by side",
+    flatlay: "Overhead flat lay photography of the product surrounded by carefully arranged complementary items (ingredients, tools, lifestyle props), clean white surface, soft even lighting, organized composition with intentional negative space, editorial catalog style",
+    // 9. 包装/配件/信任
+    brand_story: "Brand storytelling image featuring the product packaging alongside key ingredients or brand elements, warm emotional lighting, trust-building visual, editorial brand campaign photography, premium aesthetic. Show packaging quality—box material, seal, included accessories",
+    gift_accessory: "Product photography showing the main product alongside complementary accessories or gift items included in the purchase, clean composition, soft studio lighting, all items in sharp focus, professional e-commerce bundle presentation, white background, 4K",
   };
 
   if (!imageProjectId || !productImageId) {
