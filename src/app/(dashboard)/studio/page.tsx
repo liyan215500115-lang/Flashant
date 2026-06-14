@@ -194,7 +194,7 @@ export default function StudioPage() {
           productImageId: selectedImage.id,
           prompt: prompt,
           title: productName,
-          numOutputs: 1,
+          numOutputs: 2,
           engineType,
           targetPlatform,
           targetLanguage,

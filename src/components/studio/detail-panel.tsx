@@ -76,8 +76,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     if (selected.size === 0 || !projectId) return;
     setGenerating(true);
     const types = DETAIL_TYPES.filter((d) => selected.has(d.key));
-    const out: typeof results = [];
-    for (const t of types) {
+    const promises = types.map(async (t) => {
       try {
         const res = await fetch("/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -87,10 +86,12 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         const genUrl = detailRes.url;
         if (genUrl) {
           const overlayedUrl = await overlayTextOnImage(genUrl, customDesc, t.zh).catch(() => genUrl);
-          out.push({ key: t.key, url: overlayedUrl, rawUrl: genUrl, label: t.zh });
+          return { key: t.key, url: overlayedUrl, rawUrl: genUrl, label: t.zh };
         }
       } catch {}
-    }
+      return null;
+    });
+    const out = (await Promise.all(promises)).filter(Boolean) as NonNullable<Awaited<typeof promises[number]>>[];
     setResults((prev) => [...out, ...prev]);
     setGenerating(false);
     onDetailGenerated?.(out);
