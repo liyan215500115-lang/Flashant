@@ -387,10 +387,20 @@ export async function POST(req: Request) {
         });
 
         let finalUrl = output.url;
+        // Always re-upload to R2 so images don't expire
+        if (hasS3Config()) {
+          try {
+            const imageBuf = await fetchImageBuffer(output.url);
+            const { publicUrl: newUrl, s3Key: newKey } = await uploadBuffer(imageBuf, output.mimeType ?? "image/png", "generated/");
+            finalUrl = newUrl;
+            await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newKey } });
+          } catch { /* keep original */ }
+        }
+        // Apply brand logo overlay if present (non-FREE users)
         const presetLogo = brandPreset?.logoUrl;
         if (presetLogo && quota.tier !== "FREE") {
           try {
-            const imageBuf = await fetchImageBuffer(output.url);
+            const imageBuf = await fetchImageBuffer(finalUrl);
             const logoUrl = await getSignedGetUrl(presetLogo).catch(() => presetLogo);
             const logoBuf = await fetchImageBuffer(logoUrl);
             const overlaid = await overlayLogo(imageBuf, logoBuf);
