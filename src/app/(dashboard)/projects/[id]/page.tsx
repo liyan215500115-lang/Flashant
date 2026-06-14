@@ -376,9 +376,10 @@ export default function ProductDetailPage() {
                   onClick={() => setLightboxUrl(pi.originalUrl)}>
                   <img src={pi.originalUrl} alt={pi.fileName} className="w-full h-full object-cover" />
                 </div>
-                <button type="button" onClick={(e) => { e.preventDefault(); setEditingImage({ url: pi.originalUrl, name: pi.fileName }); }}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-white/90 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-zinc-600"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: pi.originalUrl, name: pi.fileName }); }}
+                  className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 hover:text-zinc-800 transition-all flex items-center gap-1">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                  编辑
                 </button>
               </div>
               <div className="flex-1 min-w-0">
