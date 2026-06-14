@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { useT } from "@/components/i18n-provider";
 import { toast } from "sonner";
+import { Type } from "lucide-react";
 
 
 interface ProductImage {
