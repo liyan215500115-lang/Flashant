@@ -34,7 +34,7 @@ export default function StudioPage() {
   const [projectError, setProjectError] = useState("");
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
-  const [activeStyle, setActiveStyle] = useState<string | null>(null);
+  const [activeStyles, setActiveStyles] = useState<string[]>([]);
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [engineType, setEngineType] = useState("flux");
@@ -185,33 +185,37 @@ export default function StudioPage() {
     setIsGenerating(true);
     setGenerationError("");
 
+    const STYLE_MAP: Record<string, string> = { white: "Product centered on pure white background, soft even studio lighting, 4K", scene: "Product styled in a clean aspirational setting, professional interior photography, 4K", in_use: "Product being actively used by a person, natural interaction, candid moment, 4K", marble: "Product on elegant marble surface with soft directional light, luxury aesthetic, 4K", natural: "Product in natural outdoor setting, golden hour sunlight, lifestyle photography, 4K", cosy: "Product in warm home interior, soft warm lighting, Scandinavian style, 4K", dark_moody: "Product dramatically lit against dark background, cinematic photography, 4K" };
+    const stylePrompts = activeStyles.length > 0 ? activeStyles.map((k) => STYLE_MAP[k] || prompt) : [prompt];
+
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageProjectId: pid!,
-          productImageId: selectedImage.id,
-          prompt: prompt,
-          title: productName,
-          numOutputs: 2,
-          engineType,
-          targetPlatform,
-          targetLanguage,
-          brandPresetId: brandPresetId || undefined,
-          referenceImageUrl: styleReferenceUrl || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (data.status === "succeeded" && data.url) {
-        const preview = { id: data.generatedImageId, url: data.url, promptUsed: prompt };
-        setLatestImage(preview);
-        setGenerationHistory((prev) => {
-          const next = [preview, ...prev.filter((h) => h.id !== preview.id)];
-          return next.slice(0, 12);
+      for (const p of stylePrompts) {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageProjectId: pid!,
+            productImageId: selectedImage.id,
+            prompt: p || prompt,
+            title: productName,
+            numOutputs: 1,
+            engineType,
+            targetPlatform,
+            targetLanguage,
+            brandPresetId: brandPresetId || undefined,
+            referenceImageUrl: styleReferenceUrl || undefined,
+          }),
         });
-        toast.success("Image generated");
-        fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
+        const data = await res.json();
+        if (data.status === "succeeded" && data.url) {
+          const preview = { id: data.generatedImageId, url: data.url, promptUsed: p };
+          setLatestImage(preview);
+          setGenerationHistory((prev) => {
+            const next = [preview, ...prev.filter((h) => h.id !== preview.id)];
+            return next.slice(0, 12);
+          });
+          toast.success("Image generated");
+          fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
       } else if (data.taskId) {
         pollTask(data.taskId);
         return; // polling manages its own setIsGenerating(false)
@@ -219,6 +223,7 @@ export default function StudioPage() {
         setGenerationError(data.message || data.error);
         toast.error(data.message || data.error);
       }
+    } // end for each style prompt
     } catch (e) {
       setGenerationError(e instanceof Error ? e.message : "Network failed");
     }
@@ -273,7 +278,7 @@ export default function StudioPage() {
               targetLanguage={targetLanguage}
               brandPresetId={brandPresetId}
               isGenerating={isGenerating}
-              activeStyle={activeStyle}
+              activeStyles={activeStyles}
               onImageChange={handleImageChange}
               onAccessoryUpload={(img) => setAccessoryImages((prev) => [...prev, img])}
               accessoryImages={accessoryImages}
@@ -287,7 +292,7 @@ export default function StudioPage() {
               }}
               onLanguageChange={setTargetLanguage}
               onBrandPresetChange={setBrandPresetId}
-              onStyleChange={(key, prompt) => { setActiveStyle(key); setPrompt(prompt); }}
+              onStyleChange={(keys, prompts) => { setActiveStyles(keys); if (prompts.length === 1) setPrompt(prompts[0]); else if (prompts.length > 1) setPrompt(prompts.join(" | ")); }}
               onStyleReferenceChange={setStyleReferenceUrl}
               onGenerate={handleGenerate}
             />
@@ -312,7 +317,7 @@ export default function StudioPage() {
             <StudioDetailPanel
               projectId={projectId}
               productImageId={selectedImage.id}
-              basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
+              basePrompt={prompt || `Product in ${activeStyles.length > 0 ? activeStyles.join(", ") : "clean"} style`}
               referenceImageUrl={latestImage.url}
               targetPlatform={targetPlatform}
             />
