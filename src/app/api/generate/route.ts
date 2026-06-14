@@ -136,7 +136,7 @@ export async function POST(req: Request) {
     if (baseStyle) {
       // Match the main image's lighting, color palette, and overall aesthetic — lock across the entire set
       const seedSuffix = seed ? `_{seed=${seed}}` : "";
-      prompt = `${prompt}. All images in this set MUST share identical lighting quality, color temperature, and visual style: ${baseStyle}.${seedSuffix} Keep the aesthetic perfectly consistent across every frame like a professional photoshoot set.`;
+      prompt = `${prompt}. Use this lighting and color style as a loose guide: ${baseStyle}.${seedSuffix} Vary the camera angle, product distance, and composition between frames. Same product, same mood, different perspective each time.`;
     }
     // Text overlay is handled client-side via Canvas — not requested in prompt
     // Keep product and person faithful to reference image

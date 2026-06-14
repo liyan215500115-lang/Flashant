@@ -186,6 +186,8 @@ export default function StudioPage() {
     setGenerationError("");
 
     const promptsToGenerate = [prompt];
+    // Generate 2 variants in parallel for faster perceived speed
+    if (prompt.trim()) promptsToGenerate.push(prompt + " (alternate angle)");
 
     try {
       for (const p of promptsToGenerate) {
