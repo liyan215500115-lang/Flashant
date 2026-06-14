@@ -37,18 +37,18 @@ export async function POST(req: Request) {
   const DETAIL_PROMPTS: Record<string, string> = {
     // ── 功能卖点 ──
     selling_points: "Product key selling points infographic, highlighted features with clean callout text, white background, professional e-commerce layout, 8K, sharp detail",
-    detail: "Extreme macro close-up product detail shot, texture and material clearly visible, premium product photography, shallow depth of field, soft studio lighting, 8K",
+    detail: "Extreme macro close-up product detail shot, texture and material clearly visible, premium product photography, shallow depth of field, soft studio lighting, 8K. For creams and lotions: show the actual texture—whipped, glossy, creamy, or gel consistency—with a small amount on a fingertip or spatula.",
     size: "Product size comparison with measurement reference, dimensional guide overlay, clean studio lighting, informative layout, scale reference, white background",
     compare: "Before and after comparison, split screen layout, product transformation showcase, side by side, professional presentation, clean composition",
     // ── 工艺品牌 ──
     craft: "Artisan craftsmanship process scene, hands carefully making the product, workshop environment, warm natural lighting, authentic handmade feel, documentary style, editorial quality",
-    material: "Clean product detail shot showcasing the material texture and composition, macro lens, surface clearly visible, soft studio lighting, informative product page layout, white background, professional e-commerce photography",
+    material: "Product detail shot focused on material texture and ingredients. For skincare: show the cream texture, consistency, and quality. For liquids: show viscosity and clarity. Macro lens, soft studio lighting, informative product page layout, white background, professional e-commerce photography",
     brand_story: "Brand storytelling image featuring the product in an aspirational setting, warm emotional lighting, relatable human element, authentic connection, editorial brand campaign photography, premium aesthetic, 4K",
     // ── 多角度 ──
     multi_angle: "Professional product photography showing the product at multiple angles: front view, back view, side profile, 45-degree angle, consistent lighting across angles, white background, e-commerce multi-angle set, 4K",
     flatlay: "Overhead flat lay photography of the product surrounded by carefully arranged complementary items, clean white surface, soft even lighting, organized composition with intentional negative space, editorial catalog style",
     // ── 场景氛围 ──
-    lifestyle: "Natural lifestyle scene showing the product in real use context, warm home environment, candid photography style, relatable and authentic, soft natural lighting, editorial quality",
+    lifestyle: "Natural lifestyle scene showing the product in real use context, warm bathroom or vanity setting, soft natural lighting, candid photography style, relatable and authentic, editorial quality. For skincare: a person applying cream on their face, showing satisfaction.",
     scene_atmosphere: "Atmospheric product photography with the product as the hero, dramatic cinematic lighting with fog or warm ambiance, emotional depth, movie poster quality, premium aesthetic",
     color_variants: "Grid layout photography showing the product in multiple color or style variants, consistent lighting and angle, organized arrangement, white background, e-commerce color selection showcase",
     gift_accessory: "Product photography showing the main product alongside complementary accessories or gift items, clean composition, soft studio lighting, both items in sharp focus, professional e-commerce bundle presentation, white background, 4K",
@@ -120,6 +120,8 @@ export async function POST(req: Request) {
     prompt = DETAIL_PROMPTS[detailType];
     if (baseStyle) prompt = `${prompt}, consistent with this style: ${baseStyle}`;
     if (customDesc) prompt = `${prompt}. Additional instructions: ${customDesc}`;
+    // Keep person consistent — reference the main generated image URL
+    if (referenceImageUrl) prompt = `${prompt}. Keep the same person/product as in the reference image, only change the scene, pose, or context.`;
   } else if (customPrompt) {
     prompt = customPrompt;
   } else if (promptTemplateId) {
