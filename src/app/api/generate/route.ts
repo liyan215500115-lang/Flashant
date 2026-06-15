@@ -235,16 +235,27 @@ export async function POST(req: Request) {
 
       if ((result as any).outputs?.[0]?.url) {
         const imgUrl = (result as any).outputs[0].url;
+        // Upload to R2 so the image doesn't expire
+        let finalUrl = imgUrl;
+        let finalKey = imgUrl;
+        if (hasS3Config()) {
+          try {
+            const imageBuf = await fetchImageBuffer(imgUrl);
+            const r2 = await uploadBuffer(imageBuf, "image/png", "generated/");
+            finalUrl = r2.publicUrl;
+            finalKey = r2.s3Key;
+          } catch { /* keep provider URL as fallback */ }
+        }
         const saved = await db.generatedImage.create({
           data: {
             imageProjectId, productImageId,
-            s3Key: imgUrl, url: imgUrl, promptUsed: prompt,
+            s3Key: finalKey, url: finalUrl, promptUsed: prompt,
             aiProvider: engineType, status: "SUCCEEDED", completedAt: new Date(),
           },
         });
-        await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: imgUrl } });
+        await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: finalUrl } });
         await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
-        return NextResponse.json({ taskId: task.id, status: "succeeded", generatedImageId: saved.id, url: imgUrl });
+        return NextResponse.json({ taskId: task.id, status: "succeeded", generatedImageId: saved.id, url: finalUrl });
       }
     } catch {
       // Fallback to Flux
@@ -266,23 +277,27 @@ export async function POST(req: Request) {
       const openaiUrl = (result as { openaiUrl?: string }).openaiUrl;
       const imageUrl = openaiUrl ?? "";
 
-      // Fetch the image to get file metadata
+      // Upload to R2 so the image doesn't expire
+      let finalUrl = imageUrl;
+      let finalKey = imageUrl;
       let fileSize = 0;
       let mimeType = "image/png";
-      try {
-        const headRes = await fetch(imageUrl, { method: "HEAD" });
-        fileSize = Number(headRes.headers.get("content-length") ?? 0);
-        mimeType = headRes.headers.get("content-type") ?? "image/png";
-      } catch {
-        // Metadata fetch is best-effort
+      if (hasS3Config() && imageUrl) {
+        try {
+          const imageBuf = await fetchImageBuffer(imageUrl);
+          fileSize = imageBuf.length;
+          const r2 = await uploadBuffer(imageBuf, "image/png", "generated/");
+          finalUrl = r2.publicUrl;
+          finalKey = r2.s3Key;
+        } catch { /* keep provider URL as fallback */ }
       }
 
       const generatedImage = await db.generatedImage.create({
         data: {
           imageProjectId,
           productImageId,
-          s3Key: imageUrl,
-          url: imageUrl,
+          s3Key: finalKey,
+          url: finalUrl,
           promptUsed: prompt,
           aiProvider: "openai",
           modelVersion: "gpt-image-2",

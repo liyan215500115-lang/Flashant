@@ -67,12 +67,30 @@ export function ImageUploadZone({
         s3Key = localData.s3Key;
         publicUrl = localData.publicUrl;
       } else {
-        const uploadRes = await fetch(config.uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type },
-        });
-        if (!uploadRes.ok) throw new Error("Upload failed");
+        // Upload to R2 with up to 2 retries
+        let lastErr: Error | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const ctrl = new AbortController();
+            const timeout = setTimeout(() => ctrl.abort(), 30_000);
+            const uploadRes = await fetch(config.uploadUrl, {
+              method: "PUT",
+              body: file,
+              headers: { "Content-Type": file.type },
+              signal: ctrl.signal,
+            });
+            clearTimeout(timeout);
+            if (uploadRes.ok) {
+              lastErr = null;
+              break;
+            }
+            lastErr = new Error(`Upload failed (${uploadRes.status})`);
+          } catch (err) {
+            lastErr = err instanceof Error ? err : new Error("Network error");
+          }
+          if (attempt < 2) await new Promise((r) => setTimeout(r, (attempt + 1) * 1000));
+        }
+        if (lastErr) throw lastErr;
         s3Key = config.s3Key;
         publicUrl = config.publicUrl;
       }
