@@ -154,11 +154,15 @@
     "moreGenerating": "更多生成中...",
     "regenerate": "重新生成",
     "publishToPlatform": "发布到平台",
+    "publishDownload": "发布/下载",
     "allDone": "全部生成完成",
     "imagesReady": "张商品图已就绪",
     "noImages": "暂无产品图片",
     "noImagesDesc": "请先上传产品图片以开始生成",
     "projectNotFound": "项目未找到",
+    "selectTypes": "选择内容类型",
+    "generateBtn": "生成 {count} 张详情图",
+    "results": "生成结果",
     "backToWorkspace": "返回工作台",
     "delete": "删除",
     "confirmDeleteTitle": "确认删除",
@@ -271,7 +275,10 @@
     "retry": "重试",
     "projectError": "创建项目失败",
     "detailImages": "详情图",
-    "detailImagesDesc": "生成 13 种类型的商品详情长图"
+    "detailImagesDesc": "生成 14 种类型的商品详情长图",
+    "sectionProductImage": "产品图片",
+    "sectionPublishSettings": "发布设置",
+    "sectionGenerateSettings": "生成设置"
   },
   "onboarding": {
     "welcome": "欢迎使用闪象",

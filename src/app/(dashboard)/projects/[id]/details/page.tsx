@@ -138,7 +138,7 @@ export default function DetailsPage() {
         </div>
         <Link href={`/projects/${projectId}/publish`}>
           <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
-            <Send size={14} /> {isZh ? "发布/下载" : "Publish / Download"}
+            <Send size={14} /> {t("detail.publishDownload")}
           </Button>
         </Link>
       </div>
@@ -146,7 +146,7 @@ export default function DetailsPage() {
       {/* Content type selector */}
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-6 mb-6">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-          {isZh ? "选择内容类型" : "Select Content Types"}
+          {t("detail.selectTypes")}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           {DETAIL_TYPES.map((dt) => (
@@ -165,7 +165,7 @@ export default function DetailsPage() {
         <Button onClick={handleGenerate} disabled={selectedPt.size === 0 || generating}
           className="bg-brand-900 hover:bg-brand-800 text-white cursor-pointer gap-2 rounded-xl">
           {generating && <Loader2 size={14} className="animate-spin" />}
-          {generating ? t("detail.generating") : `${isZh ? "生成" : "Generate"} ${selectedPt.size || 0} ${isZh ? "张详情图" : " Detail Images"}`}
+          {generating ? t("detail.generating") : t("detail.generateBtn").replace("{count}", String(selectedPt.size || 0))}
         </Button>
       </div>
 
@@ -173,7 +173,7 @@ export default function DetailsPage() {
       {results.length > 0 && (
         <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/40 p-6">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-            {isZh ? "生成结果" : "Results"} ({results.length})
+            {t("detail.results")} ({results.length})
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {results.map((r, i) => (

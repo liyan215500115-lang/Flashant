@@ -49,7 +49,7 @@ export function StudioControlPanel({
           <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-brand-600" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           </div>
-          <span className="text-xs font-semibold text-zinc-700">产品图片</span>
+          <span className="text-xs font-semibold text-zinc-700">{t("studio.sectionProductImage")}</span>
         </div>
         {projectId ? (
           <ImageUploadZone projectId={projectId} currentImage={selectedImage} onImageChange={onImageChange} onAccessoryUpload={onAccessoryUpload} accessoryImages={accessoryImages} />
@@ -66,7 +66,7 @@ export function StudioControlPanel({
           <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-brand-600" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
           </div>
-          <span className="text-xs font-semibold text-zinc-700">发布设置</span>
+          <span className="text-xs font-semibold text-zinc-700">{t("studio.sectionPublishSettings")}</span>
         </div>
         <PublishDestination value={targetPlatform} onChange={onPlatformChange} language={targetLanguage} onLanguageChange={onLanguageChange} />
         <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
@@ -78,7 +78,7 @@ export function StudioControlPanel({
           <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-brand-600" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
           </div>
-          <span className="text-xs font-semibold text-zinc-700">生成设置</span>
+          <span className="text-xs font-semibold text-zinc-700">{t("studio.sectionGenerateSettings")}</span>
         </div>
 
         {/* Engine */}

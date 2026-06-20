@@ -154,11 +154,15 @@
     "moreGenerating": "More in progress...",
     "regenerate": "Regenerate",
     "publishToPlatform": "Publish to Platform",
+    "publishDownload": "Publish / Download",
     "allDone": "All generations complete",
     "imagesReady": "product images ready",
     "noImages": "No product images",
     "noImagesDesc": "Upload a product image to start generating",
     "projectNotFound": "Project not found",
+    "selectTypes": "Select Content Types",
+    "generateBtn": "Generate {count} Detail Images",
+    "results": "Results",
     "backToWorkspace": "Back to Workspace",
     "delete": "Delete",
     "confirmDeleteTitle": "Confirm Delete",
@@ -271,7 +275,10 @@
     "retry": "Retry",
     "projectError": "Failed to create project",
     "detailImages": "Detail Images",
-    "detailImagesDesc": "Generate 13 types of product listing detail images"
+    "detailImagesDesc": "Generate 14 types of product listing detail images",
+    "sectionProductImage": "Product Image",
+    "sectionPublishSettings": "Publish Settings",
+    "sectionGenerateSettings": "Generate Settings"
   },
   "onboarding": {
     "welcome": "Welcome to Flashant",
