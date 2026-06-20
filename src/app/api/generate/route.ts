@@ -332,75 +332,35 @@ export async function POST(req: Request) {
     data: { status: "GENERATING", title: projectTitle || undefined },
   });
 
-  // Gemini-based providers (Nano Banana 2, GPT Image 2 via laozhang.ai)
-  // Race against Vercel timeout: try sync first, fire-and-forget on timeout
+  // Gemini-based providers — always async: create task, return taskId, let /api/tasks/[id] do the heavy lifting
   if ((engineType === "gemini" || engineType === "banana" || engineType === "gpt-image") && actualEngine !== "flux") {
-    try {
-      const geminiPromise = provider.createPrediction({
-        prompt,
-        productImageUrl: sharedImageUrl,
-        referenceImageUrl: referenceImageUrl ?? undefined,
-        numOutputs: 1,
-        width: genWidth,
-        height: genHeight,
-      });
+    // Store generation params on task so /api/tasks/[id] can pick them up
+    await db.task.update({
+      where: { id: task.id },
+      data: {
+        status: "PENDING",
+        // Store params as JSON in errorMessage temporarily (will be cleared on success)
+        errorMessage: JSON.stringify({
+          engineType: actualEngine,
+          prompt,
+          sharedImageUrl,
+          genWidth,
+          genHeight,
+        }),
+      },
+    });
 
-      // 8-second timeout to stay within Vercel Hobby 10s limit
-      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000));
-      const result = await Promise.race([geminiPromise, timeout]);
+    await db.imageProject.update({
+      where: { id: imageProjectId },
+      data: { status: "GENERATING", title: projectTitle || undefined },
+    });
 
-      if (result && (result as any).outputs?.[0]?.url) {
-        const imgUrl = (result as any).outputs[0].url;
-        let finalUrl = imgUrl;
-        let finalKey = imgUrl;
-        if (hasS3Config()) {
-          try {
-            const imageBuf = await fetchImageBuffer(imgUrl);
-            const r2 = await uploadBuffer(imageBuf, "image/png", "generated/");
-            finalUrl = r2.publicUrl;
-            finalKey = r2.s3Key;
-          } catch { /* keep provider URL as fallback */ }
-        }
-        const saved = await db.generatedImage.create({
-          data: {
-            imageProjectId, productImageId,
-            s3Key: finalKey, url: finalUrl, promptUsed: prompt,
-            aiProvider: actualEngine, status: "SUCCEEDED", completedAt: new Date(),
-          },
-        });
-        await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: finalUrl } });
-        await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
-        return NextResponse.json({ taskId: task.id, status: "succeeded", generatedImageId: saved.id, url: finalUrl });
-      }
-
-      // Timed out — fire and forget, return taskId for polling
-      if (!result) {
-        // Fire in background (best-effort on Vercel)
-        geminiPromise.then(async (r) => {
-          if ((r as any).outputs?.[0]?.url) {
-            const u = (r as any).outputs[0].url;
-            await db.generatedImage.create({
-              data: { imageProjectId, productImageId, s3Key: u, url: u, promptUsed: prompt, aiProvider: actualEngine, status: "SUCCEEDED", completedAt: new Date() },
-            });
-            await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: u } });
-            await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
-          } else {
-            await db.task.update({ where: { id: task.id }, data: { status: "FAILED", errorMessage: "No output from provider" } });
-          }
-        }).catch(async (err) => {
-          await db.task.update({ where: { id: task.id }, data: { status: "FAILED", errorMessage: String(err) } });
-        });
-
-        await db.task.update({ where: { id: task.id }, data: { status: "PROCESSING" } });
-        return NextResponse.json({ taskId: task.id, status: "processing", poll: true, nextPollMs: 5000 });
-      }
-    } catch (err) {
-      console.warn(`Gemini engine failed (${err instanceof Error ? err.message : "unknown"}), falling back to Flux`);
-    }
-    // Fall back to Flux
-    const fluxProvider = getProvider("flux");
-    provider = fluxProvider;
-    actualEngine = "flux";
+    return NextResponse.json({
+      taskId: task.id,
+      status: "processing",
+      poll: true,
+      nextPollMs: 2000,
+    });
   }
 
   if (actualEngine === "openai") {
