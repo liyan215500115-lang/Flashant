@@ -27,8 +27,8 @@ export function initProviders(): void {
   // All image models via laozhang.ai
   if (process.env.NANO_BANANA_API_KEY) {
     try {
-      // gemini-3.1-flash-image: ~12s, the original Nano Banana 2 model
-      registerProvider("gemini", createGeminiProvider({ model: "gemini-3.1-flash-image" }));
+      // seedream-4-0: ~5s fastest image model, best for e-commerce
+      registerProvider("gemini", createGeminiProvider({ model: "seedream-4-0-250828" }));
       // gpt-image-2: ~47s, no img2img support
       registerProvider("gpt-image", createGeminiProvider({ model: "gpt-image-2", timeoutMs: 120_000 }));
     } catch {}
