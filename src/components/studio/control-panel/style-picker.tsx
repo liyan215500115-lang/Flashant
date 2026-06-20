@@ -10,6 +10,19 @@ interface StyleDef {
   prompt: string; promptZh: string;
 }
 
+// FLUX has input_images for product reference — only describe scene/lighting/mood
+// Gemini/GPT need full prompt since they're text-to-image only
+function simplifyForFlux(prompt: string): string {
+  return prompt
+    .replace(/\b(100mm macro lens|f\/1\d|f\/[2-9]\.\d|ISO\s*\d+|2048x\d+|sRGB|color[ -]accurate|filling\s*\d+%|85 percent)\b[^,.]*[,.]?\s*/gi, "")
+    .replace(/Absolutely no.*?\./gi, "")
+    .replace(/No (props|text|watermarks|reflections|lens flare|color cast)[^.]*\./gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/,\s*,/g, ",")
+    .replace(/\.\s*\./g, ".")
+    .trim();
+}
+
 const STYLES: StyleDef[] = [
   // ═══════════════════════════════════════════════════════════
   // 1. Pure White Background — Amazon/Shopify mandatory hero
@@ -102,19 +115,24 @@ const STYLES: StyleDef[] = [
 
 interface StylePickerProps {
   value: string | null;
+  engineType?: string;
   onChange: (key: string, prompt: string) => void;
   onReferenceImage?: (url: string | null) => void;
   onReferenceImageUploaded?: () => void;
 }
 
-export function StylePicker({ value, onChange, onReferenceImage, onReferenceImageUploaded }: StylePickerProps) {
+export function StylePicker({ value, onChange, onReferenceImage, onReferenceImageUploaded, engineType }: StylePickerProps) {
   const { t, locale } = useT();
   const isZh = locale === "zh";
   const [refUrl, setRefUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function select(s: StyleDef) {
-    const prompt = isZh ? s.promptZh : s.prompt;
+    let prompt = isZh ? s.promptZh : s.prompt;
+    // FLUX has input_images for img2img — shorten prompt to scene-only
+    if (engineType === "flux") {
+      prompt = simplifyForFlux(prompt);
+    }
     onChange(s.key === value ? "" : s.key, s.key === value ? "" : prompt);
   }
 

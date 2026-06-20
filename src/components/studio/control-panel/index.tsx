@@ -102,7 +102,7 @@ export function StudioControlPanel({
         </div>
 
         {/* Style */}
-        <StylePicker value={activeStyle} onChange={onStyleChange} onReferenceImage={onStyleReferenceChange} onReferenceImageUploaded={onStyleReferenceUploaded} />
+        <StylePicker value={activeStyle} onChange={onStyleChange} onReferenceImage={onStyleReferenceChange} onReferenceImageUploaded={onStyleReferenceUploaded} engineType={engineType} />
 
         {/* Prompt + AI enhancer */}
         <div className="flex flex-col gap-1.5">
