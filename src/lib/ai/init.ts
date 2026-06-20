@@ -24,10 +24,10 @@ export function initProviders(): void {
     }
   }
 
-  // Optional: laozhang.ai models (Gemini, GPT Image 2)
+  // Optional: laozhang.ai models (Gemini via Google, GPT Image via OpenAI)
   if (process.env.NANO_BANANA_API_KEY) {
     try {
-      registerProvider("gemini", createGeminiProvider({ model: "gpt-image-2", timeoutMs: 120_000 }));
+      registerProvider("gemini", createGeminiProvider({ model: "gemini-3.1-flash-image", timeoutMs: 60_000 }));
       registerProvider("gpt-image", createGeminiProvider({ model: "gpt-image-2", timeoutMs: 120_000 }));
     } catch {}
   }

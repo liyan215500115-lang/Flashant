@@ -279,8 +279,8 @@ export async function POST(req: Request) {
 
   // Model version mapping for alternative engines (all routed through Replicate)
   const ENGINE_MODELS: Record<string, string> = {
-    flux: "black-forest-labs/flux-schnell",
-    flux2: "black-forest-labs/flux-schnell",
+    flux: "black-forest-labs/flux-2-pro",
+    flux2: "black-forest-labs/flux-2-pro",
     sdxl: "stability-ai/sdxl",
     playground: "playgroundai/playground-v2.5-1024px-aesthetic",
   };

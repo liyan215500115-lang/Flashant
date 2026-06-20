@@ -492,7 +492,7 @@
     "historyLabel": "History ({count})",
     "engineLabel": "AI Engine",
     "engineFlux": "FLUX.2 Pro",
-    "engineGemini": "GPT Image 2",
+    "engineGemini": "Gemini Flash",
     "engineFlux2": "FLUX.2 Pro (Recommended)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL (Fast)",
