@@ -23,7 +23,7 @@ interface CheckoutSession {
 const TIER_LIMITS: Record<PlanTier, { generationsPerMonth: number; platforms: number }> = {
   FREE: { generationsPerMonth: 10, platforms: 0 },
   PRO: { generationsPerMonth: 100, platforms: 1 },
-  BUSINESS: { generationsPerMonth: 1000, platforms: 1 },
+  BUSINESS: { generationsPerMonth: 600, platforms: 1 },
   ENTERPRISE: { generationsPerMonth: -1, platforms: 4 },
 };
 

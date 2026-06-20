@@ -44,15 +44,15 @@ describe("getQuota", () => {
     expect(q.platforms).toBe(0);
   });
 
-  it("returns PRO limits (200 generations, 1 platform)", () => {
+  it("returns PRO limits (100 generations, 1 platform)", () => {
     const q = getQuota("PRO");
-    expect(q.generationsPerMonth).toBe(200);
+    expect(q.generationsPerMonth).toBe(100);
     expect(q.platforms).toBe(1);
   });
 
-  it("returns BUSINESS limits (1500 generations, 1 platform)", () => {
+  it("returns BUSINESS limits (600 generations, 1 platform)", () => {
     const q = getQuota("BUSINESS");
-    expect(q.generationsPerMonth).toBe(1500);
+    expect(q.generationsPerMonth).toBe(600);
   });
 
   it("returns ENTERPRISE limits (-1 = unlimited)", () => {

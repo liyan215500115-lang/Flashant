@@ -25,8 +25,8 @@ const PLANS = [
   },
   {
     tier: "BUSINESS" as const,
-    monthlyPrice: 49,
-    annualPrice: 490,
+    monthlyPrice: 59,
+    annualPrice: 590,
     features: ["landing.pricing.plans.business.feature1", "landing.pricing.plans.business.feature2", "landing.pricing.plans.business.feature3", "landing.pricing.plans.business.feature4", "landing.pricing.plans.business.feature5"],
   },
 ];
