@@ -34,6 +34,9 @@ export async function POST(req: Request) {
     seed,
   } = await req.json();
 
+  // Track which engine will actually be used (may fall back to flux at resolve time)
+  let actualEngine = engineType;
+
   // Detail image type prompts (server-side only)
   // Types that should be clean white-bg + Canvas text overlay (no AI text generation)
   const INFO_TYPES = new Set(["selling_points", "material", "size", "craft", "compare"]);
@@ -196,7 +199,6 @@ export async function POST(req: Request) {
   const modelVersion = ENGINE_MODELS[actualEngine] || ENGINE_MODELS.flux;
 
   // Resolve provider — fallback to flux for Gemini-based engines when unavailable
-  let actualEngine = engineType;
   let provider;
   try {
     provider = getProvider(engineType);
