@@ -24,11 +24,11 @@ export function initProviders(): void {
     }
   }
 
-  // All image models via laozhang.ai
+  // All image models via laozhang.ai — using seedream for img2img support
   if (process.env.NANO_BANANA_API_KEY) {
     try {
-      registerProvider("gemini", createGeminiProvider({ model: "gemini-3.1-flash-image" }));
-      registerProvider("gpt-image", createGeminiProvider({ model: "gpt-image-2" }));
+      registerProvider("gemini", createGeminiProvider({ model: "seedream-4-5-251128" }));
+      registerProvider("gpt-image", createGeminiProvider({ model: "seedream-4-5-251128" }));
     } catch {}
   }
 

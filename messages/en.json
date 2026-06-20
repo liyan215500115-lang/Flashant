@@ -492,7 +492,7 @@
     "historyLabel": "History ({count})",
     "engineLabel": "AI Engine",
     "engineFlux": "FLUX.2 Pro",
-    "engineGemini": "Nano Banana 2 (Fast)",
+    "engineGemini": "Seedream 4.5 (Img2Img)",
     "engineFlux2": "FLUX.2 Pro (Recommended)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL (Fast)",

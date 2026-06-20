@@ -12,8 +12,9 @@ export function createGeminiProvider(config?: Partial<GeminiConfig>): ImageProvi
   const apiKey = config?.apiKey ?? process.env.GEMINI_API_KEY ?? process.env.NANO_BANANA_API_KEY;
   if (!apiKey) throw new Error("Gemini API key required");
   const baseUrl = "https://api.laozhang.ai/v1";
-  const model = config?.model ?? "gemini-3.1-flash-image";
-  const timeoutMs = config?.timeoutMs ?? 60_000;
+  // seedream supports img2img (image parameter) — other models don't
+  const model = config?.model ?? "seedream-4-5-251128";
+  const timeoutMs = config?.timeoutMs ?? 120_000;
 
   return {
     name: "gemini",
