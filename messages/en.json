@@ -433,7 +433,7 @@
         "pro": {
           "name": "Pro",
           "desc": "Growing brands",
-          "feature1": "500 / month",
+          "feature1": "100 / month",
           "feature2": "All templates + HD",
           "feature3": "Shopify one-click",
           "feature4": "Brand logo overlay",
@@ -442,7 +442,7 @@
         "business": {
           "name": "Business",
           "desc": "Brand teams",
-          "feature1": "1,500 / month",
+          "feature1": "600 / month",
           "feature2": "All templates + HD",
           "feature3": "Shopify one-click",
           "feature4": "Brand logo overlay",
@@ -469,6 +469,10 @@
     "generatingCta": "Generating...",
     "canvasTitle": "Preview Canvas",
     "quotaLabel": "Credits remaining this month",
+    "upscaleButton": "Upscale 4x",
+    "upscaleLoading": "Upscaling...",
+    "upscaleSuccess": "Upscaled",
+    "upscaleError": "Upscale failed",
     "generatingOverlay": "Flashant is composing your scene, estimated 5–8 seconds...",
     "emptyPreview": "Upload an image and click generate",
     "downloadImage": "Download",
@@ -491,9 +495,8 @@
     "unlimited": "Unlimited",
     "historyLabel": "History ({count})",
     "engineLabel": "AI Engine",
-    "engineFlux": "FLUX.2 Pro",
-    "engineGemini": "Gemini Flash",
-    "engineFlux2": "FLUX.2 Pro (Recommended)",
+    "engineFlux": "FLUX Kontext (Recommended)",
+    "engineGptImage": "GPT Image 2 · Text-only ($0.03)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL (Fast)",
     "enginePlayground": "Playground v2.5",
@@ -520,7 +523,8 @@
     "uploadHintBatch": "Batch up to {max} · PNG / JPG / WebP",
     "languageLabel": "Target Language",
     "productLabel": "Product",
-    "productPlaceholder": "e.g. Silver Earrings, Wireless Earbuds..."
+    "productPlaceholder": "e.g. Silver Earrings, Wireless Earbuds...",
+    "engineFluxPro": "FLUX.2 Pro (Backup)"
   },
   "assets": {
     "title": "Asset Center",

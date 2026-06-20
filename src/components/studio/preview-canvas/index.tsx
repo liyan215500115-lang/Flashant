@@ -120,11 +120,11 @@ export function StudioPreviewCanvas({
                   fetch("/api/upscale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: latestImage.url }) })
                     .then(r => r.json())
                     .then(d => { if (d.url && onHistorySelect) { onHistorySelect({ ...latestImage, url: d.url }); } }),
-                  { loading: "超清增强中...", success: "增强完成", error: "增强失败" }
+                  { loading: t("generate.upscaleLoading"), success: t("generate.upscaleSuccess"), error: t("generate.upscaleError") }
                 );
               }}
               className="text-xs text-zinc-400 hover:text-brand-600 cursor-pointer transition-colors">
-              {t("generate.engineFlux").includes("Pro") ? "超清增强" : "Upscale 4x"}
+              {t("generate.upscaleButton")}
             </button>
           )}
         </div>

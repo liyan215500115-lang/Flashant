@@ -442,7 +442,7 @@
         "business": {
           "name": "Business",
           "desc": "品牌团队",
-          "feature1": "1,000 次 AI 生图 / 月",
+          "feature1": "600 次 AI 生图 / 月",
           "feature2": "全部模板 + HD",
           "feature3": "Shopify 一键发布",
           "feature4": "品牌 Logo 叠加",
@@ -469,6 +469,10 @@
     "generatingCta": "闪象生成中...",
     "canvasTitle": "画布预演",
     "quotaLabel": "本月剩余额度",
+    "upscaleButton": "超清增强",
+    "upscaleLoading": "超清增强中...",
+    "upscaleSuccess": "增强完成",
+    "upscaleError": "增强失败",
     "generatingOverlay": "闪象正在为你重构画面，预计需要 5-8 秒...",
     "emptyPreview": "上传图片并点击生成",
     "downloadImage": "下载",
@@ -491,9 +495,8 @@
     "unlimited": "无限",
     "historyLabel": "历史生成 ({count})",
     "engineLabel": "AI 算力引擎",
-    "engineFlux": "FLUX.2 Pro",
-    "engineFlux2": "FLUX.2 Pro",
-    "engineGemini": "Gemini Flash",
+    "engineFlux": "FLUX Kontext（推荐）",
+    "engineGptImage": "GPT Image 2 · 文生图 ($0.03)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL（快速模式）",
     "enginePlayground": "Playground v2.5",
@@ -520,7 +523,8 @@
     "uploadHintBatch": "支持批量，最多 {max} 张 · PNG / JPG / WebP",
     "languageLabel": "目标语种",
     "productLabel": "产品名称",
-    "productPlaceholder": "如：银色耳环、无线耳机、有机绿茶..."
+    "productPlaceholder": "如：银色耳环、无线耳机、有机绿茶...",
+    "engineFluxPro": "FLUX.2 Pro（备选）"
   },
   "assets": {
     "title": "素材中心",
