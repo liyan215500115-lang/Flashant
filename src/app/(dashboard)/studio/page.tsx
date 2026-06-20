@@ -25,6 +25,14 @@ interface PreviewImage {
   promptUsed?: string;
 }
 
+function hashStr(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
 export default function StudioPage() {
   const { t } = useT();
   const searchParams = useSearchParams();
@@ -323,7 +331,8 @@ export default function StudioPage() {
           )}
 
           {latestImage && projectId && (
-            <Link href={`/projects/${projectId}`}
+            <Link
+              href={`/projects/${projectId}${styleReferenceUrl ? `?styleRef=${encodeURIComponent(styleReferenceUrl)}&styleSeed=${Math.abs(hashStr(projectId)) % 100000}&lockStyle=1` : ""}`}
               className="flex items-center justify-center gap-2 w-full rounded-xl bg-brand-50 py-3 text-sm font-medium text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer">
               <FolderOpen size={16} />
               查看项目全部图片

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
@@ -48,7 +48,13 @@ export default function DetailsPage() {
   const { t, locale } = useT();
   const isZh = locale === "zh";
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const projectId = params.id;
+
+  // Style consistency: inherited from Studio page via URL params
+  const styleRefUrl = searchParams.get("styleRef") ?? undefined;
+  const styleSeed = searchParams.get("styleSeed") ? parseInt(searchParams.get("styleSeed")!) : undefined;
+  const styleLock = searchParams.get("lockStyle") === "1";
 
   const [productImages, setProductImages] = useState<Array<{ id: string; originalUrl: string }>>([]);
   const [selectedPt, setSelectedPt] = useState<Set<string>>(new Set());
@@ -76,6 +82,8 @@ export default function DetailsPage() {
           productImageId: productImages[0]?.id || "",
           detailTypes: types.map((t) => ({ key: t.key, prompt: t.prompt })),
           numOutputs: 1,
+          referenceImageUrl: styleLock ? styleRefUrl : undefined,
+          seed: styleLock ? styleSeed : undefined,
         }),
       });
       const data = await res.json();

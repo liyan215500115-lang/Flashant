@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Loader2, FileText, Type, Download } from "lucide-react";
+import { useState } from "react";
+import { Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/i18n-provider";
 
@@ -28,6 +28,14 @@ interface StudioDetailPanelProps {
   referenceImageUrl?: string;
   targetPlatform?: string;
   onDetailGenerated?: (results: Array<{key:string;url:string;label:string}>) => void;
+}
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
 }
 
 /** Draw text onto a canvas and return as blob URL */
@@ -92,31 +100,43 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     if (selected.size === 0 || !projectId) return;
     setGenerating(true);
     const types = DETAIL_TYPES.filter((d) => selected.has(d.key));
-    const setSeed = lockStyle ? Math.floor(Math.random() * 100000) : undefined;
-    const promises = types.map(async (t) => {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000);
-        const res = await fetch("/api/generate", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageProjectId: projectId, productImageId, detailType: t.key, baseStyle: basePrompt, customDesc, referenceImageUrl, targetPlatform, numOutputs: 1, seed: setSeed }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        const detailRes = await res.json() as { url?: string };
-        if (detailRes.url) {
-          const isInfo = INFO_TYPES.has(t.key);
-          const overlayedUrl = await overlayTextOnImage(detailRes.url, customDesc, t.zh, isInfo).catch(() => detailRes.url);
-          return { key: t.key, url: overlayedUrl, rawUrl: detailRes.url, label: t.zh };
+
+    // Deterministic seed from projectId — same project always gets same seed when locked
+    const styleSeed = lockStyle ? Math.abs(hashString(projectId)) % 100000 : undefined;
+    const styleRef = lockStyle ? (referenceImageUrl ?? undefined) : undefined;
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageProjectId: projectId,
+          productImageId,
+          detailTypes: types.map((t) => ({ key: t.key, prompt: `${t.zh} — ${basePrompt}` })),
+          baseStyle: lockStyle ? basePrompt : undefined,
+          referenceImageUrl: styleRef,
+          seed: styleSeed,
+          targetPlatform: targetPlatform || undefined,
+          numOutputs: 1,
+        }),
+      });
+      const data = await res.json();
+      const generated = data.generated as Array<{ key: string; url: string; label?: string }> | undefined;
+
+      if (generated && Array.isArray(generated)) {
+        const out: typeof results = [];
+        for (const g of generated) {
+          const isInfo = INFO_TYPES.has(g.key);
+          const label = g.label || g.key;
+          const overlayedUrl = await overlayTextOnImage(g.url, customDesc, label, isInfo).catch(() => g.url);
+          out.push({ key: g.key, url: overlayedUrl, rawUrl: g.url, label });
         }
-      } catch {}
-      return null;
-    });
-    const settled = await Promise.allSettled(promises);
-    const out = settled.filter((r) => r.status === "fulfilled" && r.value).map((r) => (r as PromiseFulfilledResult<any>).value);
-    setResults((prev) => [...out, ...prev]);
+        setResults((prev) => [...out, ...prev]);
+        onDetailGenerated?.(out);
+      }
+    } catch {
+      // silently fail
+    }
     setGenerating(false);
-    onDetailGenerated?.(out);
   }
 
   const selectedCount = selected.size;
