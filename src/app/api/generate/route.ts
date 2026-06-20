@@ -367,12 +367,14 @@ export async function POST(req: Request) {
         await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
         return NextResponse.json({ taskId: task.id, status: "succeeded", generatedImageId: saved.id, url: finalUrl });
       }
-    } catch {
-      // Fallback to Flux
+      // If we got here with a result, we already returned above
+    } catch (err) {
+      // Gemini sync path failed — return the error instead of silently falling back
+      return NextResponse.json(
+        { error: "gemini_failed", message: err instanceof Error ? err.message : "Gemini generation failed" },
+        { status: 500 }
+      );
     }
-    // Gemini failed — fall back to Flux
-    const fluxProvider = getProvider("flux");
-    provider = fluxProvider;
   }
 
   if (actualEngine === "openai") {
