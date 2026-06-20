@@ -34,14 +34,8 @@ export function createGeminiProvider(config?: Partial<GeminiConfig>): ImageProvi
         watermark: false,
       };
 
-      // Pass product image as reference for img2img
-      if (input.productImageUrl) {
-        const imgResponse = await fetch(input.productImageUrl);
-        const imgBuffer = await imgResponse.arrayBuffer();
-        const base64Image = Buffer.from(imgBuffer).toString("base64");
-        const mimeType = imgResponse.headers.get("content-type") ?? "image/png";
-        requestBody.image = `data:${mimeType};base64,${base64Image}`;
-      }
+      // Laozhang.ai does NOT support image/img2img parameter on any model
+      // Product consistency relies on prompt description only for Gemini-based engines
 
       const res = await fetch(`${baseUrl}/images/generations`, {
         method: "POST",
