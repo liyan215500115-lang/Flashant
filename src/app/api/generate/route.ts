@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
 import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
+
+export const maxDuration = 60; // seconds — Vercel Pro max
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { serverT } from "@/lib/server-t";
 import { getSignedGetUrl } from "@/lib/s3";
@@ -330,11 +332,11 @@ export async function POST(req: Request) {
     data: { status: "GENERATING", title: projectTitle || undefined },
   });
 
-  // Synchronous image providers (Nano Banana 2, GPT Image 2 via laozhang.ai)
-  // Only take this path if the provider actually resolved to a Gemini-based one (not fallen back to Flux)
+  // Gemini-based providers (Nano Banana 2, GPT Image 2 via laozhang.ai)
+  // Race against Vercel timeout: try sync first, fire-and-forget on timeout
   if ((engineType === "gemini" || engineType === "banana" || engineType === "gpt-image") && actualEngine !== "flux") {
     try {
-      const result = await provider.createPrediction({
+      const geminiPromise = provider.createPrediction({
         prompt,
         productImageUrl: sharedImageUrl,
         referenceImageUrl: referenceImageUrl ?? undefined,
@@ -343,9 +345,12 @@ export async function POST(req: Request) {
         height: genHeight,
       });
 
-      if ((result as any).outputs?.[0]?.url) {
+      // 8-second timeout to stay within Vercel Hobby 10s limit
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000));
+      const result = await Promise.race([geminiPromise, timeout]);
+
+      if (result && (result as any).outputs?.[0]?.url) {
         const imgUrl = (result as any).outputs[0].url;
-        // Upload to R2 so the image doesn't expire
         let finalUrl = imgUrl;
         let finalKey = imgUrl;
         if (hasS3Config()) {
@@ -367,9 +372,29 @@ export async function POST(req: Request) {
         await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
         return NextResponse.json({ taskId: task.id, status: "succeeded", generatedImageId: saved.id, url: finalUrl });
       }
-      // If we got here with a result, we already returned above
+
+      // Timed out — fire and forget, return taskId for polling
+      if (!result) {
+        // Fire in background (best-effort on Vercel)
+        geminiPromise.then(async (r) => {
+          if ((r as any).outputs?.[0]?.url) {
+            const u = (r as any).outputs[0].url;
+            await db.generatedImage.create({
+              data: { imageProjectId, productImageId, s3Key: u, url: u, promptUsed: prompt, aiProvider: actualEngine, status: "SUCCEEDED", completedAt: new Date() },
+            });
+            await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: u } });
+            await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
+          } else {
+            await db.task.update({ where: { id: task.id }, data: { status: "FAILED", errorMessage: "No output from provider" } });
+          }
+        }).catch(async (err) => {
+          await db.task.update({ where: { id: task.id }, data: { status: "FAILED", errorMessage: String(err) } });
+        });
+
+        await db.task.update({ where: { id: task.id }, data: { status: "PROCESSING" } });
+        return NextResponse.json({ taskId: task.id, status: "processing", poll: true, nextPollMs: 5000 });
+      }
     } catch (err) {
-      // Gemini sync path failed — silently fall back to Flux
       console.warn(`Gemini engine failed (${err instanceof Error ? err.message : "unknown"}), falling back to Flux`);
     }
     // Fall back to Flux

@@ -25,7 +25,7 @@ export async function GET(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  // Also check if there's a GeneratedImage result for this task
+  // Find generated image result — by webhookId (Replicate) or by project+image (Gemini)
   let result: {
     id: string;
     url: string;
@@ -35,6 +35,22 @@ export async function GET(
   if (task.predictionId) {
     const genImage = await db.generatedImage.findFirst({
       where: { webhookId: task.predictionId },
+      select: { id: true, url: true, status: true },
+    });
+    if (genImage) {
+      result = genImage;
+    }
+  }
+
+  // Fallback: look up by project + product image (Gemini sync path doesn't set predictionId)
+  if (!result && task.status === "SUCCEEDED") {
+    const genImage = await db.generatedImage.findFirst({
+      where: {
+        imageProjectId: task.imageProjectId,
+        productImageId: task.productImageId,
+        status: "SUCCEEDED",
+      },
+      orderBy: { createdAt: "desc" },
       select: { id: true, url: true, status: true },
     });
     if (genImage) {
