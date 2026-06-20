@@ -1,33 +1,52 @@
 "use client";
 
 import { useState } from "react";
-import { Wand2, Loader2 } from "lucide-react";
+import { Wand2, Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface PromptEnhancerProps {
+  imageUrl: string | null;
+  productName: string;
   currentPrompt: string;
+  styleName: string | null;
   onEnhanced: (enhancedPrompt: string) => void;
   className?: string;
 }
 
-export function PromptEnhancer({ currentPrompt, onEnhanced, className }: PromptEnhancerProps) {
-  const { t } = useT();
+export function PromptEnhancer({
+  imageUrl,
+  productName,
+  currentPrompt,
+  styleName,
+  onEnhanced,
+  className,
+}: PromptEnhancerProps) {
+  const { t, locale } = useT();
   const [loading, setLoading] = useState(false);
+  const [lastGenerated, setLastGenerated] = useState("");
 
   async function handleEnhance() {
-    if (!currentPrompt.trim()) return;
+    if (!imageUrl) return;
     setLoading(true);
     try {
       const res = await fetch("/api/prompts/enhance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: currentPrompt }),
+        body: JSON.stringify({
+          imageUrl,
+          productName: productName || undefined,
+          sellingPoints: currentPrompt || undefined,
+          styleName: styleName || undefined,
+          targetLanguage: locale,
+        }),
       });
       if (!res.ok) return;
-      const { enhanced } = await res.json();
-      if (enhanced) onEnhanced(enhanced);
+      const { enhanced, reasoning } = await res.json();
+      if (enhanced) {
+        setLastGenerated(enhanced);
+        onEnhanced(enhanced);
+      }
     } catch {
       // Silently fail — keep original prompt
     } finally {
@@ -35,25 +54,43 @@ export function PromptEnhancer({ currentPrompt, onEnhanced, className }: PromptE
     }
   }
 
+  const disabled = !imageUrl || loading;
+
   return (
-    <Tooltip>
-      <TooltipTrigger
-        type="button"
-        onClick={handleEnhance}
-        disabled={loading || !currentPrompt.trim()}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
-          className
-        )}
-      >
-        {loading ? (
-          <Loader2 size={13} className="animate-spin text-violet-500" />
-        ) : (
-          <Wand2 size={13} className="text-violet-500" />
-        )}
-        {t("generate.enhancePrompt")}
-      </TooltipTrigger>
-      <TooltipContent>{t("generate.enhancePromptDesc")}</TooltipContent>
-    </Tooltip>
+    <button
+      type="button"
+      onClick={handleEnhance}
+      disabled={disabled}
+      className={cn(
+        "relative w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-2.5 text-xs font-semibold transition-all duration-300",
+        disabled
+          ? "border-zinc-200 dark:border-zinc-700 text-zinc-300 dark:text-zinc-600 cursor-not-allowed"
+          : "border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 hover:shadow-sm cursor-pointer animate-in fade-in",
+        className
+      )}
+    >
+      {loading ? (
+        <>
+          <Loader2 size={15} className="animate-spin text-amber-500" />
+          <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            {locale === "zh" ? "正在分析产品并生成提示词..." : "Analyzing product & writing prompt..."}
+          </span>
+        </>
+      ) : lastGenerated ? (
+        <>
+          <Sparkles size={15} className="text-amber-500" />
+          <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            {locale === "zh" ? "重新智能生成" : "Regenerate AI Prompt"}
+          </span>
+        </>
+      ) : (
+        <>
+          <Wand2 size={15} className="text-amber-500" />
+          <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            {locale === "zh" ? "AI 智能写提示词" : "AI Auto-Write Prompt"}
+          </span>
+        </>
+      )}
+    </button>
   );
 }

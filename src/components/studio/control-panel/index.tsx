@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 import { FlashantButton } from "@/components/product/flashant-button";
 import { PublishDestination } from "./publish-destination";
 import { BrandPresetSelector } from "./brand-preset-selector";
 import { StylePicker } from "./style-picker";
+import { PromptEnhancer } from "./prompt-enhancer";
 import { useT } from "@/components/i18n-provider";
 
 interface ProductImage {
@@ -40,20 +40,6 @@ export function StudioControlPanel({
   onStyleChange, onStyleReferenceChange, onGenerate,
 }: StudioControlPanelProps) {
   const { t, locale } = useT();
-  const [isEnhancing, setIsEnhancing] = useState(false);
-
-  async function handleEnhance() {
-    if (!selectedImage) return;
-    setIsEnhancing(true);
-    try {
-      const res = await fetch("/api/prompts/enhance", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: selectedImage.originalUrl, productName, sellingPoints: prompt, sceneMode: activeStyle ?? "scene", targetLanguage: locale }),
-      });
-      if (res.ok) { const data = await res.json(); onPromptChange(data.enhanced); }
-    } catch { /* fallback */ }
-    finally { setIsEnhancing(false); }
-  }
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -117,19 +103,21 @@ export function StudioControlPanel({
         {/* Style */}
         <StylePicker value={activeStyle} onChange={onStyleChange} onReferenceImage={onStyleReferenceChange} />
 
-        {/* Prompt + wand */}
+        {/* Prompt + AI enhancer */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium text-zinc-500">{t("generate.sellingPointsLabel")}</span>
-            <button type="button" onClick={handleEnhance} disabled={isEnhancing || !selectedImage}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20 text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50 cursor-pointer">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              {isEnhancing ? "..." : t("generate.enhancePrompt")}
-            </button>
           </div>
           <textarea value={prompt} onChange={(e) => onPromptChange(e.target.value)} rows={2}
             placeholder={t("generate.sellingPointsPlaceholder")}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-xs text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all resize-y min-h-[56px]" />
+          <PromptEnhancer
+            imageUrl={selectedImage?.originalUrl ?? null}
+            productName={productName}
+            currentPrompt={prompt}
+            styleName={activeStyle}
+            onEnhanced={onPromptChange}
+          />
         </div>
       </div>
 
