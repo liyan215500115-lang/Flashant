@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Square, Image, User, Gem, Sun, Home, Coffee, Grid3X3 } from "lucide-react";
+import { Square, Image, User, Gem, Sun, Home, Coffee, Grid3X3, Palette, Smile } from "lucide-react";
 import { useT } from "@/components/i18n-provider";
 
 interface StyleDef {
@@ -56,7 +56,17 @@ const STYLES: StyleDef[] = [
     prompt: "Cyberpunk aesthetic product photography. Product dramatically lit with neon cyan and magenta rim lighting from two sides. Dark atmospheric background with subtle grid lines or rain-slicked surfaces. Volumetric light rays cutting through mist. Blade Runner 2049 / Cyberpunk 2077 atmosphere. The product looks like high-tech gear from the future. Cinematic, ultra-detailed, intense color contrast between warm product tones and cool neon environment. Suitable for electronics, sneakers, gaming accessories, streetwear, tech gadgets. 4K, sci-fi editorial quality",
     promptZh: "赛博朋克美学产品摄影。产品两侧霓虹青紫边缘光戏剧性打光。深色氛围背景带微网格线或雨水湿润表面。体积光穿透薄雾。银翼杀手2049 / 赛博朋克2077氛围。产品如未来高科技装备。电影感，超精细，暖色产品与冷色霓虹环境形成强烈对比。适合电子产品、潮鞋、游戏配件、街头服饰、科技小物。4K，科幻编辑级品质" },
 
-  // 10. Infographic — feature callout images, proven 15-25% conversion lift on Amazon
+  // 10. Canvas art / watercolor — artisanal, handmade, boutique brand aesthetic. Huge on Etsy, Pinterest, POD
+  { key: "canvas", zh: "画布风", en: "Canvas Art", icon: Palette,
+    prompt: "Watercolor illustration style product photography. The product rendered with soft visible brushwork at the edges, placed on textured cold-pressed watercolor paper or raw linen canvas with visible weave and grain. The product itself stays sharp and recognizable, while the background and edges bloom into painterly washes in a muted palette of dusty blue, soft ochre, warm beige, and ivory. Natural window light from left. Subtle pigment blooms and impasto brushstrokes visible. No digital gloss, no hard outlines. Artisanal, handcrafted brand aesthetic — like a beautiful product still life painted by a fine artist. 4K, editorial illustration quality, Pinterest-worthy",
+    promptZh: "水彩插画风格产品摄影。产品以柔和可见的笔触渲染，置于有纹理质感的冷压水彩纸或原色亚麻画布上，可见编织纹理和颗粒感。产品本身保持清晰可辨，背景和边缘则晕染成富有笔触感的画面，色调为低调的灰蓝、柔和赭石、温暖米白和象牙色。左侧自然窗光。可见微妙颜料晕染和厚涂笔触。无数字光泽，无硬边线。手工匠人品牌美学——像一位画家的精美产品静物写生。4K，编辑插画品质，Pinterest级别" },
+
+  // 11. Cute cartoon / Kawaii — viral trend for pet supplies, kids, beauty, snacks, stickers, keychains
+  { key: "kawaii", zh: "卡通风", en: "Kawaii", icon: Smile,
+    prompt: "Adorable kawaii cartoon style product photography. The product reimagined with chibi proportions (big expressive glossy eyes, tiny rounded body), soft cel shading, and smooth glossy PVC toy-like finish. Candy-colored pastel background with subtle sparkles, tiny stars, and floating hearts. Clean bold outlines, vibrant saturated colors, playful whimsical atmosphere. Studio macro photography lighting with soft rim light. The composition looks like a premium collectible figurine or sticker sheet product shot. Perfect for pet supplies, kids products, beauty items, snacks, stationery, keychains, and anything that wants to feel joyful and gift-worthy. 4K, macro detail, clean commercial product photography",
+    promptZh: "超萌卡通风产品摄影。产品以Q版比例重新呈现（大大的水汪汪眼睛、圆润小巧的身体），柔和赛璐璐上色，光滑亮面PVC玩具质感。糖果色粉彩背景搭配微闪星星和飘浮爱心。清晰粗轮廓线，鲜艳饱和色彩，充满童趣的梦幻氛围。摄影棚微距灯光加柔和轮廓光。画面如同高级收藏公仔或贴纸套装的产品照。完美适合宠物用品、儿童产品、美妆小物、零食、文具、钥匙扣等想传递快乐和送礼感的产品。4K，微距细节，商业级产品摄影" },
+
+  // 12. Infographic — feature callout images, proven 15-25% conversion lift on Amazon
   { key: "infographic", zh: "信息图", en: "Infographic", icon: Image,
     prompt: "Professional e-commerce infographic product image. Product on clean white or subtle gradient background on one side. Opposite side or overlay has elegant minimalist icons and short text callouts highlighting 3-5 key features, benefits, or specifications. Clean sans-serif typography, brand-consistent accent colors. Modern UI-inspired layout with subtle geometric lines or dividers. No clutter, each element has breathing room. Amazon A+ Content / Shopify PDP style. 8K, sharp text rendering",
     promptZh: "专业电商信息图产品图。产品置于干净白色或微渐变背景一侧。另一侧或叠加优雅极简图标和简短文字标注，突出3-5个核心卖点、优势或规格。清爽无衬线字体，品牌一致强调色。现代UI风格排版，微几何线条或分隔。不拥挤，每个元素有呼吸空间。亚马逊A+ / Shopify详情页风格。8K，文字清晰渲染" },
