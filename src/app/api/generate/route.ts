@@ -180,7 +180,7 @@ export async function POST(req: Request) {
   }
 
   // SDXL / fast models: simplify prompt to keyword format for better results
-  if (engineType === "sdxl" || engineType === "playground") {
+  if (actualEngine === "sdxl" || actualEngine === "playground") {
     prompt = prompt.replace(/[.,;!?]/g, " ").replace(/\s+/g, " ").split(" ").slice(0, 77).join(" ").trim();
   }
 
@@ -193,26 +193,40 @@ export async function POST(req: Request) {
     sdxl: "stability-ai/sdxl",
     playground: "playgroundai/playground-v2.5-1024px-aesthetic",
   };
-  const modelVersion = ENGINE_MODELS[engineType] || ENGINE_MODELS.flux;
+  const modelVersion = ENGINE_MODELS[actualEngine] || ENGINE_MODELS.flux;
 
-  // Resolve provider
+  // Resolve provider — fallback to flux for Gemini-based engines when unavailable
+  let actualEngine = engineType;
   let provider;
   try {
     provider = getProvider(engineType);
   } catch {
-    return NextResponse.json(
-      { error: `AI engine "${engineType}" is not available` },
-      { status: 400 }
-    );
+    if (engineType === "gemini" || engineType === "banana" || engineType === "gpt-image") {
+      try {
+        provider = getProvider("flux");
+        actualEngine = "flux";
+        console.warn(`Engine "${engineType}" not available, falling back to flux`);
+      } catch {
+        return NextResponse.json(
+          { error: "No AI engine available" },
+          { status: 400 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        { error: `AI engine "${engineType}" is not available` },
+        { status: 400 }
+      );
+    }
   }
 
-  // Create task
+  // Create task — record actual engine used (may differ from requested on fallback)
   const task = await db.task.create({
     data: {
       imageProjectId,
       productImageId,
       promptTemplateId: promptTemplateId ?? null,
-      engineType,
+      engineType: actualEngine,
       status: "PENDING",
     },
   });
@@ -223,8 +237,9 @@ export async function POST(req: Request) {
     data: { status: "GENERATING", title: projectTitle || undefined },
   });
 
-  // Synchronous image providers (Nano Banana 2, GPT Image 2 via laozhang.ai) — fallback to Flux on failure
-  if (engineType === "gemini" || engineType === "banana" || engineType === "gpt-image") {
+  // Synchronous image providers (Nano Banana 2, GPT Image 2 via laozhang.ai)
+  // Only take this path if the provider actually resolved to a Gemini-based one (not fallen back to Flux)
+  if ((engineType === "gemini" || engineType === "banana" || engineType === "gpt-image") && actualEngine !== "flux") {
     try {
       const result = await provider.createPrediction({
         prompt,
@@ -252,7 +267,7 @@ export async function POST(req: Request) {
           data: {
             imageProjectId, productImageId,
             s3Key: finalKey, url: finalUrl, promptUsed: prompt,
-            aiProvider: engineType, status: "SUCCEEDED", completedAt: new Date(),
+            aiProvider: actualEngine, status: "SUCCEEDED", completedAt: new Date(),
           },
         });
         await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: finalUrl } });
@@ -267,7 +282,7 @@ export async function POST(req: Request) {
     provider = fluxProvider;
   }
 
-  if (engineType === "openai") {
+  if (actualEngine === "openai") {
     // ── OpenAI synchronous path ──
     try {
       const result = await provider.createPrediction({
@@ -377,7 +392,7 @@ export async function POST(req: Request) {
         data: {
           imageProjectId, productImageId,
           s3Key: "pending", url: "", promptUsed: prompt,
-          aiProvider: engineType, status: "PROCESSING",
+          aiProvider: actualEngine, status: "PROCESSING",
           webhookId: prediction.predictionId,
         },
       });
