@@ -27,9 +27,16 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
     name: "replicate",
 
     async createPrediction(input: ImageGenerationInput) {
+      // flux-2-pro input schema (verified against Replicate API 2026-06):
+      //   aspect_ratio (default "1:1") — width/height ONLY apply when set to "custom"
+      //   input_images — img2img reference(s), max 8
+      //   seed — reproducible generation (best-effort; not pixel-identical)
+      //   output_format / output_quality / safety_tolerance / resolution
+      // NOTE: flux-2-pro has NO num_outputs param — one image per prediction (caller loops).
       const inputPayload: Record<string, unknown> = {
         prompt: input.prompt,
-        num_outputs: input.numOutputs ?? 1,
+        // Custom ratio so width/height take effect; otherwise Replicate ignores them (always 1:1)
+        aspect_ratio: "custom",
         width: input.width ?? 1024,
         height: input.height ?? 1024,
         output_format: "png",
@@ -38,8 +45,14 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
       };
 
       // Pass product photo as reference — prompt controls scene change
-            if (input.productImageUrl) {
+      if (input.productImageUrl) {
         inputPayload.input_images = [input.productImageUrl];
+      }
+
+      // Best-effort seed for style consistency (lockStyle). Not pixel-reproducible on flux-2-pro,
+      // but stabilizes the generation tendency vs. leaving it fully random.
+      if (input.seed != null) {
+        inputPayload.seed = input.seed;
       }
 
       const version = input.modelVersion || modelVersion;
@@ -91,7 +104,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
       const data = await res.json();
 
       if (data.status === "succeeded") {
-        // FLUX 1.1 Pro returns a single URL string; schnell returns string[]
+        // flux-2-pro returns a single URL string; accept string[] too for safety
         const raw = data.output;
         const urls: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
 

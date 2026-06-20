@@ -61,18 +61,29 @@ export async function GET(
         height: params.genHeight || 1024,
       });
 
-      if ((result as any).outputs?.[0]?.url) {
-        const imgUrl = (result as any).outputs[0].url;
+      const outputs = result.outputs;
+      if (outputs?.[0]?.url) {
+        const imgUrl = outputs[0].url;
+        const isDataUrl = imgUrl.startsWith("data:");
         let finalUrl = imgUrl;
         let finalKey = imgUrl;
 
         if (hasS3Config()) {
           try {
+            // fetchImageBuffer handles both http(s) URLs and data: URLs (Node undici supports data: scheme)
             const imageBuf = await fetchImageBuffer(imgUrl);
             const r2 = await uploadBuffer(imageBuf, "image/png", "generated/");
             finalUrl = r2.publicUrl;
             finalKey = r2.s3Key;
           } catch { /* keep provider URL */ }
+        } else if (isDataUrl) {
+          // Gemini/gpt-image return base64 data URLs. Without R2 configured there is nowhere to
+          // persist them — a multi-hundred-KB data URL must NOT be written into the DB url/s3Key
+          // columns. Fail loudly so the operator knows to configure S3/R2.
+          throw new Error(
+            "Image engine returned a base64 data URL but S3/R2 is not configured. " +
+              "Set R2/S3 env vars to persist generated images."
+          );
         }
 
         await db.generatedImage.create({

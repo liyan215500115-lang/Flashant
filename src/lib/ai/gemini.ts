@@ -12,16 +12,14 @@ export function createGeminiProvider(config?: Partial<GeminiConfig>): ImageProvi
   const apiKey = config?.apiKey ?? process.env.GEMINI_API_KEY ?? process.env.NANO_BANANA_API_KEY;
   if (!apiKey) throw new Error("Gemini API key required");
   const baseUrl = "https://api.laozhang.ai/v1";
-  // seedream supports img2img (image parameter) — other models don't
-  const model = config?.model ?? "seedream-4-5-251128";
+  // Model is always provided by the caller (see init.ts). Fallback kept for direct/test use only.
+  const model = config?.model ?? "gemini-3.1-flash-image";
   const timeoutMs = config?.timeoutMs ?? 120_000;
 
   return {
     name: "gemini",
 
     async createPrediction(input: ImageGenerationInput) {
-      // Seedream does img2img via the `image` parameter — keep the prompt scene-focused
-      // The reference image handles product identity; the prompt should only describe the desired background/scene/lighting
       const prompt = input.prompt;
 
       // Build request body for images/generations endpoint
@@ -34,8 +32,9 @@ export function createGeminiProvider(config?: Partial<GeminiConfig>): ImageProvi
         watermark: false,
       };
 
-      // Laozhang.ai does NOT support image/img2img parameter on any model
-      // Product consistency relies on prompt description only for Gemini-based engines
+      // laozhang.ai's images/generations endpoint does NOT support an image/img2img parameter on any
+      // model — so product identity for Gemini-based engines relies on prompt description only.
+      // (FLUX via Replicate is the only engine with true img2img / input_images.)
 
       const res = await fetch(`${baseUrl}/images/generations`, {
         method: "POST",

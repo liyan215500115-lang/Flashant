@@ -10,6 +10,7 @@ import { serverT } from "@/lib/server-t";
 import { getSignedGetUrl } from "@/lib/s3";
 import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
+import { prepareReferenceImage } from "@/lib/reference-image";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -117,9 +118,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Product image not found" }, { status: 404 });
     }
     const isR2Image = productImage.s3Key && (productImage.s3Key.startsWith("products/") || productImage.s3Key.startsWith("generated/"));
-    const sharedImageUrl = isR2Image
+    const rawBatchUrl = isR2Image
       ? await getSignedGetUrl(productImage.s3Key, 3600).catch(() => productImage.originalUrl)
       : productImage.originalUrl;
+    // Compress reference to ≤1MP before sending to Replicate — cuts input-megapixel cost ~70%.
+    const sharedImageUrl = await prepareReferenceImage(rawBatchUrl);
     // Prefer FLUX for img2img support (input_images parameter), fallback to any available provider
     let batchProvider;
     try {
@@ -215,20 +218,24 @@ export async function POST(req: Request) {
     );
   }
 
-  // Generate a public presigned URL so Replicate/DeepSeek can access the image
+  // Generate a public presigned URL so Replicate/DeepSeek can access the image.
+  // Compress the reference to ≤1MP first — Replicate flux-2-pro bills per input MP,
+  // and full-res uploads (avg 3.35MP) were costing ~$0.05/image in input fees.
   const isR2Image = productImage.s3Key && (productImage.s3Key.startsWith("products/") || productImage.s3Key.startsWith("generated/"));
-  const sharedImageUrl = isR2Image
+  const rawSharedUrl = isR2Image
     ? await getSignedGetUrl(productImage.s3Key, 3600).catch(() => productImage.originalUrl)
     : productImage.originalUrl;
+  const sharedImageUrl = await prepareReferenceImage(rawSharedUrl);
 
   // Prompt resolution
   let prompt = "Professional product photography, studio lighting, high quality";
   if (detailType && DETAIL_PROMPTS[detailType]) {
     prompt = DETAIL_PROMPTS[detailType];
     if (baseStyle) {
-      // Match the main image's lighting, color palette, and overall aesthetic — lock across the entire set
-      const seedSuffix = seed ? `_{seed=${seed}}` : "";
-      prompt = `${prompt}. Use this lighting and color style as a loose guide: ${baseStyle}.${seedSuffix} Vary the camera angle, product distance, and composition between frames. Same product, same mood, different perspective each time.`;
+      // Match the main image's lighting, color palette, and overall aesthetic — lock across the entire set.
+      // Seed is passed to the provider as a real param (see createPrediction); the prompt carries the
+      // style guide text so non-seed-aware engines still get consistency hints.
+      prompt = `${prompt}. Use this lighting and color style as a loose guide: ${baseStyle}. Vary the camera angle, product distance, and composition between frames. Same product, same mood, different perspective each time.`;
     }
     // Text overlay is handled client-side via Canvas — not requested in prompt
   } else if (customPrompt) {
@@ -280,7 +287,6 @@ export async function POST(req: Request) {
   // Model version mapping for alternative engines (all routed through Replicate)
   const ENGINE_MODELS: Record<string, string> = {
     flux: "black-forest-labs/flux-2-pro",
-    flux2: "black-forest-labs/flux-2-pro",
     sdxl: "stability-ai/sdxl",
     playground: "playgroundai/playground-v2.5-1024px-aesthetic",
   };
@@ -374,7 +380,7 @@ export async function POST(req: Request) {
       let finalUrl = imageUrl;
       let finalKey = imageUrl;
       let fileSize = 0;
-      let mimeType = "image/png";
+      const mimeType = "image/png";
       if (hasS3Config() && imageUrl) {
         try {
           const imageBuf = await fetchImageBuffer(imageUrl);
@@ -457,6 +463,7 @@ export async function POST(req: Request) {
         width: genWidth,
         height: genHeight,
         modelVersion,
+        seed,
       });
 
       await db.task.update({
@@ -473,13 +480,22 @@ export async function POST(req: Request) {
         },
       });
 
-      // Poll until complete
-      let imageResult = await provider.getPrediction(prediction.predictionId);
-      let polls = 0;
-      while (imageResult.status === "processing" && polls < 30) {
-        await new Promise((r) => setTimeout(r, 1000));
+      // Synchronous providers (flux-kontext-pro, gpt-image) return outputs immediately in
+      // createPrediction. Async providers (Replicate flux-2-pro) return processing and need
+      // to be polled via getPrediction. Detect which case we're in to avoid a dead poll loop.
+      let imageResult;
+      if (prediction.outputs && prediction.outputs.length > 0) {
+        imageResult = { status: prediction.status as "succeeded" | "failed", outputs: prediction.outputs, error: prediction.error };
+      } else if (prediction.status === "failed") {
+        imageResult = { status: "failed" as const, outputs: [], error: prediction.error };
+      } else {
         imageResult = await provider.getPrediction(prediction.predictionId);
-        polls++;
+        let polls = 0;
+        while (imageResult.status === "processing" && polls < 30) {
+          await new Promise((r) => setTimeout(r, 1000));
+          imageResult = await provider.getPrediction(prediction.predictionId);
+          polls++;
+        }
       }
 
       if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
