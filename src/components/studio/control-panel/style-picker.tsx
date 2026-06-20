@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Square, Image, User, Gem, Sun, Home, Coffee, Grid3X3, Layout } from "lucide-react";
+import { Square, Image, User, Gem, Sun, Home, Coffee, Grid3X3 } from "lucide-react";
 import { useT } from "@/components/i18n-provider";
 
 interface StyleDef {
@@ -51,10 +51,10 @@ const STYLES: StyleDef[] = [
     prompt: "Dramatic cinematic product photography on deep charcoal or black background. Single hard key light from one side creates bold chiaroscuro — deep shadows with crisp edge definition. Product emerges from darkness with sculptural presence. Subtle rim light separates product edge from black void. Rich blacks, controlled highlights, intense contrast ratio. Premium independent brand aesthetic (Aesop, Le Labo, Byredo style). Ultra-premium feel, mysterious and exclusive. 4K",
     promptZh: "戏剧性电影级产品摄影，深炭黑或纯黑背景。单侧硬主光营造强烈明暗对比——深邃阴影与清晰边缘。产品从黑暗中浮现如雕塑般立体。微妙轮廓光勾勒产品边缘。浓郁黑色、精准高光、强烈对比度。高端独立品牌美学（Aesop、Le Labo、Byredo风格）。极致高级感，神秘而独特。4K" },
 
-  // 9. Flat lay — overhead composition, popular for accessories, beauty, food, fashion
-  { key: "flatlay", zh: "平铺图", en: "Flat Lay", icon: Layout,
-    prompt: "Overhead flat lay product photography shot from directly above. Product as the centerpiece, surrounded by carefully curated complementary props (relevant accessories, natural elements, color-coordinated items). Clean neutral surface beneath — light wood, linen, or matte white. Soft even lighting from all sides, no harsh shadows. Organized yet organic composition with intentional negative space. Editorial catalog aesthetic, 8K, top-down perspective, Pinterest-worthy styling",
-    promptZh: "俯拍平铺产品摄影，完全垂直向下拍摄。产品为中心，周围精心搭配辅助道具（相关配件、自然元素、同色系物品）。底部：浅木纹、亚麻布或哑光白表面。均匀柔光四面打光，无硬阴影。有序不失自然的构图，刻意留白。编辑目录美学，8K，俯视视角，Pinterest级别" },
+  // 9. Cyberpunk — massive appeal for electronics, gadgets, sneakers, gaming gear, streetwear
+  { key: "cyberpunk", zh: "赛博朋克", en: "Cyberpunk", icon: Coffee,
+    prompt: "Cyberpunk aesthetic product photography. Product dramatically lit with neon cyan and magenta rim lighting from two sides. Dark atmospheric background with subtle grid lines or rain-slicked surfaces. Volumetric light rays cutting through mist. Blade Runner 2049 / Cyberpunk 2077 atmosphere. The product looks like high-tech gear from the future. Cinematic, ultra-detailed, intense color contrast between warm product tones and cool neon environment. Suitable for electronics, sneakers, gaming accessories, streetwear, tech gadgets. 4K, sci-fi editorial quality",
+    promptZh: "赛博朋克美学产品摄影。产品两侧霓虹青紫边缘光戏剧性打光。深色氛围背景带微网格线或雨水湿润表面。体积光穿透薄雾。银翼杀手2049 / 赛博朋克2077氛围。产品如未来高科技装备。电影感，超精细，暖色产品与冷色霓虹环境形成强烈对比。适合电子产品、潮鞋、游戏配件、街头服饰、科技小物。4K，科幻编辑级品质" },
 
   // 10. Infographic — feature callout images, proven 15-25% conversion lift on Amazon
   { key: "infographic", zh: "信息图", en: "Infographic", icon: Image,
