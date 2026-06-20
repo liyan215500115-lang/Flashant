@@ -369,12 +369,13 @@ export async function POST(req: Request) {
       }
       // If we got here with a result, we already returned above
     } catch (err) {
-      // Gemini sync path failed — return the error instead of silently falling back
-      return NextResponse.json(
-        { error: "gemini_failed", message: err instanceof Error ? err.message : "Gemini generation failed" },
-        { status: 500 }
-      );
+      // Gemini sync path failed — silently fall back to Flux
+      console.warn(`Gemini engine failed (${err instanceof Error ? err.message : "unknown"}), falling back to Flux`);
     }
+    // Fall back to Flux
+    const fluxProvider = getProvider("flux");
+    provider = fluxProvider;
+    actualEngine = "flux";
   }
 
   if (actualEngine === "openai") {
