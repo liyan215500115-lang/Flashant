@@ -120,9 +120,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // ── Batch detail types: generate one image per type in a single request ──
+  // ── Batch detail types: fire all predictions in parallel, poll concurrently ──
   if (detailTypes && detailTypes.length > 0) {
-    const generated: Array<{ key: string; url: string; label: string }> = [];
     const productImage = await db.productImage.findUnique({
       where: { id: productImageId },
     });
@@ -141,36 +140,60 @@ export async function POST(req: Request) {
       data: { status: "GENERATING", title: projectTitle || undefined },
     });
 
-    for (const dt of detailTypes as Array<{ key: string; prompt: string }>) {
-      try {
+    // Fire all predictions in parallel
+    const detailTypesArray = detailTypes as Array<{ key: string; prompt: string }>;
+    const predictions = await Promise.all(
+      detailTypesArray.map(async (dt) => {
         const detailPrompt = DETAIL_PROMPTS[dt.key] ?? dt.prompt;
-        const prediction = await fluxProvider.createPrediction({
-          prompt: detailPrompt,
-          productImageUrl: sharedImageUrl,
-          numOutputs: 1,
-          width: 1024,
-          height: 1024,
-        });
-        let imageResult = await fluxProvider.getPrediction(prediction.predictionId);
+        try {
+          const p = await fluxProvider.createPrediction({
+            prompt: detailPrompt,
+            productImageUrl: sharedImageUrl,
+            numOutputs: 1,
+            width: 1024,
+            height: 1024,
+          });
+          return { key: dt.key, predictionId: p.predictionId, prompt: detailPrompt };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    // Poll all predictions concurrently (shorter timeout — 8 polls × 1.5s = 12s per type)
+    const MAX_POLLS = 8;
+    const pollOne = async (key: string, predictionId: string, prompt: string) => {
+      try {
+        let result = await fluxProvider.getPrediction(predictionId);
         let polls = 0;
-        while (imageResult.status === "processing" && polls < 30) {
-          await new Promise((r) => setTimeout(r, 1000));
-          imageResult = await fluxProvider.getPrediction(prediction.predictionId);
+        while (result.status === "processing" && polls < MAX_POLLS) {
+          await new Promise((r) => setTimeout(r, 1500));
+          result = await fluxProvider.getPrediction(predictionId);
           polls++;
         }
-        if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
-          const imgUrl = imageResult.outputs[0].url;
-          // Save to DB for project history
+        if (result.status === "succeeded" && result.outputs.length > 0) {
+          const imgUrl = result.outputs[0].url;
           await db.generatedImage.create({
             data: {
               imageProjectId, productImageId,
-              s3Key: imgUrl, url: imgUrl, promptUsed: detailPrompt,
+              s3Key: imgUrl, url: imgUrl, promptUsed: prompt,
               aiProvider: "flux", status: "SUCCEEDED", completedAt: new Date(),
             },
           });
-          generated.push({ key: dt.key, url: imgUrl, label: dt.key });
+          return { key, url: imgUrl, label: key };
         }
-      } catch { /* skip this type */ }
+      } catch { /* skip */ }
+      return null;
+    };
+
+    const generated: Array<{ key: string; url: string; label: string }> = [];
+    const pollResults = await Promise.all(
+      predictions
+        .filter((p): p is NonNullable<typeof p> => p !== null)
+        .map((p) => pollOne(p.key, p.predictionId, p.prompt))
+    );
+    for (const r of pollResults) {
+      if (r) generated.push(r);
     }
 
     // Mark project as generated
