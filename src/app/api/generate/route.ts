@@ -45,22 +45,22 @@ export async function POST(req: Request) {
   const INFO_TYPES = new Set(["selling_points", "material", "size", "craft", "compare"]);
 
   const DETAIL_PROMPTS: Record<string, string> = {
-    // Pure visual prompts — no "For electronics/beauty" meta-instructions that models render as text
-    selling_points: "Product centered on pure white background #FFFFFF, soft diffused studio lighting 5500K, no text, no labels, no watermarks, clean minimal e-commerce packshot, abundant negative space, 8K",
-    material: "Extreme macro close-up product photography on pure white background, 100mm macro lens f/2.8, texture and material grain crisply visible, shallow depth of field, soft diffused ring light, no text, 8K",
-    size: "Product on pure white background next to a standard soda can for scale reference, both equally sharp at f/8, clean studio lighting 5500K, no text overlay, 4K",
-    craft: "Product on clean white surface, hands-free still-life showing fine craftsmanship details, soft directional light raking at 30 degrees to reveal surface texture, no text, no people, 4K",
-    compare: "Split-screen product comparison, two views side by side on pure white background, identical lighting scale and angle, clean vertical dividing line, equally sharp at f/11, no text, 8K",
+    // Keep prompts purely visual — no negative instructions that confuse img models
+    selling_points: "Product centered on pure white background, soft diffused studio lighting 5500K, clean minimal e-commerce packshot, generous empty space around product, 8K sharp focus",
+    material: "Extreme macro close-up product photography on white background, 100mm macro lens f/2.8, crisp texture detail, shallow depth of field, soft diffused ring light, premium detail quality, 8K",
+    size: "Product on white background next to a standard soda can for scale reference, both equally sharp at f/8, clean studio lighting 5500K, professional size reference photography, 4K",
+    craft: "Product on clean white surface, still-life composition showing fine workmanship details, soft directional light raking at 30 degrees, revealing subtle surface texture, clean professional photography, 4K",
+    compare: "Split-screen comparison, two views side by side on white background, identical lighting and scale, clean vertical dividing line centered, equally sharp at f/11, professional layout, 8K",
 
-    lifestyle: "Product in a bright modern interior with natural window light, soft daylight 5600K, 50mm lens f/2.2, product sharp foreground, background softly blurred, editorial magazine quality, warm and aspirational, 4K",
-    scene_atmosphere: "Dramatic atmospheric product photography, product as lone hero, directional lighting, 85mm lens f/1.8 ultra-shallow depth of field, product pin-sharp, cinematic mood, 4K",
-    in_use: "Product being naturally used or worn by a person, candid mid-action moment, soft daylight 5500K, 50mm lens f/2.0, focus on product, editorial lifestyle quality, warm and relatable, 4K",
-    multi_angle: "Multi-angle product photography composited, front 45-degree side rear and top-down views, pure white background, consistent lighting 5500K, identical scale, clean grid layout, 8K",
-    detail: "Extreme macro close-up premium craftsmanship, 100mm macro lens f/3.2, very shallow depth of field isolating one exquisite detail, soft diffused light, no harsh reflections, 8K",
-    color_variants: "Product color variants in clean grid layout on pure white background, consistent lighting and angle across variants, equal spacing identical scale, professional catalog, 8K",
-    flatlay: "Overhead flat lay product photography from directly above, product surrounded by curated accessories, clean neutral surface, soft even lighting, organized composition with negative space, 8K",
-    brand_story: "Premium unboxing photography, packaging box tissue paper product in insert accessories neatly arranged, warm window light 5000K, overhead or 45-degree angle, editorial e-commerce quality, 4K",
-    gift_accessory: "Main product with all included accessories neatly arranged on white surface, soft even studio lighting, all items equally sharp at f/11, clean visual inventory, no text labels, 8K",
+    lifestyle: "Product in a bright modern interior with natural window light, soft daylight 5600K, 50mm lens f/2.2, product sharp in foreground, background softly blurred, editorial magazine quality, warm atmosphere, 4K",
+    scene_atmosphere: "Dramatic product photography, product as lone hero, directional lighting, 85mm lens f/1.8 ultra-shallow depth of field, product pin-sharp, cinematic moody atmosphere, 4K",
+    in_use: "Product being used by a person, candid mid-action moment, soft daylight 5500K, 50mm lens f/2.0, focus on product, editorial lifestyle photography, warm tones, 4K",
+    multi_angle: "Multi-angle product photography composited, front view 45-degree side rear and top-down views, white background, consistent lighting, identical scale across all views, clean grid layout, 8K",
+    detail: "Extreme macro close-up of premium quality details, 100mm macro lens f/3.2, very shallow depth of field, soft diffused light, crisp texture visible, 8K",
+    color_variants: "Product color variants in clean grid layout on white background, consistent lighting and angle across all variants, equal spacing, professional catalog presentation, 8K",
+    flatlay: "Overhead flat lay product photography from directly above, product surrounded by complementary accessories, clean neutral surface, soft even lighting, editorial catalog style, 8K",
+    brand_story: "Premium unboxing scene, packaging box tissue paper product in insert accessories arranged, warm window light 5000K, overhead angle, editorial quality, 4K",
+    gift_accessory: "Main product with all included accessories neatly arranged on white surface, soft even studio lighting, all items equally sharp at f/11, clean visual inventory, 8K",
   };
 
   if (!imageProjectId || !productImageId) {
@@ -120,7 +120,13 @@ export async function POST(req: Request) {
     const sharedImageUrl = isR2Image
       ? await getSignedGetUrl(productImage.s3Key, 3600).catch(() => productImage.originalUrl)
       : productImage.originalUrl;
-    const fluxProvider = getProvider("flux");
+    // Prefer seedream for img2img (via laozhang.ai), fallback to FLUX
+    let batchProvider;
+    try {
+      batchProvider = getProvider("gpt-image");
+    } catch {
+      batchProvider = getProvider("flux");
+    }
 
     // Update project status
     await db.imageProject.update({
@@ -128,59 +134,39 @@ export async function POST(req: Request) {
       data: { status: "GENERATING", title: projectTitle || undefined },
     });
 
-    // Fire all predictions in parallel
+    // Fire all predictions in parallel — seedream returns outputs directly (synchronous)
     const detailTypesArray = detailTypes as Array<{ key: string; prompt: string }>;
+    const generated: Array<{ key: string; url: string; label: string }> = [];
+
     const predictions = await Promise.all(
       detailTypesArray.map(async (dt) => {
         const detailPrompt = DETAIL_PROMPTS[dt.key] ?? dt.prompt;
         try {
-          const p = await fluxProvider.createPrediction({
+          const p = await batchProvider.createPrediction({
             prompt: detailPrompt,
             productImageUrl: sharedImageUrl,
             numOutputs: 1,
             width: 1024,
             height: 1024,
           });
-          return { key: dt.key, predictionId: p.predictionId, prompt: detailPrompt };
-        } catch {
-          return null;
-        }
+          // Seedream returns outputs synchronously in the prediction result
+          if ((p as any).outputs?.[0]?.url) {
+            const imgUrl = (p as any).outputs[0].url;
+            await db.generatedImage.create({
+              data: {
+                imageProjectId, productImageId,
+                s3Key: imgUrl, url: imgUrl, promptUsed: detailPrompt,
+                aiProvider: "seedream", status: "SUCCEEDED", completedAt: new Date(),
+              },
+            });
+            return { key: dt.key, url: imgUrl, label: dt.key };
+          }
+        } catch { /* skip */ }
+        return null;
       })
     );
 
-    // Poll all predictions concurrently (shorter timeout — 8 polls × 1.5s = 12s per type)
-    const MAX_POLLS = 8;
-    const pollOne = async (key: string, predictionId: string, prompt: string) => {
-      try {
-        let result = await fluxProvider.getPrediction(predictionId);
-        let polls = 0;
-        while (result.status === "processing" && polls < MAX_POLLS) {
-          await new Promise((r) => setTimeout(r, 1500));
-          result = await fluxProvider.getPrediction(predictionId);
-          polls++;
-        }
-        if (result.status === "succeeded" && result.outputs.length > 0) {
-          const imgUrl = result.outputs[0].url;
-          await db.generatedImage.create({
-            data: {
-              imageProjectId, productImageId,
-              s3Key: imgUrl, url: imgUrl, promptUsed: prompt,
-              aiProvider: "flux", status: "SUCCEEDED", completedAt: new Date(),
-            },
-          });
-          return { key, url: imgUrl, label: key };
-        }
-      } catch { /* skip */ }
-      return null;
-    };
-
-    const generated: Array<{ key: string; url: string; label: string }> = [];
-    const pollResults = await Promise.all(
-      predictions
-        .filter((p): p is NonNullable<typeof p> => p !== null)
-        .map((p) => pollOne(p.key, p.predictionId, p.prompt))
-    );
-    for (const r of pollResults) {
+    for (const r of predictions) {
       if (r) generated.push(r);
     }
 
