@@ -495,7 +495,7 @@
     "unlimited": "无限",
     "historyLabel": "历史生成 ({count})",
     "engineLabel": "AI 算力引擎",
-    "engineFlux": "FLUX Kontext（推荐）",
+    "engineFlux": "FLUX.2 Pro（推荐）",
     "engineGptImage": "GPT Image 2 · 文生图 ($0.03)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL（快速模式）",

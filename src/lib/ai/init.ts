@@ -12,34 +12,32 @@ export function initProviders(): void {
   if (initialized) return;
   initialized = true;
 
-  // ── Primary img2img engine: flux-kontext-pro via laozhang ──
-  // $0.03/image flat, purpose-built for image editing, genuinely uses the input image.
-  // Cheaper than flux-2-pro img2img (~$0.045 with a 1MP ref) and the better fit for the
-  // core "upload product photo → generate product image" flow.
-  let kontextRegistered = false;
-  if (process.env.NANO_BANANA_API_KEY) {
-    try {
-      registerProvider("flux", createLaozhangKontextProvider());
-      kontextRegistered = true;
-    } catch {
-      // Provider construction failed — fall through to flux-2-pro as default "flux"
-    }
-  }
-
-  // ── Backup img2img engine: flux-2-pro via Replicate ──
-  // Bills per input + output megapixel, so always pair with prepareReferenceImage() to
-  // compress inputs. Registered under "flux-pro" for direct selection, and ALSO under
-  // "flux" when kontext is unavailable (so the app always has a default provider).
+  // ── Primary img2img engine: flux-2-pro via Replicate ──
+  // Replicate direct (no middleman), stable, and stronger at style transfer than kontext.
+  // Bills per input + output megapixel (~$0.045/img2img with a 1MP ref), so always pair
+  // with prepareReferenceImage() to compress inputs. Registered under "flux" (default) and
+  // "flux-pro" (kept for backward compat with old recipe data in users' localStorage).
   if (process.env.REPLICATE_API_KEY) {
     try {
       const flux2Pro = createReplicateProvider();
+      registerProvider("flux", flux2Pro);
       registerProvider("flux-pro", flux2Pro);
-      if (!kontextRegistered) {
-        registerProvider("flux", flux2Pro);
-      }
       // SDXL / Playground — disabled until model version is verified
       // registerProvider("sdxl", createReplicateProvider({ modelVersion: "stability-ai/sdxl" }));
       // registerProvider("playground", createReplicateProvider({ modelVersion: "playgroundai/playground-v2.5-1024px-aesthetic" }));
+    } catch {
+      // Provider not available — skip registration
+    }
+  }
+
+  // ── Hidden backup img2img engine: flux-kontext-pro via laozhang ──
+  // $0.03/image flat. NOT exposed in the UI — it is weaker at style transfer than flux-2-pro
+  // and laozhang's relay has been unstable (intermittent convert_request_failed / 500).
+  // Registered under "flux-kontext" so code can reach it as a fallback if Replicate is down,
+  // but users never select it directly. Re-evaluate exposing it once laozhang stabilizes.
+  if (process.env.NANO_BANANA_API_KEY) {
+    try {
+      registerProvider("flux-kontext", createLaozhangKontextProvider());
     } catch {
       // Provider not available — skip registration
     }

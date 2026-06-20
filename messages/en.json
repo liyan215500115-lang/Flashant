@@ -495,7 +495,7 @@
     "unlimited": "Unlimited",
     "historyLabel": "History ({count})",
     "engineLabel": "AI Engine",
-    "engineFlux": "FLUX Kontext (Recommended)",
+    "engineFlux": "FLUX.2 Pro (Recommended)",
     "engineGptImage": "GPT Image 2 · Text-only ($0.03)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL (Fast)",
