@@ -9,13 +9,33 @@ import { toast } from "sonner";
 import { useT } from "@/components/i18n-provider";
 
 const DETAIL_TYPES = [
-  { key: "selling_points", label: "Core Selling Points", labelZh: "核心卖点图", prompt: "Product key selling points infographic style, highlighted features with clean callout text, white background, e-commerce product page section, professional layout, 8K" },
-  { key: "detail", label: "Detail Close-up", labelZh: "商品细节图", prompt: "Extreme macro close-up product detail shot, texture and material clearly visible, premium product photography, shallow depth of field, 8K" },
-  { key: "size", label: "Size Guide", labelZh: "尺寸/容量图", prompt: "Product size comparison with measurement reference, dimensional guide overlay, clean studio lighting, informative layout, scale reference" },
-  { key: "compare", label: "Before/After", labelZh: "效果对比图", prompt: "Before and after comparison, split screen layout, product transformation showcase, side by side, professional presentation" },
-  { key: "craft", label: "Craftsmanship", labelZh: "工艺制作图", prompt: "Artisan craftsmanship process scene, hands carefully making the product, workshop environment, warm natural lighting, authentic handmade feel" },
-  { key: "series", label: "Series Collection", labelZh: "系列展示图", prompt: "Product family lineup, multiple color variants or styles displayed together, organized grid layout, collection showcase, premium brand presentation" },
-  { key: "scene", label: "Lifestyle Scene", labelZh: "场景使用图", prompt: "Product in real-life use scenario, lifestyle photography, natural environment, candid authentic moment, magazine quality" },
+  // #1 in every Shopify/Amazon guide: clean hero shot that fills 85%+ frame
+  { key: "hero", label: "Hero Shot", labelZh: "主图（白底）",
+    prompt: "Professional e-commerce hero product photography. Product centered on pure white background (RGB 255,255,255), filling 85% of frame. Soft even studio lighting from two 45-degree angles, no harsh shadows, subtle ground contact shadow only. Product front-facing, color-accurate. Commercial packshot standard. 8K, razor-sharp detail, no props, no text, no watermarks" },
+
+  // Detail close-up — builds trust through transparency, shows quality
+  { key: "detail", label: "Detail Close-up", labelZh: "细节特写",
+    prompt: "Extreme macro close-up product photography. Focus on one key detail area: texture, stitching, material grain, logo placement, mechanism, or finish quality. Very shallow depth of field (f/2.8), product fills entire frame. Soft diffused lighting reveals fine surface detail without burning highlights. Premium quality inspection grade. Cracked leather grain, fabric weave, metal machining marks — show what the customer can't touch. 8K, 1:1 macro lens style" },
+
+  // Size/scale — eliminates "is this too big/small?" hesitation, the #1 reason for returns
+  { key: "size", label: "Size Reference", labelZh: "尺寸参考",
+    prompt: "Product size reference photography for e-commerce. Product next to a universally recognized scale object (coin, standard soda can, ruler, or human hand gently holding). Clean white studio background. Both product and scale object in same focal plane, equally sharp. Helps customer instantly understand physical dimensions. Informative but visually clean — not cluttered. Professional catalog style, 4K, well-lit, no text overlay needed" },
+
+  // Comparison — side-by-side, proven effective in Amazon A+ Content
+  { key: "compare", label: "Comparison", labelZh: "对比展示",
+    prompt: "Clean split-screen product comparison photography. Two products side by side in identical lighting and angle on white background. Shows different color variants, sizes, or before/after effect. Equal spacing, identical scale, same camera distance. Professional e-commerce comparison layout. Studio lighting consistent across both sides. 8K, sharp detail, commercial catalog quality. Suitable for Amazon comparison charts and Shopify variant displays" },
+
+  // Material/craft — shows "why it's worth the price", used by premium brands
+  { key: "craft", label: "Material & Craft", labelZh: "材质工艺",
+    prompt: "Premium product material and craftsmanship photography. Highlight the quality of materials and construction. Close-up shots of material texture (leather grain, fabric weave, wood grain, metal finish), edge details, stitching precision, hardware quality. Warm, directional soft lighting creates subtle shadows that reveal surface depth. Workshop or studio setting. Communicates durability, quality, and justifies premium pricing. Editorial quality, 4K, shallow depth of field on focal area" },
+
+  // Packaging/unboxing — shows what customer receives, proven to reduce post-purchase anxiety
+  { key: "packaging", label: "Packaging & Unboxing", labelZh: "包装开箱",
+    prompt: "Premium packaging and unboxing product photography. Show the complete unboxing experience: outer box, tissue paper, product nestled in insert, all included accessories, manuals, and extras neatly arranged. Warm, inviting lighting. Communicates care, quality, and gift-worthiness. Customer should feel excited to receive this package. Clean surface, organized layout, editorial e-commerce quality. 4K, bright and aspirational" },
+
+  // Lifestyle scene — emotional connection, the conversion booster
+  { key: "scene", label: "Lifestyle Scene", labelZh: "场景使用",
+    prompt: "Authentic lifestyle product photography in a real-world setting. Product naturally integrated into its intended environment. For electronics: on a clean desk with coffee and notebook. For home goods: styled in a bright living room. For fashion: worn outdoors in natural light. Candid feel, not overly staged. Soft natural lighting, warm undertones. Shallow depth of field — product sharp, background softly blurred. Magazine editorial quality, aspirational but relatable. 4K, photorealistic" },
 ];
 
 export default function DetailsPage() {
