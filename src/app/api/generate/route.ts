@@ -140,10 +140,6 @@ export async function POST(req: Request) {
       prompt = `${prompt}. Use this lighting and color style as a loose guide: ${baseStyle}.${seedSuffix} Vary the camera angle, product distance, and composition between frames. Same product, same mood, different perspective each time.`;
     }
     // Text overlay is handled client-side via Canvas — not requested in prompt
-    // Keep product and person faithful to reference image
-    if (referenceImageUrl) {
-      prompt = `${prompt}. Keep the product and any person visually identical to the reference image—same face, same build, same product appearance. Only change the pose, framing, or background context.`;
-    }
   } else if (customPrompt) {
     prompt = customPrompt;
   } else if (promptTemplateId) {
@@ -151,6 +147,11 @@ export async function POST(req: Request) {
       where: { id: promptTemplateId },
     });
     if (template) prompt = template.prompt;
+  }
+
+  // Keep product faithful to reference image (applies to ALL modes, not just detailType)
+  if (referenceImageUrl) {
+    prompt = `${prompt}. CRITICAL: Keep the product and any person visually IDENTICAL to the reference image — same shape, same color, same materials, same details. Only change the background, scene, pose, framing, or camera angle. Do NOT substitute the product with a different one.`;
   }
 
   // Brand preset injection
@@ -222,12 +223,13 @@ export async function POST(req: Request) {
     data: { status: "GENERATING", title: projectTitle || undefined },
   });
 
-  // Gemini / synchronous providers — fallback to Flux on failure
-  if (engineType === "gemini" || engineType === "banana") {
+  // Synchronous image providers (Nano Banana 2, GPT Image 2 via laozhang.ai) — fallback to Flux on failure
+  if (engineType === "gemini" || engineType === "banana" || engineType === "gpt-image") {
     try {
       const result = await provider.createPrediction({
         prompt,
         productImageUrl: sharedImageUrl,
+        referenceImageUrl: referenceImageUrl ?? undefined,
         numOutputs: 1,
         width: genWidth,
         height: genHeight,

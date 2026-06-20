@@ -24,13 +24,24 @@ export function createGeminiProvider(config?: Partial<GeminiConfig>): ImageProvi
       const base64Image = Buffer.from(imgBuffer).toString("base64");
       const mimeType = imgResponse.headers.get("content-type") ?? "image/png";
 
+      // Prepend product fidelity instruction — critical for img2img to keep the product identical
+      const fidelityPrefix = [
+        "CRITICAL: The image below is the product reference.",
+        "Generate a new image where the product itself is visually IDENTICAL to the reference — same shape, same color, same materials, same details, same proportions.",
+        "You may change ONLY: the background, scene, lighting, angle/perspective (slightly), and surrounding context.",
+        "If the reference shows a specific object, the output MUST show exactly that object, not a similar substitute.",
+        "Do NOT alter the product's identity.",
+      ].join(" ");
+
+      const enhancedPrompt = `${fidelityPrefix}\n\nOutput instructions: ${input.prompt}`;
+
       const requestBody = {
         model,
         messages: [
           {
             role: "user",
             content: [
-              { type: "text", text: input.prompt },
+              { type: "text", text: enhancedPrompt },
               { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } },
             ],
           },
