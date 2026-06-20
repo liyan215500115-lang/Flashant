@@ -20,27 +20,21 @@ export function createGeminiProvider(config?: Partial<GeminiConfig>): ImageProvi
     name: "gemini",
 
     async createPrediction(input: ImageGenerationInput) {
-      // Prepend product fidelity instruction — critical for img2img to keep the product identical
-      const fidelityPrefix = [
-        "CRITICAL: The image below is the product reference.",
-        "Generate a new image where the product itself is visually IDENTICAL to the reference — same shape, same color, same materials, same details, same proportions.",
-        "You may change ONLY: the background, scene, lighting, angle/perspective (slightly), and surrounding context.",
-        "If the reference shows a specific object, the output MUST show exactly that object, not a similar substitute.",
-        "Do NOT alter the product's identity.",
-      ].join(" ");
-
-      const enhancedPrompt = `${fidelityPrefix}\n\nOutput instructions: ${input.prompt}`;
+      // Seedream does img2img via the `image` parameter — keep the prompt scene-focused
+      // The reference image handles product identity; the prompt should only describe the desired background/scene/lighting
+      const prompt = input.prompt;
 
       // Build request body for images/generations endpoint
       const requestBody: Record<string, unknown> = {
         model,
-        prompt: enhancedPrompt,
-        n: input.numOutputs ?? 1,
+        prompt,
+        n: 1,
         size: `${input.width ?? 1024}x${input.height ?? 1024}`,
         response_format: "b64_json",
+        watermark: false,
       };
 
-      // Pass product image as reference when available (model-dependent support)
+      // Pass product image as reference for img2img
       if (input.productImageUrl) {
         const imgResponse = await fetch(input.productImageUrl);
         const imgBuffer = await imgResponse.arrayBuffer();
