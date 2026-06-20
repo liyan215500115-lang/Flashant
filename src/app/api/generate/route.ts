@@ -120,12 +120,16 @@ export async function POST(req: Request) {
     const sharedImageUrl = isR2Image
       ? await getSignedGetUrl(productImage.s3Key, 3600).catch(() => productImage.originalUrl)
       : productImage.originalUrl;
-    // Prefer seedream for img2img (via laozhang.ai), fallback to FLUX
+    // Prefer FLUX for img2img support (input_images parameter), fallback to any available provider
     let batchProvider;
     try {
-      batchProvider = getProvider("gpt-image");
-    } catch {
       batchProvider = getProvider("flux");
+    } catch {
+      try {
+        batchProvider = getProvider("gpt-image");
+      } catch {
+        return NextResponse.json({ error: "No AI engine available" }, { status: 400 });
+      }
     }
 
     // Update project status
@@ -134,9 +138,10 @@ export async function POST(req: Request) {
       data: { status: "GENERATING", title: projectTitle || undefined },
     });
 
-    // Fire all predictions in parallel — seedream returns outputs directly (synchronous)
+    // Fire predictions in parallel, poll concurrently
     const detailTypesArray = detailTypes as Array<{ key: string; prompt: string }>;
-    const generated: Array<{ key: string; url: string; label: string }> = [];
+    const POLL_MS = 2000;
+    const MAX_POLLS = 15;
 
     const predictions = await Promise.all(
       detailTypesArray.map(async (dt) => {
@@ -149,24 +154,42 @@ export async function POST(req: Request) {
             width: 1024,
             height: 1024,
           });
-          // Seedream returns outputs synchronously in the prediction result
-          if ((p as any).outputs?.[0]?.url) {
-            const imgUrl = (p as any).outputs[0].url;
-            await db.generatedImage.create({
-              data: {
-                imageProjectId, productImageId,
-                s3Key: imgUrl, url: imgUrl, promptUsed: detailPrompt,
-                aiProvider: "seedream", status: "SUCCEEDED", completedAt: new Date(),
-              },
-            });
-            return { key: dt.key, url: imgUrl, label: dt.key };
-          }
-        } catch { /* skip */ }
-        return null;
+          return { key: dt.key, predictionId: p.predictionId, prompt: detailPrompt };
+        } catch {
+          return null;
+        }
       })
     );
 
-    for (const r of predictions) {
+    const generated: Array<{ key: string; url: string; label: string }> = [];
+    const results = await Promise.all(
+      predictions
+        .filter((p): p is NonNullable<typeof p> => p !== null)
+        .map(async (p) => {
+          try {
+            let result = await batchProvider.getPrediction(p.predictionId);
+            let polls = 0;
+            while (result.status === "processing" && polls < MAX_POLLS) {
+              await new Promise((r) => setTimeout(r, POLL_MS));
+              result = await batchProvider.getPrediction(p.predictionId);
+              polls++;
+            }
+            if (result.status === "succeeded" && result.outputs.length > 0) {
+              const imgUrl = result.outputs[0].url;
+              await db.generatedImage.create({
+                data: {
+                  imageProjectId, productImageId,
+                  s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
+                  aiProvider: "flux", status: "SUCCEEDED", completedAt: new Date(),
+                },
+              });
+              return { key: p.key, url: imgUrl, label: p.key };
+            }
+          } catch { /* skip */ }
+          return null;
+        })
+    );
+    for (const r of results) {
       if (r) generated.push(r);
     }
 
@@ -256,8 +279,8 @@ export async function POST(req: Request) {
 
   // Model version mapping for alternative engines (all routed through Replicate)
   const ENGINE_MODELS: Record<string, string> = {
-    flux: "black-forest-labs/flux-2-pro",
-    flux2: "black-forest-labs/flux-2-pro",
+    flux: "black-forest-labs/flux-schnell",
+    flux2: "black-forest-labs/flux-schnell",
     sdxl: "stability-ai/sdxl",
     playground: "playgroundai/playground-v2.5-1024px-aesthetic",
   };

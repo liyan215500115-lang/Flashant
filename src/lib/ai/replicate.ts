@@ -18,7 +18,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
   const modelVersion =
     config?.modelVersion ??
     process.env.REPLICATE_MODEL_VERSION ??
-    "black-forest-labs/flux-2-pro";
+    "black-forest-labs/flux-schnell";
   const webhookUrl = config?.webhookUrl ?? process.env.REPLICATE_WEBHOOK_URL;
   const timeoutMs = config?.timeoutMs ?? 60_000;
   const baseUrl = "https://api.replicate.com/v1";
