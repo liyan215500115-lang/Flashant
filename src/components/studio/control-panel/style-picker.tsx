@@ -104,9 +104,10 @@ interface StylePickerProps {
   value: string | null;
   onChange: (key: string, prompt: string) => void;
   onReferenceImage?: (url: string | null) => void;
+  onReferenceImageUploaded?: () => void;
 }
 
-export function StylePicker({ value, onChange, onReferenceImage }: StylePickerProps) {
+export function StylePicker({ value, onChange, onReferenceImage, onReferenceImageUploaded }: StylePickerProps) {
   const { t, locale } = useT();
   const isZh = locale === "zh";
   const [refUrl, setRefUrl] = useState<string | null>(null);
@@ -123,6 +124,7 @@ export function StylePicker({ value, onChange, onReferenceImage }: StylePickerPr
     const url = URL.createObjectURL(file);
     setRefUrl(url);
     onReferenceImage?.(url);
+    onReferenceImageUploaded?.(); // notify parent to auto-switch to FLUX for img2img
     e.target.value = "";
   }
 

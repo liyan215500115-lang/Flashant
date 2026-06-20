@@ -301,6 +301,7 @@ export default function StudioPage() {
               onBrandPresetChange={setBrandPresetId}
               onStyleChange={(key, prompt) => { setActiveStyle(key); setPrompt(prompt); }}
               onStyleReferenceChange={setStyleReferenceUrl}
+              onStyleReferenceUploaded={() => setEngineType("flux")}
               onGenerate={handleGenerate}
             />
           )}

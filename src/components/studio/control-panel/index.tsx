@@ -29,6 +29,7 @@ interface StudioControlPanelProps {
   onBrandPresetChange: (presetId: string | null) => void;
   onStyleChange: (key: string, prompt: string) => void;
   onStyleReferenceChange?: (url: string | null) => void;
+  onStyleReferenceUploaded?: () => void;
   onGenerate: () => void;
 }
 
@@ -37,7 +38,7 @@ export function StudioControlPanel({
   engineType, targetPlatform, targetLanguage, brandPresetId, isGenerating,
   activeStyle, onImageChange, onAccessoryUpload, accessoryImages, onPromptChange,
   onProductNameChange, onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
-  onStyleChange, onStyleReferenceChange, onGenerate,
+  onStyleChange, onStyleReferenceChange, onStyleReferenceUploaded, onGenerate,
 }: StudioControlPanelProps) {
   const { t, locale } = useT();
 
@@ -101,7 +102,7 @@ export function StudioControlPanel({
         </div>
 
         {/* Style */}
-        <StylePicker value={activeStyle} onChange={onStyleChange} onReferenceImage={onStyleReferenceChange} />
+        <StylePicker value={activeStyle} onChange={onStyleChange} onReferenceImage={onStyleReferenceChange} onReferenceImageUploaded={onStyleReferenceUploaded} />
 
         {/* Prompt + AI enhancer */}
         <div className="flex flex-col gap-1.5">
