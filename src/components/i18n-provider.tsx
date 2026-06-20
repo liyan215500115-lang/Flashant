@@ -37,12 +37,7 @@ function buildT(messages: Messages) {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState("en");
-
-  useEffect(() => {
-    setLocale(readCookieLocale());
-  }, []);
-
+  const [locale, setLocale] = useState(() => readCookieLocale());
   const t = useMemo(() => buildT(locale === "zh" ? zh : en), [locale]);
 
   return (

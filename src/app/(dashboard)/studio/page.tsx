@@ -185,38 +185,37 @@ export default function StudioPage() {
     setIsGenerating(true);
     setGenerationError("");
 
-    const promptsToGenerate = [prompt];
-    // Generate 2 variants in parallel for faster perceived speed
-    if (prompt.trim()) promptsToGenerate.push(prompt + " (alternate angle)");
-
     try {
-      for (const p of promptsToGenerate) {
-        const res = await fetch("/api/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            imageProjectId: pid!,
-            productImageId: selectedImage.id,
-            prompt: p || prompt,
-            title: productName,
-            numOutputs: 1,
-            engineType,
-            targetPlatform,
-            targetLanguage,
-            brandPresetId: brandPresetId || undefined,
-            referenceImageUrl: styleReferenceUrl || undefined,
-          }),
-        });
-        const data = await res.json();
-        if (data.status === "succeeded" && data.url) {
-          const preview = { id: data.generatedImageId, url: data.url, promptUsed: p };
-          setLatestImage(preview);
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageProjectId: pid!,
+          productImageId: selectedImage.id,
+          prompt,
+          title: productName,
+          numOutputs: 2,
+          engineType,
+          targetPlatform,
+          targetLanguage,
+          brandPresetId: brandPresetId || undefined,
+          referenceImageUrl: styleReferenceUrl || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.status === "succeeded") {
+        const urls: Array<{ id: string; url: string }> = data.urls ?? (data.url ? [{ id: data.generatedImageId, url: data.url }] : []);
+        const newPreviews = urls.map((u, i) => ({ id: u.id, url: u.url, promptUsed: prompt }));
+        if (newPreviews.length > 0) {
+          setLatestImage(newPreviews[0]);
           setGenerationHistory((prev) => {
-            const next = [preview, ...prev.filter((h) => h.id !== preview.id)];
+            const ids = new Set(newPreviews.map((p) => p.id));
+            const next = [...newPreviews, ...prev.filter((h) => !ids.has(h.id))];
             return next.slice(0, 12);
           });
-          toast.success("Image generated");
-          fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
+        }
+        toast.success(`Generated ${newPreviews.length} image${newPreviews.length > 1 ? "s" : ""}`);
+        fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
       } else if (data.taskId) {
         pollTask(data.taskId);
         return; // polling manages its own setIsGenerating(false)
@@ -224,7 +223,6 @@ export default function StudioPage() {
         setGenerationError(data.message || data.error);
         toast.error(data.message || data.error);
       }
-    } // end for each style prompt
     } catch (e) {
       setGenerationError(e instanceof Error ? e.message : "Network failed");
     }

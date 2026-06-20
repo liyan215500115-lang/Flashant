@@ -40,27 +40,35 @@ export default function DetailsPage() {
     if (selectedPt.size === 0) return;
     setGenerating(true);
     const types = DETAIL_TYPES.filter((t) => selectedPt.has(t.key));
-    const newResults: typeof results = [];
 
-    for (const t of types) {
-      try {
-        const res = await fetch("/api/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            imageProjectId: projectId,
-            productImageId: productImages[0]?.id || "",
-            prompt: t.prompt,
-            numOutputs: 1,
-          }),
-        });
-        const data = await res.json();
-        if (data.url) newResults.push({ key: t.key, url: data.url, label: t.label });
-      } catch { /* skip */ }
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageProjectId: projectId,
+          productImageId: productImages[0]?.id || "",
+          detailTypes: types.map((t) => ({ key: t.key, prompt: t.prompt })),
+          numOutputs: 1,
+        }),
+      });
+      const data = await res.json();
+      const { generated } = data;
+      if (generated && Array.isArray(generated)) {
+        const newResults: typeof results = generated.map(
+          (g: { key: string; url: string; label: string }) => ({
+            key: g.key, url: g.url, label: g.label,
+          })
+        );
+        setResults((prev) => [...newResults, ...prev]);
+        toast.success(`${newResults.length} detail images ready`);
+      } else {
+        toast.error(data.error || "Generation failed");
+      }
+    } catch {
+      toast.error("Network failed");
     }
-    setResults((prev) => [...newResults, ...prev]);
     setGenerating(false);
-    toast.success(`${newResults.length} detail images ready`);
   }
 
   return (

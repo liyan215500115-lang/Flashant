@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     targetPlatform,
     title: projectTitle,
     detailType,
+    detailTypes, // batch detail types: [{ key, prompt }]
     baseStyle,
     customDesc,
     referenceImageUrl,
@@ -101,19 +102,85 @@ export async function POST(req: Request) {
     );
   }
 
-  // Double-click guard
-  const existing = await db.task.findFirst({
-    where: {
-      imageProjectId,
-      productImageId,
-      status: { in: ["PENDING", "PROCESSING"] },
-    },
-  });
-  if (existing) {
-    return NextResponse.json(
-      { error: "already_generating", taskId: existing.id },
-      { status: 409 }
-    );
+  // Double-click guard — skip when using batch detailTypes (multiple types intentionally)
+  if (!detailTypes || detailTypes.length === 0) {
+    const existing = await db.task.findFirst({
+      where: {
+        imageProjectId,
+        productImageId,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: "already_generating", taskId: existing.id },
+        { status: 409 }
+      );
+    }
+  }
+
+  // ── Batch detail types: generate one image per type in a single request ──
+  if (detailTypes && detailTypes.length > 0) {
+    const generated: Array<{ key: string; url: string; label: string }> = [];
+    const productImage = await db.productImage.findUnique({
+      where: { id: productImageId },
+    });
+    if (!productImage) {
+      return NextResponse.json({ error: "Product image not found" }, { status: 404 });
+    }
+    const isR2Image = productImage.s3Key && (productImage.s3Key.startsWith("products/") || productImage.s3Key.startsWith("generated/"));
+    const sharedImageUrl = isR2Image
+      ? await getSignedGetUrl(productImage.s3Key, 3600).catch(() => productImage.originalUrl)
+      : productImage.originalUrl;
+    const fluxProvider = getProvider("flux");
+
+    // Update project status
+    await db.imageProject.update({
+      where: { id: imageProjectId },
+      data: { status: "GENERATING", title: projectTitle || undefined },
+    });
+
+    for (const dt of detailTypes as Array<{ key: string; prompt: string }>) {
+      try {
+        const detailPrompt = DETAIL_PROMPTS[dt.key] ?? dt.prompt;
+        const prediction = await fluxProvider.createPrediction({
+          prompt: detailPrompt,
+          productImageUrl: sharedImageUrl,
+          numOutputs: 1,
+          width: 1024,
+          height: 1024,
+        });
+        let imageResult = await fluxProvider.getPrediction(prediction.predictionId);
+        let polls = 0;
+        while (imageResult.status === "processing" && polls < 30) {
+          await new Promise((r) => setTimeout(r, 1000));
+          imageResult = await fluxProvider.getPrediction(prediction.predictionId);
+          polls++;
+        }
+        if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
+          const imgUrl = imageResult.outputs[0].url;
+          // Save to DB for project history
+          await db.generatedImage.create({
+            data: {
+              imageProjectId, productImageId,
+              s3Key: imgUrl, url: imgUrl, promptUsed: detailPrompt,
+              aiProvider: "flux", status: "SUCCEEDED", completedAt: new Date(),
+            },
+          });
+          generated.push({ key: dt.key, url: imgUrl, label: dt.key });
+        }
+      } catch { /* skip this type */ }
+    }
+
+    // Mark project as generated
+    const pendingCount = await db.task.count({
+      where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
+    });
+    if (pendingCount === 0) {
+      await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
+    }
+
+    return NextResponse.json({ generated, count: generated.length });
   }
 
   // Get product image
@@ -453,15 +520,20 @@ export async function POST(req: Request) {
 
     const succeeded = generatedIds.filter(Boolean);
     if (succeeded.length > 0) {
-      const firstId = succeeded[0];
-      const firstImg = await db.generatedImage.findUnique({ where: { id: firstId } });
+      const succeededImages = await db.generatedImage.findMany({
+        where: { id: { in: succeeded } },
+        select: { id: true, url: true },
+      });
+      const firstImg = succeededImages[0];
+      const allUrls = succeededImages.map((img) => ({ id: img.id, url: img.url }));
 
       await db.task.update({ where: { id: task.id }, data: { status: "SUCCEEDED", resultUrl: firstImg?.url ?? "" } });
       await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
 
       return NextResponse.json({
         taskId: task.id, status: "succeeded",
-        generatedImageId: firstId, url: firstImg?.url ?? "",
+        generatedImageId: firstImg?.id, url: firstImg?.url ?? "",
+        urls: allUrls,
         count: succeeded.length,
       });
     }
