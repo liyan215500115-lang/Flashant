@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/i18n-provider";
@@ -113,7 +113,15 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   const [perTypeDesc, setPerTypeDesc] = useState<Record<string, string>>({});
   const [showCustomDesc, setShowCustomDesc] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>(initialResults || []);
+  const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
+
+  // Sync initialResults after async load (e.g. when project is fetched from API)
+  useEffect(() => {
+    if (initialResults?.length) {
+      setResults(initialResults);
+      setOpen(true);
+    }
+  }, [initialResults]);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [lockStyle, setLockStyle] = useState(false);
 
