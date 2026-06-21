@@ -234,16 +234,26 @@ export async function POST(req: Request) {
         const baseVisual = DETAIL_PROMPTS[dt.key];
         const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
         const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
+        // Blend base style (from lockStyle mode) into the visual prompt for scene types
+        const styleHint = baseStyle && !wantsTextOnImage
+          ? ` Match the overall aesthetic, lighting, and visual mood of: ${baseStyle}.`
+          : "";
+        // When a reference image is provided, lock model/person identity across detail images
+        const identityLock = referenceImageUrl && !wantsTextOnImage
+          ? " Keep any person or model visually identical to the reference image — same face, same body, same clothing."
+          : "";
         const detailPrompt = baseVisual
-          ? `${baseVisual}.${userPrompt ? ` The image should visually convey: ${userPrompt}.` : ""}${wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image. Pure photography only."}`
+          ? `${baseVisual}.${userPrompt ? ` The image should visually convey: ${userPrompt}.` : ""}${styleHint}${identityLock}${wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image. Pure photography only."}`
           : userPrompt || baseVisual || "Professional product photography";
         try {
           const p = await batchProvider.createPrediction({
             prompt: detailPrompt,
             productImageUrl: sharedImageUrl,
+            referenceImageUrl: referenceImageUrl || undefined,
             numOutputs: 1,
             width: 1024,
             height: 1024,
+            seed: seed || undefined,
           });
           return { key: dt.key, predictionId: p.predictionId, prompt: detailPrompt };
         } catch {
