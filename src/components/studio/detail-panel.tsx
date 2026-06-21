@@ -69,6 +69,7 @@ interface StudioDetailPanelProps {
   referenceImageUrl?: string;
   targetPlatform?: string;
   onDetailGenerated?: (results: Array<{key:string;url:string;label:string}>) => void;
+  initialResults?: Array<{key:string; url:string; label:string; rawUrl:string}>;
 }
 
 function hashString(str: string): number {
@@ -104,15 +105,15 @@ async function overlayTextOnImage(imageUrl: string, text: string): Promise<strin
   return new Promise((resolve) => canvas.toBlob((b) => resolve(URL.createObjectURL(b!)), "image/png", 1.0));
 }
 
-export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, targetPlatform, onDetailGenerated }: StudioDetailPanelProps) {
+export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, targetPlatform, onDetailGenerated, initialResults }: StudioDetailPanelProps) {
   const { t } = useT();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!initialResults?.length);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["scene", "spec"]));
   const [perTypeDesc, setPerTypeDesc] = useState<Record<string, string>>({});
   const [showCustomDesc, setShowCustomDesc] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
+  const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>(initialResults || []);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [lockStyle, setLockStyle] = useState(false);
 

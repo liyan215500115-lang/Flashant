@@ -53,6 +53,7 @@ export default function StudioPage() {
   const [styleReferenceUrl, setStyleReferenceUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
+  const [loadedDetailResults, setLoadedDetailResults] = useState<Array<{key:string; url:string; label:string; rawUrl:string}>>([]);
 
   // Sync product name to project title (debounced)
   function handleProductNameChange(name: string) {
@@ -116,15 +117,29 @@ export default function StudioPage() {
           const gens = d.project?.generatedImages ?? [];
           if (gens.length > 0) {
             const succeeded = gens.filter((g: any) => g.status === "SUCCEEDED");
-            // Split by sourceType: main images go to preview, detail images stay in project
+            // Split: main images → preview area, detail images → detail panel
             const mainImages = succeeded.filter((g: any) => {
-              const meta = g.generationMeta as { sourceType?: string } | null;
+              const meta = g.generationMeta as { sourceType?: string; detailKey?: string } | null;
               return !meta || meta.sourceType !== "detail";
             });
+            const detailImages = succeeded.filter((g: any) => {
+              const meta = g.generationMeta as { sourceType?: string; detailKey?: string } | null;
+              return meta?.sourceType === "detail";
+            });
+            // Main images to preview
             const history = mainImages.map((g: any) => ({ id: g.id, url: g.url, promptUsed: g.promptUsed || "" }));
             if (history.length > 0) {
               setLatestImage(history[0]);
               setGenerationHistory(history);
+            }
+            // Detail images to detail panel
+            if (detailImages.length > 0) {
+              setLoadedDetailResults(detailImages.map((g: any) => ({
+                key: ((g.generationMeta as any)?.detailKey) || "detail",
+                url: g.url,
+                rawUrl: g.url,
+                label: ((g.generationMeta as any)?.detailKey) || "detail",
+              })));
             }
           }
         })
@@ -340,6 +355,7 @@ export default function StudioPage() {
               basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
               referenceImageUrl={latestImage.url}
               targetPlatform={targetPlatform}
+              initialResults={loadedDetailResults}
             />
           )}
 
