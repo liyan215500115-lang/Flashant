@@ -143,17 +143,24 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     });
   };
 
+  const [enhancing, setEnhancing] = useState(false);
+  const [stageLabel, setStageLabel] = useState("");
+
   async function handleGenerate() {
     if (selected.size === 0 || !projectId) return;
     setGenerating(true);
+    setStageLabel("优化提示词...");
+    setEnhancing(true);
     const types = [...selected].map(key => ({ key, zh: TYPE_LABELS[key] || key }));
 
     const styleSeed = lockStyle ? Math.abs(hashString(projectId)) % 100000 : undefined;
     const styleRef = lockStyle ? (referenceImageUrl ?? undefined) : undefined;
 
-    // Enhance prompts via AI for each detail type (in parallel)
+    // Enhance prompts via AI for each detail type (in parallel, max 8s timeout)
     let enhancedPrompts: Record<string, string> = {};
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
       const enhancementResults = await Promise.allSettled(
         types.map(t =>
           fetch("/api/prompts/enhance", {
@@ -165,16 +172,20 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
               detailType: t.key,
               targetLanguage: "zh",
             }),
-          }).then(r => r.json()).then(d => ({ key: t.key, prompt: d.enhanced || "" }))
+            signal: controller.signal,
+          }).then(r => r.ok ? r.json() : { enhanced: "" }).then(d => ({ key: t.key, prompt: d.enhanced || "" }))
         )
       );
+      clearTimeout(timeout);
       for (const r of enhancementResults) {
         if (r.status === "fulfilled" && r.value.prompt) {
           enhancedPrompts[r.value.key] = r.value.prompt;
         }
       }
     } catch { /* proceed without enhancement */ }
+    setEnhancing(false);
 
+    setStageLabel("生成图片...");
     try {
       const res = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -183,7 +194,6 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           productImageId,
           detailTypes: types.map((t) => ({
             key: t.key,
-            // Use enhanced prompt if available, otherwise fallback to user input
             prompt: enhancedPrompts[t.key] || [TYPE_LABELS[t.key], basePrompt, perTypeDesc[t.key] || ""].filter(Boolean).join(" — "),
           })),
           baseStyle: lockStyle ? basePrompt : undefined,
@@ -336,7 +346,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           <Button onClick={handleGenerate} disabled={selectedCount === 0 || generating}
             size="sm" className="w-full gap-1.5 cursor-pointer rounded-xl bg-brand-900 hover:bg-brand-800 text-white">
             {generating && <Loader2 size={12} className="animate-spin" />}
-            {generating ? "生成中..." : `生成 ${selectedCount} 张套图`}
+            {generating ? (stageLabel || "生成中...") : `生成 ${selectedCount} 张套图`}
           </Button>
 
           {/* Results by group */}

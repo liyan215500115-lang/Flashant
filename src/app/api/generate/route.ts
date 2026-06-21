@@ -236,9 +236,8 @@ export async function POST(req: Request) {
 
     const predictions = await Promise.all(
       detailTypesArray.map(async (dt) => {
-        // Prompt construction: user content (from enhancer or manual input)
-        // leads the scene description. Tech params (lens/lighting/quality) are
-        // appended as quality guarantees. Guardrails come last.
+        // Prompt construction: identity lock FIRST (so the AI prioritizes it),
+        // then user content (from enhancer or manual input), then tech params.
         const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
         const techParams = DETAIL_TECH_PARAMS[dt.key] || "";
         const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
@@ -249,7 +248,8 @@ export async function POST(req: Request) {
           ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
           : "";
         const noTextGuard = wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
-        const detailPrompt = `${userPrompt || "Professional product photography"}. ${techParams}.${styleHint}${identityLock}${noTextGuard}`;
+        // Identity lock goes first so the AI sees it as the most important instruction
+        const detailPrompt = `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}. ${techParams}.${noTextGuard}`.trim();
         // Model close-ups: person using/wearing the product (e.g. headphones on
         // ears, lotion on face, hat on head). Show the product IN USE but do NOT
         // show the product packaging, bottle, or box.

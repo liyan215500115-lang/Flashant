@@ -115,9 +115,13 @@ export default function StudioPage() {
           if (d.project?.title && !d.project.title.startsWith("202")) setProductName(d.project.title);
           const gens = d.project?.generatedImages ?? [];
           if (gens.length > 0) {
-            const history = gens
-              .filter((g: any) => g.status === "SUCCEEDED")
-              .map((g: any) => ({ id: g.id, url: g.url, promptUsed: g.promptUsed || "" }));
+            const succeeded = gens.filter((g: any) => g.status === "SUCCEEDED");
+            // Split by sourceType: main images go to preview, detail images stay in project
+            const mainImages = succeeded.filter((g: any) => {
+              const meta = g.generationMeta as { sourceType?: string } | null;
+              return !meta || meta.sourceType !== "detail";
+            });
+            const history = mainImages.map((g: any) => ({ id: g.id, url: g.url, promptUsed: g.promptUsed || "" }));
             if (history.length > 0) {
               setLatestImage(history[0]);
               setGenerationHistory(history);
