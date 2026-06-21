@@ -227,7 +227,14 @@ export async function POST(req: Request) {
 
     const predictions = await Promise.all(
       detailTypesArray.map(async (dt) => {
-        const detailPrompt = DETAIL_PROMPTS[dt.key] ?? dt.prompt;
+        // Blend the visual template with the user's description so the AI
+        // generates an image that VISUALLY represents the content — not text
+        // rendered on top of the photo.
+        const baseVisual = DETAIL_PROMPTS[dt.key];
+        const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
+        const detailPrompt = baseVisual
+          ? `${baseVisual}.${userPrompt ? ` The image should visually convey: ${userPrompt}.` : ""} CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image. Pure photography only.`
+          : userPrompt || baseVisual || "Professional product photography";
         try {
           const p = await batchProvider.createPrediction({
             prompt: detailPrompt,

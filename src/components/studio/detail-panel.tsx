@@ -125,9 +125,13 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       if (generated && Array.isArray(generated)) {
         const out: typeof results = [];
         for (const g of generated) {
-          const isInfo = INFO_TYPES.has(g.key);
           const label = g.label || g.key;
-          const overlayedUrl = await overlayTextOnImage(g.url, customDesc, label, isInfo).catch(() => g.url);
+          // INFO types use Canvas text overlay (white-bg spec sheet style).
+          // Scene types rely on the AI prompt alone — no text overlay.
+          const isInfo = INFO_TYPES.has(g.key);
+          const overlayedUrl = isInfo
+            ? await overlayTextOnImage(g.url, customDesc, label, true).catch(() => g.url)
+            : g.url;
           out.push({ key: g.key, url: overlayedUrl, rawUrl: g.url, label });
         }
         setResults((prev) => [...out, ...prev]);
