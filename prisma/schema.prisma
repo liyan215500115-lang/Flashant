@@ -259,6 +259,7 @@ enum GenerationStatus {
   PROCESSING
   SUCCEEDED
   FAILED
+  DELETED
 }
 
 enum Platform {
