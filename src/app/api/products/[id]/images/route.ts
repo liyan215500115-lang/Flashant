@@ -28,7 +28,10 @@ export async function DELETE(
 
   const isGen = await db.generatedImage.findFirst({ where: { id: imageId, imageProjectId: projectId } });
   if (isGen) {
-    await db.generatedImage.delete({ where: { id: imageId } });
+    // Soft-delete: set status to DELETED so quota counting remains accurate.
+    // Hard-deleting would inflate remaining quota, which is incorrect — the user
+    // already consumed that generation, and quota should be fixed.
+    await db.generatedImage.update({ where: { id: imageId }, data: { status: "DELETED" } });
     return NextResponse.json({ success: true });
   }
 
