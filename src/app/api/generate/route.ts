@@ -20,23 +20,27 @@ const MODEL_CLOSEUP_TYPES = new Set(["detail"]);
 
 // ── Module-level constants ──
 
-// Visual prompts for each detail type — server-side only, kept purely visual
-const DETAIL_PROMPTS: Record<string, string> = {
-  selling_points: "Product centered on pure white background, soft diffused studio lighting 5500K, clean minimal e-commerce packshot, generous empty space around product, 8K sharp focus",
-  material: "Extreme macro close-up product photography on white background, 100mm macro lens f/2.8, crisp texture detail, shallow depth of field, soft diffused ring light, premium detail quality, 8K",
-  size: "Product on white background next to a standard soda can for scale reference, both equally sharp at f/8, clean studio lighting 5500K, professional size reference photography, 4K",
-  craft: "Product on clean white surface, still-life composition showing fine workmanship details, soft directional light raking at 30 degrees, revealing subtle surface texture, clean professional photography, 4K",
-  compare: "Split-screen comparison, two views side by side on white background, identical lighting and scale, clean vertical dividing line centered, equally sharp at f/11, professional layout, 8K",
-
-  lifestyle: "Product in a bright modern interior with natural window light, soft daylight 5600K, 50mm lens f/2.2, product sharp in foreground, background softly blurred, editorial magazine quality, warm atmosphere, 4K",
-  scene_atmosphere: "Dramatic product photography, product as lone hero, directional lighting, 85mm lens f/1.8 ultra-shallow depth of field, product pin-sharp, cinematic moody atmosphere, 4K",
-  in_use: "Product being used by a person, candid mid-action moment, soft daylight 5500K, 50mm lens f/2.0, focus on product, editorial lifestyle photography, warm tones, 4K",
-  multi_angle: "Multi-angle product photography composited, front view 45-degree side rear and top-down views, white background, consistent lighting, identical scale across all views, clean grid layout, 8K",
-  detail: "Extreme macro close-up of premium quality details, 100mm macro lens f/3.2, very shallow depth of field, soft diffused light, crisp texture visible, 8K",
-  color_variants: "Product color variants in clean grid layout on white background, consistent lighting and angle across all variants, equal spacing, professional catalog presentation, 8K",
-  flatlay: "Overhead flat lay product photography from directly above, product surrounded by complementary accessories, clean neutral surface, soft even lighting, editorial catalog style, 8K",
-  brand_story: "Premium unboxing scene, packaging box tissue paper product in insert accessories arranged, warm window light 5000K, overhead angle, editorial quality, 4K",
-  gift_accessory: "Main product with all included accessories neatly arranged on white surface, soft even studio lighting, all items equally sharp at f/11, clean visual inventory, 8K",
+// Tech-only templates — lens, lighting, and quality directives appended AFTER the AI prompt.
+// Scene/environment description is handled by the prompt enhancer (DeepSeek).
+const DETAIL_TECH_PARAMS: Record<string, string> = {
+  // Info types (white bg, spec sheet style — text overlaid by Canvas)
+  selling_points: "Pure white background, soft diffused studio lighting 5500K, clean minimal e-commerce packshot, 8K sharp focus",
+  material: "Pure white background, 100mm macro lens f/2.8, crisp texture detail, shallow depth of field, soft diffused ring light, 8K",
+  size: "Pure white background with common reference object for scale, f/8, clean studio lighting 5500K, 4K",
+  craft: "Pure white background, soft directional light raking at 30°, revealing surface texture, 4K",
+  compare: "Pure white background, split-screen comparison layout, identical lighting and scale, f/11, 8K",
+  // Scene types (real environments, lifestyle photography)
+  lifestyle: "Natural setting, soft daylight 5600K, 50mm f/2.2, product sharp in foreground, background softly blurred, editorial quality, 4K",
+  scene_atmosphere: "Dramatic directional lighting, 85mm f/1.8, ultra-shallow depth of field, cinematic atmosphere, 4K",
+  in_use: "Candid moment, soft daylight 5500K, 50mm f/2.0, product in sharp focus, editorial lifestyle quality, 4K",
+  // Product-only types
+  detail: "Extreme macro close-up, 100mm f/2.8, very shallow depth of field, soft diffused ring light, premium detail quality, 8K",
+  multi_angle: "Multi-angle composite (front + side + rear + top), pure white background, consistent lighting and scale, clean grid, 8K",
+  color_variants: "Color variants grid, pure white background, consistent lighting and angle, professional catalog, 8K",
+  flatlay: "Overhead flat lay from directly above, clean neutral surface, soft even lighting, editorial catalog style, 8K",
+  // Brand/lifestyle
+  brand_story: "Unboxing scene with packaging and accessories, warm window light 5000K, overhead angle, editorial quality, 4K",
+  gift_accessory: "All items neatly arranged on clean surface, soft even studio lighting, f/11, clean visual inventory, 8K",
 };
 
 // Model version mapping for engines routed through Replicate.
@@ -232,31 +236,25 @@ export async function POST(req: Request) {
 
     const predictions = await Promise.all(
       detailTypesArray.map(async (dt) => {
-        // Blend the visual template with the user's description so the AI
-        // generates an image that VISUALLY represents the content.
-        // Only add the "no text" guard when the user didn't explicitly ask
-        // for text rendering (e.g. "write", "标注", "text on image").
-        const baseVisual = DETAIL_PROMPTS[dt.key];
+        // Prompt construction: user content (from enhancer or manual input)
+        // leads the scene description. Tech params (lens/lighting/quality) are
+        // appended as quality guarantees. Guardrails come last.
         const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
+        const techParams = DETAIL_TECH_PARAMS[dt.key] || "";
         const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
-        // Blend base style (from lockStyle mode) into the visual prompt for scene types
         const styleHint = baseStyle && !wantsTextOnImage
-          ? ` Match the overall aesthetic, lighting, and visual mood of: ${baseStyle}.`
+          ? ` Match the overall aesthetic of: ${baseStyle}.`
           : "";
-        // When a reference image is provided, lock model/person identity across detail images
         const identityLock = referenceImageUrl && !wantsTextOnImage
-          ? " Keep any person or model visually identical to the reference image — same face, same body, same clothing."
+          ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
           : "";
-        const detailPrompt = baseVisual
-          ? `${baseVisual}.${userPrompt ? ` The image should visually convey: ${userPrompt}.` : ""}${styleHint}${identityLock}${wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image. Pure photography only."}`
-          : userPrompt || baseVisual || "Professional product photography";
+        const noTextGuard = wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
+        const detailPrompt = `${userPrompt || "Professional product photography"}. ${techParams}.${styleHint}${identityLock}${noTextGuard}`;
         // Model close-ups: person using/wearing the product (e.g. headphones on
         // ears, lotion on face, hat on head). Show the product IN USE but do NOT
         // show the product packaging, bottle, or box.
         const isModelCloseup = referenceImageUrl && MODEL_CLOSEUP_TYPES.has(dt.key);
-        const modelCloseupPrompt = baseVisual
-          ? `Extreme close-up of the person from the reference image using or wearing the product. Focus on the face/head/hands where the product is being applied or worn. The product itself should be visible in use (on skin, on head, on body) but do NOT show any product packaging, bottles, boxes, or containers. Keep the person visually IDENTICAL to the reference image — same face, same features, same skin tone. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. CRITICAL: do NOT render any text or labels on the image.`
-          : detailPrompt;
+        const modelCloseupPrompt = `Extreme close-up of the person from the reference image using or wearing the product. Focus on the face/head/hands where the product is being applied or worn. The product itself should be visible in use (on skin, on head, on body) but do NOT show any product packaging, bottles, boxes, or containers. Keep the person visually IDENTICAL to the reference image — same face, same features, same skin tone. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. CRITICAL: do NOT render any text or labels on the image.`;
 
         try {
           const p = await batchProvider.createPrediction({
@@ -336,8 +334,8 @@ export async function POST(req: Request) {
 
   // Prompt resolution
   let prompt = "Professional product photography, studio lighting, high quality";
-  if (detailType && DETAIL_PROMPTS[detailType]) {
-    prompt = DETAIL_PROMPTS[detailType];
+  if (detailType && DETAIL_TECH_PARAMS[detailType]) {
+    prompt = `${prompt}. ${DETAIL_TECH_PARAMS[detailType]}`;
     if (baseStyle) {
       // Match the main image's lighting, color palette, and overall aesthetic — lock across the entire set.
       // Seed is passed to the provider as a real param (see createPrediction); the prompt carries the

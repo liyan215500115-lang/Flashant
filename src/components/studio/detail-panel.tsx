@@ -151,6 +151,30 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     const styleSeed = lockStyle ? Math.abs(hashString(projectId)) % 100000 : undefined;
     const styleRef = lockStyle ? (referenceImageUrl ?? undefined) : undefined;
 
+    // Enhance prompts via AI for each detail type (in parallel)
+    let enhancedPrompts: Record<string, string> = {};
+    try {
+      const enhancementResults = await Promise.allSettled(
+        types.map(t =>
+          fetch("/api/prompts/enhance", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              imageUrl: referenceImageUrl || undefined,
+              productName: basePrompt || undefined,
+              sellingPoints: perTypeDesc[t.key] || undefined,
+              detailType: t.key,
+              targetLanguage: "zh",
+            }),
+          }).then(r => r.json()).then(d => ({ key: t.key, prompt: d.enhanced || "" }))
+        )
+      );
+      for (const r of enhancementResults) {
+        if (r.status === "fulfilled" && r.value.prompt) {
+          enhancedPrompts[r.value.key] = r.value.prompt;
+        }
+      }
+    } catch { /* proceed without enhancement */ }
+
     try {
       const res = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -159,7 +183,8 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           productImageId,
           detailTypes: types.map((t) => ({
             key: t.key,
-            prompt: [TYPE_LABELS[t.key], basePrompt, perTypeDesc[t.key] || ""].filter(Boolean).join(" — "),
+            // Use enhanced prompt if available, otherwise fallback to user input
+            prompt: enhancedPrompts[t.key] || [TYPE_LABELS[t.key], basePrompt, perTypeDesc[t.key] || ""].filter(Boolean).join(" — "),
           })),
           baseStyle: lockStyle ? basePrompt : undefined,
           referenceImageUrl: styleRef,

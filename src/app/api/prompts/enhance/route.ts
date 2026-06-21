@@ -4,52 +4,37 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createSocksFetch } from "@/lib/ai/socks-fetch";
 
-// Style definitions — each key maps to a distinct visual goal and guidance
 const STYLE_GUIDANCE: Record<string, { desc: string; guidance: string }> = {
-  white: {
-    desc: "pure white infinity background #FFFFFF, softbox lighting from two 45-degree angles, subtle ground contact shadow only, clean e-commerce packshot style, 2048x2048px square, product filling 85% of frame",
-    guidance: "Write a precise product description. Focus on shape, colors, materials, surface finish, and fine details. The pure background makes every edge visible. Be factual and specific — name the materials, the finish type (matte/gloss/textured), the color palette. Do not describe any background or environment.",
-  },
-  scene: {
-    desc: "curated aspirational real-world interior setting, abundant natural window light from left, warm neutral undertones, shallow depth of field f/2.8, 50mm lens, editorial home/lifestyle magazine quality (Kinfolk, Cereal aesthetic)",
-    guidance: "Describe an aspirational lifestyle scene. Place the product naturally in a beautiful room. Focus on how the product fits into daily life — describe the room, the mood, the lighting, the emotional appeal. Make the setting feel attainable yet desirable. Name specific interior styles (Scandinavian, Japandi, mid-century modern) and materials (linen, oak, marble, ceramic).",
-  },
-  in_use: {
-    desc: "product being actively used or worn by a real person, candid mid-action moment, soft diffused daylight 5500K, 50mm lens f/2.0, focus on the product and interaction area, model's face softly out of focus, editorial lifestyle quality (Everlane, Uniqlo lookbook style)",
-    guidance: "Describe a natural human interaction with the product. Focus on the user experience — how the product feels to wear, hold, or operate. Describe the person's body language, the setting, the lighting. Make it feel like a captured moment, not a photoshoot. The product is the hero, not the model.",
-  },
-  marble: {
-    desc: "Carrara marble or dark walnut wood surface, single directional soft key light at 30 degrees, 45% negative space, desaturated warm neutral palette (sage, stone, cream, charcoal), subtle brass or gold accent in deep blurred background, 85mm tilt-shift effect, Aesop / Le Labo / Tom Ford Beauty aesthetic",
-    guidance: "Write a luxury editorial description. Focus on exclusivity and refinement. Describe the glossy reflections, the premium materials, the rich sophisticated color palette. Use words that evoke quality: 'bespoke', 'artisanal', 'heirloom', 'sculptural'. The mood is quiet confidence, not loud luxury.",
-  },
-  natural: {
-    desc: "golden hour outdoor setting 3200K, warm directional sunlight, f/1.8 shallow depth, soft bokeh circles from foliage, hazy atmosphere, 16:9 cinematic ratio, wellness-lifestyle aesthetic, Instagram/TikTok ready",
-    guidance: "Describe a golden-hour outdoor moment. Focus on the harmony between the product and nature. Describe how sunlight wraps around surfaces, the organic textures, the sense of freedom and freshness. Use words like 'earthy', 'sun-kissed', 'wild', 'breathe'. Make it feel spontaneous, not staged.",
-  },
-  cosy: {
-    desc: "warm hygge interior, soft diffused window light through linen curtain 4500K, Scandinavian-Japandi fusion, natural linen and chunky knit textures, warm oak wood, matte ceramics, dried botanicals, candlelight, 50mm f/2.2 shallow depth, Architectural Digest / Dezeen quality",
-    guidance: "Describe a warm, soulful home moment. Focus on comfort, belonging, and quiet beauty. Describe the textures (soft linen, warm wood, rough ceramic), the gentle lighting, the feeling of a slow Sunday morning. The product feels like a natural part of this peaceful life. Words: 'hygge', 'serene', 'tactile', 'grounded'.",
-  },
-  dark_moody: {
-    desc: "deep charcoal void background, single fresnel spotlight from upper-right 45 degrees, dramatic chiaroscuro, subtle rim light at 5%, rich deep blacks RGB(15,15,15), controlled specular highlights, single wisp of smoke or dust in light beam, square 1:1, Byredo / Aesop / Diptyque aesthetic",
-    guidance: "Write a dramatic, cinematic description. Focus on the interplay of shadow and light. The product emerges from darkness like a sculpture. Describe the mystery, the intensity, the exclusivity. Use words like 'noir', 'dramatic', 'sculptural', 'enigmatic', 'timeless'. Each word should feel heavy with atmosphere.",
-  },
-  cyberpunk: {
-    desc: "reflective wet asphalt or dark metallic surface, dual neon rim lights cyan #00FFFF left + magenta #FF00FF right, volumetric fog with visible light rays, holographic grid lines receding into darkness, distant blurred city lights warm amber and cool teal, water droplets reflecting neon, 21:9 ultrawide cinematic ratio, Blade Runner 2049 production design",
-    guidance: "Describe a futuristic cyberpunk scene. The product looks like high-tech gear from a Blade Runner world. Focus on the neon reflections on surfaces, the atmospheric fog, the contrast between warm product materials and cool neon environment. Use words like 'neon-drenched', 'dystopian', 'high-tech', 'synthetic', 'holographic'. Make it cinematic and immersive.",
-  },
-  canvas: {
-    desc: "product on textured cold-pressed watercolor paper or raw linen canvas surface, background wall is flowing abstract watercolor washes (dusty cerulean, warm ochre, sage, blush rose, raw umber) with visible wet-on-wet blooms and dry brush texture, product centered and 100% real in razor-sharp f/11 focus, soft natural north-facing window light 5000K, 4:5 portrait, the product is a real object in an artist's studio — not painted, not illustrated, not transformed",
-    guidance: "Describe a product photographed in an artist's studio. THE PRODUCT STAYS EXACTLY THE SAME as the reference — do NOT paint it, do NOT dissolve its edges into brushstrokes, do NOT turn it into a watercolor illustration. Only the background wall and the surface beneath the product are art canvas / watercolor style. The background looks like an abstract watercolor painting. The product is a real, sharp, photorealistic object sitting on textured paper. Use words like 'textured', 'artisan', 'handcrafted', 'studio', 'gallery', 'fine art backdrop'. The contrast between the sharp real product and the painterly background is what makes this style beautiful.",
-  },
-  kawaii: {
-    desc: "candy pastel gradient background (blush pink to lavender to baby blue), tiny floating matte gold stars, sparkle bursts, soft pillowy clouds, miniature ♡ hearts as subtle decorative elements, matte white or light pastel platform surface with soft rounded edges, product in sharp focus f/11, background decorations softly blurred f/2.8 for depth separation, sweet playful atmosphere, square 1:1, 4K, clean commercial product photography with cute backdrop — the product itself is 100% real and unchanged",
-    guidance: "Describe a cute pastel product showcase. THE PRODUCT STAYS EXACTLY THE SAME as the reference — do NOT transform it into a toy, figurine, or cartoon character. Only change the background to a candy-colored pastel gradient with tiny sparkles, stars, hearts, and soft clouds. The product should look like it's photographed on a cute desktop wallpaper. It's a real product in a joyful, gift-worthy setting. Use words like 'cute', 'pastel', 'playful', 'whimsical', 'sweet', 'kawaii atmosphere'. Target emotion: joy and delight — but the product is real, not a toy.",
-  },
-  infographic: {
-    desc: "60-40 split layout, product on white left, clean information panel right with minimalist line icons and short feature callouts, sans-serif typography (Inter/SF Pro style, 14px), subtle dot grid or diagonal line pattern at 5% opacity behind text only, charcoal #333333 text, brand accent color for icons, Amazon A+ Content / Shopify PDP standard, 8K sharp text rendering",
-    guidance: "Describe a clean infographic product presentation. The product is on one side, and an elegant information panel is on the other. Focus on clarity, trustworthiness, and premium feel. The design should look like a high-end app onboarding screen. Use words like 'informative', 'clean', 'modern', 'trustworthy', 'premium UI'. No clutter, everything has breathing room.",
-  },
+  white: { desc: "pure white infinity background #FFFFFF, softbox lighting, clean e-commerce packshot", guidance: "Focus on shape, colors, materials, surface finish. Be factual — name materials, finish type, color palette. Do not describe background." },
+  scene: { desc: "curated aspirational interior, natural window light, 50mm f/2.8, editorial lifestyle (Kinfolk/Cereal)", guidance: "Place the product naturally in a beautiful room. Focus on lifestyle fit. Describe the room, mood, lighting, emotional appeal. Make it attainable yet desirable." },
+  in_use: { desc: "product being worn/used by a person, candid moment, soft daylight 5500K, 50mm f/2.0, editorial lifestyle", guidance: "Describe natural human interaction with the product. Focus on user experience. Describe body language, setting, lighting. The product is the hero, not the model." },
+  marble: { desc: "marble or walnut surface, directional key light, 45% negative space, Aesop/Le Labo aesthetic", guidance: "Luxury editorial. Focus on refinement. Glossy reflections, premium materials, rich palette. Words: bespoke, artisanal, sculptural." },
+  natural: { desc: "golden hour outdoor 3200K, f/1.8, soft bokeh, 16:9 cinematic, wellness-lifestyle", guidance: "Golden-hour outdoor moment. Harmony between product and nature. Sunlight wrapping surfaces. Words: earthy, sun-kissed, wild, breathe." },
+  cosy: { desc: "warm hygge interior, linen curtain light 4500K, Scandinavian-Japandi, 50mm f/2.2, Architectural Digest quality", guidance: "Warm soulful home moment. Comfort, belonging, quiet beauty. Textures, gentle lighting, slow morning. Words: hygge, serene, tactile, grounded." },
+  dark_moody: { desc: "deep charcoal void, single fresnel spotlight, chiaroscuro, Byredo/Diptyque aesthetic", guidance: "Dramatic cinematic. Interplay of shadow and light. Product emerges from darkness. Words: noir, dramatic, sculptural, enigmatic, timeless." },
+  cyberpunk: { desc: "wet asphalt, cyan#00FFFF + magenta#FF00FF neon, volumetric fog, Blade Runner 2049 aesthetic", guidance: "Futuristic cyberpunk. Neon reflections, atmospheric fog, contrast between product and neon environment. Words: neon-drenched, dystopian, high-tech, synthetic." },
+  canvas: { desc: "watercolor paper surface, abstract watercolor wash background, product razor-sharp f/11, north window light 5000K", guidance: "Artist's studio. Product is real and sharp — only the background is painterly. Contrast between sharp product and watercolor backdrop. Words: textured, artisanal, gallery, fine art." },
+  kawaii: { desc: "candy pastel gradient, floating gold stars/sparkles/hearts, matte white platform, product sharp f/11", guidance: "Cute pastel showcase. Product is real and unchanged — only the background is cute. Joyful, gift-worthy setting. Words: cute, pastel, playful, whimsical, kawaii." },
+  infographic: { desc: "60-40 split, product on white left, info panel right, minimalist icons, Amazon A+ style, 8K", guidance: "Clean infographic presentation. Product plus elegant info panel. Clarity, trust, premium feel. Words: informative, clean, modern, trustworthy." },
+};
+
+// Photography direction for each detail image type.
+// This tells the prompt AI what kind of image to generate — the PURPOSE of the image.
+const DETAIL_TYPE_DIRECTION: Record<string, string> = {
+  lifestyle: "The product shown naturally in a beautiful real-world interior or outdoor environment. Describe the setting, the mood, and how the product integrates into the scene. The product is the visual focus.",
+  scene_atmosphere: "Dramatic atmospheric product photography. The product as a lone hero in a cinematic setting. Strong directional lighting, rich shadows. Describe the mood, lighting drama, and emotional impact.",
+  in_use: "The product being actively used or worn by a person. Candid natural moment. Focus on the interaction — how the product is held, worn, or applied. The person is softly in frame, product is the hero.",
+  detail: "Extreme close-up macro shot focusing on product texture, materials, and fine details. 100mm macro lens perspective. Reveal quality and craftsmanship. Do NOT render text or labels.",
+  multi_angle: "Multiple views of the product composited: front, 45° side, rear, and top-down. White background, consistent scale and lighting. Professional catalog layout. Do NOT render text.",
+  flatlay: "Overhead flat lay from directly above. Product surrounded by complementary accessories on a clean surface. Even soft lighting, editorial catalog style.",
+  color_variants: "Product color variants in a clean grid on white background. Consistent angle and lighting. Professional catalog presentation.",
+  selling_points: "Product centered on pure white background. Clean minimal e-commerce packshot with generous empty space. Text will be overlaid separately — generate a clean visual canvas. Do NOT render text.",
+  material: "Extreme macro close-up of product materials and textures. Focus on surface quality, weave, grain, or finish. Clean visual canvas for text overlay. Do NOT render text.",
+  size: "Product on white background with a common reference object for scale. Professional size reference photography. Clean canvas for text overlay. Do NOT render text.",
+  craft: "Product on clean surface showing fine workmanship details. Soft directional light raking to reveal texture. Clean canvas for text overlay. Do NOT render text.",
+  compare: "Split-screen comparison on white background. Two views side by side, identical lighting and scale. Clean canvas for text overlay. Do NOT render text.",
+  brand_story: "Premium unboxing scene. Packaging, tissue paper, product, and accessories arranged beautifully. Warm window light, overhead angle, editorial quality.",
+  gift_accessory: "Main product with all included accessories neatly arranged on a clean surface. Soft even studio lighting, all items equally sharp. Professional visual inventory.",
 };
 
 export async function POST(req: Request) {
@@ -58,13 +43,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { imageUrl, productName, sellingPoints, styleName, targetLanguage } = await req.json();
+  const { imageUrl, productName, sellingPoints, styleName, detailType, targetLanguage } = await req.json();
   const name = productName || "product";
   const points = sellingPoints || "";
   const style = styleName || "scene";
   const lang = targetLanguage || "en";
 
   const styleInfo = STYLE_GUIDANCE[style] ?? STYLE_GUIDANCE.scene;
+  const typeDirection = detailType ? DETAIL_TYPE_DIRECTION[detailType] : null;
 
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
 
@@ -82,64 +68,67 @@ export async function POST(req: Request) {
         ? "用中文写出一个完整的、视觉化的产品摄影提示词。"
         : "Write one complete, visually descriptive product photography prompt in English.";
 
-      // Build user message — vision analysis if imageUrl is provided
-      const userText = [
+      // Build the task instruction
+      const parts: string[] = [
         `Product name: ${name}`,
-        points ? `User's selling points or notes: ${points}` : "",
-        `Target style: ${style} — ${styleInfo.desc}`,
+        points ? `User's notes: ${points}` : "",
+        `Visual style: ${style} — ${styleInfo.desc}`,
+        typeDirection ? `Image type: ${detailType} — ${typeDirection}` : "",
         "",
-        "Your task: Write a professional AI image generation prompt following the 5-layer structure:",
-        "1. SUBJECT — describe the product (materials, colors, shape, finish) based on the reference image",
-        "2. ENVIRONMENT — describe the scene/background/setting for this style",
-        "3. LIGHTING — specify light direction, quality, color temperature in Kelvin",
-        "4. CAMERA — specify lens, aperture, depth of field, composition",
-        "5. TECHNICAL — resolution, aspect ratio, quality level, output format",
+        "Write a professional AI image generation prompt following this structure:",
+        "1. SUBJECT — describe the product based on the reference image",
+        "2. ENVIRONMENT — describe the scene for this image type",
+        "3. LIGHTING — direction, quality, color temperature Kelvin",
+        "4. CAMERA — lens, aperture, depth of field, composition",
+        "5. TECHNICAL — resolution, quality, output format",
+      ];
+
+      if (typeDirection) {
+        parts.push(
+          "",
+          `IMAGE TYPE DIRECTION: ${typeDirection}`,
+          "This is the photography purpose. The environment, lighting, and camera should serve this purpose.",
+        );
+      }
+
+      parts.push(
         "",
         "CRITICAL RULES:",
-        "- NEVER describe the product from imagination. Use ONLY what you see in the reference image.",
-        "- Describe the WORLD AROUND the product, not the product itself in detail.",
-        "- The product must remain visually IDENTICAL to the reference — same shape, color, materials, details.",
+        "- NEVER describe the product from imagination — use ONLY what you see in the reference image.",
+        "- The product must remain visually IDENTICAL to the reference — same shape, color, materials.",
         "- You may ONLY change: background, scene, lighting, camera angle, composition.",
-        "- Use precise photography terminology (f-stop, lens mm, color temperature Kelvin, lighting angles).",
-        "- Include explicit quality directives (8K, photorealistic, maximum quality, sharp focus).",
-        "- Output ONLY the prompt. No introduction, no explanation, no quotation marks.",
-        "- Keep the prompt between 80-150 words — detailed but concise.",
-      ].filter(Boolean).join("\n");
+        "- Use precise photography terminology (f-stop, lens mm, Kelvin, lighting angles).",
+        "- Include quality directives (8K, photorealistic, sharp focus).",
+        "- Output ONLY the prompt. No introduction, no explanation, no quotes.",
+        "- 80-150 words.",
+      );
+
+      const userText = parts.filter(Boolean).join("\n");
 
       type ContentPart =
         | { type: "image_url"; image_url: { url: string } }
         | { type: "text"; text: string };
 
       const userContent: ContentPart[] = [];
-
       if (imageUrl) {
-        userContent.push({
-          type: "image_url" as const,
-          image_url: { url: imageUrl },
-        });
+        userContent.push({ type: "image_url", image_url: { url: imageUrl } });
       }
-
-      userContent.push({
-        type: "text" as const,
-        text: userText,
-      });
-
+      userContent.push({ type: "text", text: userText });
 
       const response = await client.chat.completions.create({
         model: "deepseek-chat",
         messages: [
           {
             role: "system",
-            content: `You are an expert e-commerce product photography director and AI prompt engineer. Your job is to analyze product reference images and write precise, structured image generation prompts that a text-to-image AI model will use.
+            content: `You are an expert e-commerce product photography director. Analyze product reference images and write precise image generation prompts.
 
 ${styleInfo.guidance}
 
-Output format: A single complete prompt in ${langInstruction}. The prompt follows a 5-layer structure: subject description, environment/scene, lighting/camera specs, composition, technical parameters. Output ONLY the prompt — no preamble, no markdown, no quotes.`,
+${typeDirection ? `IMAGE TYPE CONTEXT: ${typeDirection}` : ""}
+
+Output: A single complete prompt in ${langInstruction}. Output ONLY the prompt — no preamble, no markdown, no quotes.`,
           },
-          {
-            role: "user",
-            content: userContent,
-          },
+          { role: "user", content: userContent },
         ],
         temperature: 0.8,
         max_tokens: 500,
@@ -154,10 +143,11 @@ Output format: A single complete prompt in ${langInstruction}. The prompt follow
     }
   }
 
-  // Template fallback — no API key or API call failed
+  // Template fallback
+  const typeDesc = typeDirection ? ` ${typeDirection}` : "";
   const fallback = lang === "zh"
-    ? `${name}${points ? "，" + points : ""}。${styleInfo.desc}，8K，照片级真实，专业产品摄影。`
-    : `${name}${points ? ", " + points : ""}. ${styleInfo.desc}, 8K, photorealistic, professional product photography.`;
+    ? `${name}${points ? "，" + points : ""}。${styleInfo.desc}。${typeDesc}，8K，照片级真实，专业产品摄影。`
+    : `${name}${points ? ", " + points : ""}. ${styleInfo.desc}.${typeDesc}, 8K, photorealistic, professional product photography.`;
 
   return NextResponse.json({ enhanced: fallback });
 }
