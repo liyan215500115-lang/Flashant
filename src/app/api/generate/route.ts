@@ -260,7 +260,7 @@ export async function POST(req: Request) {
         try {
           const p = await batchProvider.createPrediction({
             prompt: isModelCloseup ? modelCloseupPrompt : detailPrompt,
-            productImageUrl: isModelCloseup ? undefined : sharedImageUrl,
+            productImageUrl: isModelCloseup ? "" : sharedImageUrl,
             referenceImageUrl: referenceImageUrl || undefined,
             numOutputs: 1,
             width: 1024,
