@@ -284,12 +284,11 @@ export async function POST(req: Request) {
 
   const numOutputs = customNumOutputs ?? 2;
 
-  // Model version mapping for alternative engines (all routed through Replicate)
-  // NOTE: bria provider hardcodes its own version internally and ignores this field,
-  // but we list it so the fallback below doesn't silently substitute flux-2-pro's version.
+  // Model version mapping for alternative engines (all routed through Replicate).
+  // bria is intentionally absent: its provider hardcodes the version internally and
+  // never reads modelVersion, so the flux fallback below is harmless for it.
   const ENGINE_MODELS: Record<string, string> = {
     flux: "black-forest-labs/flux-2-pro",
-    bria: "bria/generate-background",
     sdxl: "stability-ai/sdxl",
     playground: "playgroundai/playground-v2.5-1024px-aesthetic",
   };
