@@ -41,12 +41,6 @@ function hashString(str: string): number {
 /** Draw text onto a canvas and return as blob URL */
 const INFO_TYPES = new Set(["selling_points", "material", "size", "craft", "compare"]);
 
-/** Detect if text is spec-like (measurements, numbers, materials) vs visual description. */
-function isSpecLike(text: string): boolean {
-  // Measurement units, numbers with units, common spec patterns
-  return /(\d+\.?\d*\s*(cm|mm|m|inch|kg|g|ml|l|oz|lb|px|°[CF]|%)|[0-9]+[×xX][0-9]+)/i.test(text);
-}
-
 async function overlayTextOnImage(imageUrl: string, text: string, label: string, isInfoType: boolean): Promise<string> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new window.Image(); i.crossOrigin = "anonymous"; i.onload = () => resolve(i); i.onerror = reject; i.src = imageUrl;
@@ -129,12 +123,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         const out: typeof results = [];
         for (const g of generated) {
           const label = g.label || g.key;
-          // Only overlay text when the user wrote actual specs (numbers, measurements,
-          // materials). Visual descriptions ("warm atmosphere, modern interior")
-          // should guide the AI, not appear as text.
+          // INFO types (尺寸/材质/成分/卖点/工艺/对比) are spec-sheet style:
+          // the user's text should be rendered directly on the white-bg image.
+          // Scene types (场景/氛围/使用中等) are pure photography — no text overlay.
           const isInfo = INFO_TYPES.has(g.key);
-          const shouldOverlay = isInfo && isSpecLike(customDesc);
-          const overlayedUrl = shouldOverlay
+          const overlayedUrl = isInfo
             ? await overlayTextOnImage(g.url, customDesc, label, true).catch(() => g.url)
             : g.url;
           out.push({ key: g.key, url: overlayedUrl, rawUrl: g.url, label });
