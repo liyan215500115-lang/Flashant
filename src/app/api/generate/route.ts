@@ -11,6 +11,109 @@ import { getSignedGetUrl } from "@/lib/s3";
 import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { prepareReferenceImage } from "@/lib/reference-image";
+import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES } from "@/lib/ai/constants";
+
+// ── Module-level constants ──
+
+// Visual prompts for each detail type — server-side only, kept purely visual
+const DETAIL_PROMPTS: Record<string, string> = {
+  selling_points: "Product centered on pure white background, soft diffused studio lighting 5500K, clean minimal e-commerce packshot, generous empty space around product, 8K sharp focus",
+  material: "Extreme macro close-up product photography on white background, 100mm macro lens f/2.8, crisp texture detail, shallow depth of field, soft diffused ring light, premium detail quality, 8K",
+  size: "Product on white background next to a standard soda can for scale reference, both equally sharp at f/8, clean studio lighting 5500K, professional size reference photography, 4K",
+  craft: "Product on clean white surface, still-life composition showing fine workmanship details, soft directional light raking at 30 degrees, revealing subtle surface texture, clean professional photography, 4K",
+  compare: "Split-screen comparison, two views side by side on white background, identical lighting and scale, clean vertical dividing line centered, equally sharp at f/11, professional layout, 8K",
+
+  lifestyle: "Product in a bright modern interior with natural window light, soft daylight 5600K, 50mm lens f/2.2, product sharp in foreground, background softly blurred, editorial magazine quality, warm atmosphere, 4K",
+  scene_atmosphere: "Dramatic product photography, product as lone hero, directional lighting, 85mm lens f/1.8 ultra-shallow depth of field, product pin-sharp, cinematic moody atmosphere, 4K",
+  in_use: "Product being used by a person, candid mid-action moment, soft daylight 5500K, 50mm lens f/2.0, focus on product, editorial lifestyle photography, warm tones, 4K",
+  multi_angle: "Multi-angle product photography composited, front view 45-degree side rear and top-down views, white background, consistent lighting, identical scale across all views, clean grid layout, 8K",
+  detail: "Extreme macro close-up of premium quality details, 100mm macro lens f/3.2, very shallow depth of field, soft diffused light, crisp texture visible, 8K",
+  color_variants: "Product color variants in clean grid layout on white background, consistent lighting and angle across all variants, equal spacing, professional catalog presentation, 8K",
+  flatlay: "Overhead flat lay product photography from directly above, product surrounded by complementary accessories, clean neutral surface, soft even lighting, editorial catalog style, 8K",
+  brand_story: "Premium unboxing scene, packaging box tissue paper product in insert accessories arranged, warm window light 5000K, overhead angle, editorial quality, 4K",
+  gift_accessory: "Main product with all included accessories neatly arranged on white surface, soft even studio lighting, all items equally sharp at f/11, clean visual inventory, 8K",
+};
+
+// Model version mapping for engines routed through Replicate.
+// bria is intentionally absent: its provider hardcodes the version internally.
+const ENGINE_MODELS: Record<string, string> = {
+  flux: "black-forest-labs/flux-2-pro",
+  sdxl: "stability-ai/sdxl",
+  playground: "playgroundai/playground-v2.5-1024px-aesthetic",
+};
+
+/**
+ * Re-upload a generated image to R2 (so it doesn't expire) and optionally apply a
+ * brand logo overlay for non-FREE users. Returns the final URL and updates the
+ * generatedImage DB record in place.
+ */
+async function postProcessImage(
+  imageUrl: string,
+  mimeType: string,
+  generatedImageId: string,
+  brandPreset: { logoUrl?: string | null } | null,
+  quotaTier: string,
+): Promise<string> {
+  let finalUrl = imageUrl;
+
+  // Re-upload to R2 so the image doesn't expire with the provider
+  if (hasS3Config()) {
+    try {
+      const imageBuf = await fetchImageBuffer(imageUrl);
+      const { publicUrl: newUrl, s3Key: newKey } = await uploadBuffer(
+        imageBuf,
+        mimeType || "image/png",
+        "generated/",
+      );
+      finalUrl = newUrl;
+      await db.generatedImage.update({
+        where: { id: generatedImageId },
+        data: { url: newUrl, s3Key: newKey },
+      });
+    } catch { /* keep provider URL as fallback */ }
+  }
+
+  // Apply brand logo overlay if present (non-FREE users)
+  const presetLogo = brandPreset?.logoUrl;
+  if (presetLogo && quotaTier !== "FREE") {
+    try {
+      const imageBuf = await fetchImageBuffer(finalUrl);
+      const logoUrl = await getSignedGetUrl(presetLogo).catch(() => presetLogo);
+      const logoBuf = await fetchImageBuffer(logoUrl);
+      const overlaid = await overlayLogo(imageBuf, logoBuf);
+      if (hasS3Config()) {
+        const { publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
+        await db.generatedImage.update({
+          where: { id: generatedImageId },
+          data: { url: newUrl, s3Key: newUrl },
+        });
+        finalUrl = newUrl;
+      }
+    } catch { /* keep un-overlaid image */ }
+  }
+
+  return finalUrl;
+}
+
+/**
+ * Poll a prediction until it completes or times out.
+ * Used by both the sync-generation and batch paths.
+ */
+async function pollPrediction(
+  provider: ReturnType<typeof getProvider>,
+  predictionId: string,
+  pollMs: number = 1000,
+  maxPolls: number = 30,
+) {
+  let result = await provider.getPrediction(predictionId);
+  let polls = 0;
+  while (result.status === "processing" && polls < maxPolls) {
+    await new Promise((r) => setTimeout(r, pollMs));
+    result = await provider.getPrediction(predictionId);
+    polls++;
+  }
+  return result;
+}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -33,36 +136,12 @@ export async function POST(req: Request) {
     detailType,
     detailTypes, // batch detail types: [{ key, prompt }]
     baseStyle,
-    customDesc,
     referenceImageUrl,
     seed,
   } = await req.json();
 
   // Track which engine will actually be used (may fall back to flux at resolve time)
   let actualEngine = engineType;
-
-  // Detail image type prompts (server-side only)
-  // Types that should be clean white-bg + Canvas text overlay (no AI text generation)
-  const INFO_TYPES = new Set(["selling_points", "material", "size", "craft", "compare"]);
-
-  const DETAIL_PROMPTS: Record<string, string> = {
-    // Keep prompts purely visual — no negative instructions that confuse img models
-    selling_points: "Product centered on pure white background, soft diffused studio lighting 5500K, clean minimal e-commerce packshot, generous empty space around product, 8K sharp focus",
-    material: "Extreme macro close-up product photography on white background, 100mm macro lens f/2.8, crisp texture detail, shallow depth of field, soft diffused ring light, premium detail quality, 8K",
-    size: "Product on white background next to a standard soda can for scale reference, both equally sharp at f/8, clean studio lighting 5500K, professional size reference photography, 4K",
-    craft: "Product on clean white surface, still-life composition showing fine workmanship details, soft directional light raking at 30 degrees, revealing subtle surface texture, clean professional photography, 4K",
-    compare: "Split-screen comparison, two views side by side on white background, identical lighting and scale, clean vertical dividing line centered, equally sharp at f/11, professional layout, 8K",
-
-    lifestyle: "Product in a bright modern interior with natural window light, soft daylight 5600K, 50mm lens f/2.2, product sharp in foreground, background softly blurred, editorial magazine quality, warm atmosphere, 4K",
-    scene_atmosphere: "Dramatic product photography, product as lone hero, directional lighting, 85mm lens f/1.8 ultra-shallow depth of field, product pin-sharp, cinematic moody atmosphere, 4K",
-    in_use: "Product being used by a person, candid mid-action moment, soft daylight 5500K, 50mm lens f/2.0, focus on product, editorial lifestyle photography, warm tones, 4K",
-    multi_angle: "Multi-angle product photography composited, front view 45-degree side rear and top-down views, white background, consistent lighting, identical scale across all views, clean grid layout, 8K",
-    detail: "Extreme macro close-up of premium quality details, 100mm macro lens f/3.2, very shallow depth of field, soft diffused light, crisp texture visible, 8K",
-    color_variants: "Product color variants in clean grid layout on white background, consistent lighting and angle across all variants, equal spacing, professional catalog presentation, 8K",
-    flatlay: "Overhead flat lay product photography from directly above, product surrounded by complementary accessories, clean neutral surface, soft even lighting, editorial catalog style, 8K",
-    brand_story: "Premium unboxing scene, packaging box tissue paper product in insert accessories arranged, warm window light 5000K, overhead angle, editorial quality, 4K",
-    gift_accessory: "Main product with all included accessories neatly arranged on white surface, soft even studio lighting, all items equally sharp at f/11, clean visual inventory, 8K",
-  };
 
   if (!imageProjectId || !productImageId) {
     return NextResponse.json(
@@ -170,13 +249,8 @@ export async function POST(req: Request) {
         .filter((p): p is NonNullable<typeof p> => p !== null)
         .map(async (p) => {
           try {
-            let result = await batchProvider.getPrediction(p.predictionId);
-            let polls = 0;
-            while (result.status === "processing" && polls < MAX_POLLS) {
-              await new Promise((r) => setTimeout(r, POLL_MS));
-              result = await batchProvider.getPrediction(p.predictionId);
-              polls++;
-            }
+            const result = await pollPrediction(batchProvider, p.predictionId, POLL_MS, MAX_POLLS);
+
             if (result.status === "succeeded" && result.outputs.length > 0) {
               const imgUrl = result.outputs[0].url;
               await db.generatedImage.create({
@@ -284,14 +358,6 @@ export async function POST(req: Request) {
 
   const numOutputs = customNumOutputs ?? 2;
 
-  // Model version mapping for alternative engines (all routed through Replicate).
-  // bria is intentionally absent: its provider hardcodes the version internally and
-  // never reads modelVersion, so the flux fallback below is harmless for it.
-  const ENGINE_MODELS: Record<string, string> = {
-    flux: "black-forest-labs/flux-2-pro",
-    sdxl: "stability-ai/sdxl",
-    playground: "playgroundai/playground-v2.5-1024px-aesthetic",
-  };
   const modelVersion = ENGINE_MODELS[actualEngine] || ENGINE_MODELS.flux;
 
   // Resolve provider — fallback to flux for Gemini-based engines when unavailable
@@ -299,7 +365,7 @@ export async function POST(req: Request) {
   try {
     provider = getProvider(engineType);
   } catch {
-    if (engineType === "gemini" || engineType === "banana" || engineType === "gpt-image") {
+    if (FALLBACK_ENGINES.has(engineType)) {
       try {
         provider = getProvider("flux");
         actualEngine = "flux";
@@ -336,7 +402,7 @@ export async function POST(req: Request) {
   });
 
   // Gemini-based providers — always async: create task, return taskId, let /api/tasks/[id] do the heavy lifting
-  if ((engineType === "gemini" || engineType === "banana" || engineType === "gpt-image") && actualEngine !== "flux") {
+  if (ASYNC_ENGINES.has(engineType) && actualEngine !== "flux") {
     // Store generation params on task so /api/tasks/[id] can pick them up
     await db.task.update({
       where: { id: task.id },
@@ -458,6 +524,32 @@ export async function POST(req: Request) {
   // modelVersion, width, or height — bria ignores them and they can confuse the API.
   // The prompt here is already a pure background description (see style-picker: bria
   // reuses promptFlux with the "keep the product identical" clause stripped).
+  //
+  // bria is a backup engine — it only fits the "swap background on a real product
+  // photo" flow. Redirect to flux (the primary engine) when the request is outside
+  // bria's lane, so the user still gets a result instead of an error:
+  //   1. No product image (pure text-to-image) — bria needs image_url.
+  //   2. White-bg / composite detailTypes (selling_points, material, size, craft,
+  //      compare, multi_angle, color_variants, flatlay, brand_story, gift_accessory,
+  //      detail) — these are clean studio composites, not background swaps. bria only
+  //      fits the scene types: lifestyle / scene_atmosphere / in_use.
+  if (actualEngine === "bria") {
+    const briaUnsupportedDetail = !!detailType && !BRIA_SCENE_TYPES.has(detailType);
+    if (!sharedImageUrl || briaUnsupportedDetail) {
+      const reason = !sharedImageUrl ? "no product image" : `unsupported detailType "${detailType}"`;
+      console.warn(`bria fallback to flux: ${reason}`);
+      try {
+        provider = getProvider("flux");
+        actualEngine = "flux";
+      } catch {
+        return NextResponse.json(
+          { error: "No AI engine available" },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
   if (actualEngine === "bria") {
     try {
       const generatedIds: string[] = [];
@@ -491,13 +583,7 @@ export async function POST(req: Request) {
         });
 
         // bria is async (Replicate) — poll until done.
-        let imageResult = await provider.getPrediction(prediction.predictionId);
-        let polls = 0;
-        while (imageResult.status === "processing" && polls < 30) {
-          await new Promise((r) => setTimeout(r, 1000));
-          imageResult = await provider.getPrediction(prediction.predictionId);
-          polls++;
-        }
+        const imageResult = await pollPrediction(provider, prediction.predictionId);
 
         if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
           const output = imageResult.outputs[0];
@@ -511,31 +597,13 @@ export async function POST(req: Request) {
             },
           });
 
-          let finalUrl = output.url;
-          // Always re-upload to R2 so images don't expire
-          if (hasS3Config()) {
-            try {
-              const imageBuf = await fetchImageBuffer(output.url);
-              const { publicUrl: newUrl, s3Key: newKey } = await uploadBuffer(imageBuf, output.mimeType ?? "image/png", "generated/");
-              finalUrl = newUrl;
-              await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newKey } });
-            } catch { /* keep original */ }
-          }
-          // Apply brand logo overlay if present (non-FREE users)
-          const presetLogo = brandPreset?.logoUrl;
-          if (presetLogo && quota.tier !== "FREE") {
-            try {
-              const imageBuf = await fetchImageBuffer(finalUrl);
-              const logoUrl = await getSignedGetUrl(presetLogo).catch(() => presetLogo);
-              const logoBuf = await fetchImageBuffer(logoUrl);
-              const overlaid = await overlayLogo(imageBuf, logoBuf);
-              if (hasS3Config()) {
-                const { publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
-                await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newUrl } });
-                finalUrl = newUrl;
-              }
-            } catch { /* keep original */ }
-          }
+          await postProcessImage(
+            output.url,
+            output.mimeType ?? "image/png",
+            placeholder.id,
+            brandPreset,
+            quota.tier,
+          );
           generatedIds.push(placeholder.id);
         } else {
           generatedIds.push("");
@@ -618,13 +686,7 @@ export async function POST(req: Request) {
       } else if (prediction.status === "failed") {
         imageResult = { status: "failed" as const, outputs: [], error: prediction.error };
       } else {
-        imageResult = await provider.getPrediction(prediction.predictionId);
-        let polls = 0;
-        while (imageResult.status === "processing" && polls < 30) {
-          await new Promise((r) => setTimeout(r, 1000));
-          imageResult = await provider.getPrediction(prediction.predictionId);
-          polls++;
-        }
+        imageResult = await pollPrediction(provider, prediction.predictionId);
       }
 
       if (imageResult.status === "succeeded" && imageResult.outputs.length > 0) {
@@ -639,31 +701,13 @@ export async function POST(req: Request) {
           },
         });
 
-        let finalUrl = output.url;
-        // Always re-upload to R2 so images don't expire
-        if (hasS3Config()) {
-          try {
-            const imageBuf = await fetchImageBuffer(output.url);
-            const { publicUrl: newUrl, s3Key: newKey } = await uploadBuffer(imageBuf, output.mimeType ?? "image/png", "generated/");
-            finalUrl = newUrl;
-            await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newKey } });
-          } catch { /* keep original */ }
-        }
-        // Apply brand logo overlay if present (non-FREE users)
-        const presetLogo = brandPreset?.logoUrl;
-        if (presetLogo && quota.tier !== "FREE") {
-          try {
-            const imageBuf = await fetchImageBuffer(finalUrl);
-            const logoUrl = await getSignedGetUrl(presetLogo).catch(() => presetLogo);
-            const logoBuf = await fetchImageBuffer(logoUrl);
-            const overlaid = await overlayLogo(imageBuf, logoBuf);
-            if (hasS3Config()) {
-              const { publicUrl: newUrl } = await uploadBuffer(overlaid, "image/png", "generated/");
-              await db.generatedImage.update({ where: { id: placeholder.id }, data: { url: newUrl, s3Key: newUrl } });
-              finalUrl = newUrl;
-            }
-          } catch { /* keep original */ }
-        }
+        await postProcessImage(
+          output.url,
+          output.mimeType ?? "image/png",
+          placeholder.id,
+          brandPreset,
+          quota.tier,
+        );
         generatedIds.push(placeholder.id);
       } else {
         generatedIds.push("");

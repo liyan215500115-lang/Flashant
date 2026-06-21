@@ -3,15 +3,11 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
+import { fetchImageBuffer } from "@/lib/overlay-logo";
+import { ASYNC_ENGINES } from "@/lib/ai/constants";
 
 // Simple in-memory lock to avoid duplicate Gemini calls per task
 const processingLocks = new Set<string>();
-
-async function fetchImageBuffer(url: string): Promise<Buffer> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
-}
 
 export async function GET(
   _req: Request,
@@ -39,7 +35,7 @@ export async function GET(
   // ── Trigger Gemini generation on first poll ──
   if (
     task.status === "PENDING" &&
-    ["gemini", "banana", "gpt-image"].includes(task.engineType) &&
+    ASYNC_ENGINES.has(task.engineType) &&
     !processingLocks.has(id)
   ) {
     processingLocks.add(id);
