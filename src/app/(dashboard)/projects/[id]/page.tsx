@@ -75,7 +75,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
-  const [quota, setQuota] = useState({ used: 0, limit: 200 });
+  const [quota, setQuota] = useState({ used: 0, limit: -1 });
   const pollTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -215,6 +215,10 @@ export default function ProductDetailPage() {
     try {
       await fetch(`/api/products/${params.id}/images`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageId }) });
       fetchProject();
+      // Refresh quota after deletion
+      fetch("/api/quota").then(r => r.json()).then(d => {
+        if (d.used !== undefined) setQuota({ used: d.used, limit: d.limit === -1 ? Infinity : d.limit });
+      }).catch(() => {});
     } catch {}
   }
 
@@ -318,15 +322,17 @@ export default function ProductDetailPage() {
               </span>
             )}
           </div>
-          {/* Quota badge */}
-          <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border mt-2 ${
-            quota.limit !== Infinity && quota.used >= quota.limit
-              ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400"
-              : "bg-zinc-50 border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700"
-          }`}>
-            <span className="font-mono tabular-nums">{quota.used}/{quota.limit === Infinity ? "∞" : quota.limit}</span>
-            <span className="opacity-60 ml-0.5">额度</span>
-          </div>
+          {/* Quota badge — only show when limit is known (not -1 loading state) */}
+          {quota.limit >= 0 && (
+            <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border mt-2 ${
+              quota.used >= quota.limit
+                ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400"
+                : "bg-zinc-50 border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700"
+            }`}>
+              <span>本月剩余</span>
+              <span className="font-mono tabular-nums">{Math.max(0, quota.limit - quota.used)}/{quota.limit}</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {editMode ? (
@@ -664,6 +670,9 @@ export default function ProductDetailPage() {
                 setSelectedIds(new Set());
                 setDeleteImagesDialogOpen(false);
                 fetchProject();
+                fetch("/api/quota").then(r => r.json()).then(d => {
+                  if (d.used !== undefined) setQuota({ used: d.used, limit: d.limit === -1 ? Infinity : d.limit });
+                }).catch(() => {});
               }}
               className="cursor-pointer">
               删除 {selectedIds.size} 张
