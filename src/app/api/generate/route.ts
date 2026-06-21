@@ -250,11 +250,12 @@ export async function POST(req: Request) {
         const detailPrompt = baseVisual
           ? `${baseVisual}.${userPrompt ? ` The image should visually convey: ${userPrompt}.` : ""}${styleHint}${identityLock}${wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image. Pure photography only."}`
           : userPrompt || baseVisual || "Professional product photography";
-        // Model close-ups: when a reference image has a person, skip the product
-        // image so the AI focuses on the model, not the product.
+        // Model close-ups: person using/wearing the product (e.g. headphones on
+        // ears, lotion on face, hat on head). Show the product IN USE but do NOT
+        // show the product packaging, bottle, or box.
         const isModelCloseup = referenceImageUrl && MODEL_CLOSEUP_TYPES.has(dt.key);
         const modelCloseupPrompt = baseVisual
-          ? `Extreme portrait detail close-up of the person from the reference image. Focus on face, skin texture, eyes, hands, or body details — no product, no object in frame. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. Keep the person visually IDENTICAL to the reference image. CRITICAL: do NOT render any text or labels on the image.`
+          ? `Extreme close-up of the person from the reference image using or wearing the product. Focus on the face/head/hands where the product is being applied or worn. The product itself should be visible in use (on skin, on head, on body) but do NOT show any product packaging, bottles, boxes, or containers. Keep the person visually IDENTICAL to the reference image — same face, same features, same skin tone. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. CRITICAL: do NOT render any text or labels on the image.`
           : detailPrompt;
 
         try {
