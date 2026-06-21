@@ -13,6 +13,11 @@ import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { prepareReferenceImage } from "@/lib/reference-image";
 import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES } from "@/lib/ai/constants";
 
+// Detail types where the model/person should be the FOCUS, not the product.
+// When a reference image with a person is present, skip productImageUrl so the
+// AI generates portrait close-ups without forcing the product into the frame.
+const MODEL_CLOSEUP_TYPES = new Set(["detail"]);
+
 // ── Module-level constants ──
 
 // Visual prompts for each detail type — server-side only, kept purely visual
@@ -245,10 +250,17 @@ export async function POST(req: Request) {
         const detailPrompt = baseVisual
           ? `${baseVisual}.${userPrompt ? ` The image should visually convey: ${userPrompt}.` : ""}${styleHint}${identityLock}${wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image. Pure photography only."}`
           : userPrompt || baseVisual || "Professional product photography";
+        // Model close-ups: when a reference image has a person, skip the product
+        // image so the AI focuses on the model, not the product.
+        const isModelCloseup = referenceImageUrl && MODEL_CLOSEUP_TYPES.has(dt.key);
+        const modelCloseupPrompt = baseVisual
+          ? `Extreme portrait detail close-up of the person from the reference image. Focus on face, skin texture, eyes, hands, or body details — no product, no object in frame. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. Keep the person visually IDENTICAL to the reference image. CRITICAL: do NOT render any text or labels on the image.`
+          : detailPrompt;
+
         try {
           const p = await batchProvider.createPrediction({
-            prompt: detailPrompt,
-            productImageUrl: sharedImageUrl,
+            prompt: isModelCloseup ? modelCloseupPrompt : detailPrompt,
+            productImageUrl: isModelCloseup ? undefined : sharedImageUrl,
             referenceImageUrl: referenceImageUrl || undefined,
             numOutputs: 1,
             width: 1024,
@@ -277,6 +289,7 @@ export async function POST(req: Request) {
                   imageProjectId, productImageId,
                   s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
                   aiProvider: "flux", status: "SUCCEEDED", completedAt: new Date(),
+                  generationMeta: { sourceType: "detail", detailKey: p.key },
                 },
               });
               return { key: p.key, url: imgUrl, label: p.key };
@@ -493,6 +506,7 @@ export async function POST(req: Request) {
           height: 1024,
           status: "SUCCEEDED",
           completedAt: new Date(),
+          generationMeta: { sourceType: "main" },
         },
       });
 
@@ -598,6 +612,7 @@ export async function POST(req: Request) {
             s3Key: "pending", url: "", promptUsed: prompt,
             aiProvider: "bria", status: "PROCESSING",
             webhookId: prediction.predictionId,
+            generationMeta: { sourceType: "main" },
           },
         });
 
@@ -693,6 +708,7 @@ export async function POST(req: Request) {
           s3Key: "pending", url: "", promptUsed: prompt,
           aiProvider: actualEngine, status: "PROCESSING",
           webhookId: prediction.predictionId,
+          generationMeta: { sourceType: "main" },
         },
       });
 

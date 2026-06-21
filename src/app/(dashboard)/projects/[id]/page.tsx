@@ -175,59 +175,6 @@ export default function ProductDetailPage() {
     pollTimers.current.set(taskId, setTimeout(poll, initialDelay));
   }
 
-  async function handleGenerateExtended(params: {
-    productImageId: string;
-    prompt?: string;
-    numOutputs?: number;
-    engineType?: string;
-  }) {
-    const { productImageId, prompt, numOutputs, engineType } = params;
-    if (generatingIds.has(productImageId)) return;
-    setError("");
-
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageProjectId: project!.id,
-          productImageId,
-          promptTemplateId: project!.promptTemplate?.id ?? null,
-          prompt: prompt ?? undefined,
-          numOutputs: numOutputs ?? undefined,
-          engineType: engineType ?? undefined,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        if (data.error === "quota_exceeded") {
-          setError(data.message || t("error.quotaExceeded"));
-        } else if (data.error === "already_generating") {
-          startPolling(data.taskId, productImageId);
-          return;
-        } else {
-          throw new Error(data.error || t("error.generateFailed"));
-        }
-      } else {
-        const data = await res.json();
-        startPolling(data.taskId, productImageId);
-        fetchProject();
-        // Refresh quota after generation
-        fetch("/api/quota")
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.used !== undefined) {
-              setQuota({ used: data.used, limit: data.limit === -1 ? Infinity : data.limit });
-            }
-          })
-          .catch(() => {});
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.generateFailed"));
-    }
-  }
-
   async function handleGenerate(productImageId: string) {
     if (generatingIds.has(productImageId)) return;
     setError("");
@@ -371,6 +318,15 @@ export default function ProductDetailPage() {
               </span>
             )}
           </div>
+          {/* Quota badge */}
+          <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border mt-2 ${
+            quota.limit !== Infinity && quota.used >= quota.limit
+              ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400"
+              : "bg-zinc-50 border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700"
+          }`}>
+            <span className="font-mono tabular-nums">{quota.used}/{quota.limit === Infinity ? "∞" : quota.limit}</span>
+            <span className="opacity-60 ml-0.5">额度</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {editMode ? (
@@ -431,7 +387,7 @@ export default function ProductDetailPage() {
                 onClick={() => setEditMode(true)}
                 className="cursor-pointer gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                整理图片
+                选择图片
               </Button>
               <Button
                 variant="outline"
@@ -460,10 +416,22 @@ export default function ProductDetailPage() {
           return (
             <div key={pi.id} className="flex flex-col md:flex-row gap-5 items-start">
               <div className="w-full md:w-[280px] flex-shrink-0 relative group">
-                <div className="aspect-square rounded-xl overflow-hidden bg-muted border border-zinc-200 cursor-pointer"
-                  draggable
-                  onDragStart={(e) => { e.dataTransfer.setData("source", "product"); e.dataTransfer.setData("url", pi.originalUrl); e.dataTransfer.setData("name", pi.fileName); }}
-                  onClick={() => setLightboxUrl(pi.originalUrl)}>
+                <div className={`aspect-square rounded-xl overflow-hidden bg-muted border-2 transition-all ${
+                  editMode && selectedIds.has(pi.id) ? "border-brand-500 ring-2 ring-brand-500" : "border-zinc-200"
+                } cursor-pointer`}
+                  draggable={!editMode}
+                  onDragStart={(e) => { if (editMode) return; e.dataTransfer.setData("source", "product"); e.dataTransfer.setData("url", pi.originalUrl); e.dataTransfer.setData("name", pi.fileName); }}
+                  onClick={() => {
+                    if (editMode) {
+                      setSelectedIds(prev => {
+                        const next = new Set(prev);
+                        if (next.has(pi.id)) next.delete(pi.id); else next.add(pi.id);
+                        return next;
+                      });
+                    } else {
+                      setLightboxUrl(pi.originalUrl);
+                    }
+                  }}>
                   <img src={pi.originalUrl} alt={pi.fileName} className="w-full h-full object-cover pointer-events-none"
                     onError={(e) => {
                       const t = e.currentTarget;
@@ -475,11 +443,28 @@ export default function ProductDetailPage() {
                       t.parentElement?.appendChild(placeholder);
                     }} />
                 </div>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: pi.originalUrl, name: pi.fileName }); }}
-                  className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 hover:text-zinc-800 transition-all flex items-center gap-1">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                  编辑
-                </button>
+                {/* Edit mode checkbox */}
+                {editMode && (
+                  <div className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                    selectedIds.has(pi.id) ? "bg-brand-500 border-brand-500" : "bg-white/80 border-zinc-300"
+                  }`}>
+                    {selectedIds.has(pi.id) && <Check size={12} className="text-white" />}
+                  </div>
+                )}
+                {/* Hover delete icon */}
+                {!editMode && (
+                  <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm("删除这张产品图？相关的生成图也会被删除。")) handleDeleteImage(pi.id); }}
+                    className="absolute top-2 left-2 p-1 rounded-md bg-white/80 hover:bg-red-50 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm">
+                    <Trash2 size={12} />
+                  </button>
+                )}
+                {!editMode && (
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: pi.originalUrl, name: pi.fileName }); }}
+                    className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 hover:text-zinc-800 transition-all flex items-center gap-1">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    编辑
+                  </button>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 {imageResults.length === 0 ? (
@@ -534,6 +519,13 @@ export default function ProductDetailPage() {
                     placeholder.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
                     t.parentElement?.appendChild(placeholder);
                   }} />
+                        {/* Hover delete icon */}
+                        {!editMode && (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm("删除这张图片？")) handleDeleteImage(img.id); }}
+                            className="absolute top-2 left-2 p-1 rounded-md bg-white/80 hover:bg-red-50 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10">
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                         {editMode && (
                           <div className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                             selectedIds.has(img.id)
@@ -658,12 +650,17 @@ export default function ProductDetailPage() {
             <Button
               variant="destructive" size="sm"
               onClick={async () => {
-                for (const id of selectedIds) {
-                  await fetch(`/api/products/${params.id}/images`, {
-                    method: "DELETE", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ imageId: id })
-                  });
-                }
+                const results = await Promise.allSettled(
+                  [...selectedIds].map(id =>
+                    fetch(`/api/products/${params.id}/images`, {
+                      method: "DELETE", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ imageId: id })
+                    })
+                  )
+                );
+                const failed = results.filter(r => r.status === "rejected").length;
+                if (failed > 0) toast.error(`${failed} 张删除失败，请重试`);
+                else toast.success(`已删除 ${selectedIds.size} 张图片`);
                 setSelectedIds(new Set());
                 setDeleteImagesDialogOpen(false);
                 fetchProject();

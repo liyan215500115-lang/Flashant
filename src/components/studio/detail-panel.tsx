@@ -182,11 +182,19 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           {results.length > 0 && (
             <div className="grid grid-cols-4 gap-1.5 mt-3">
               {results.map((r, i) => (
-                <button key={i} type="button" onClick={() => setLightbox(r.url)}
-                  className="rounded-lg overflow-hidden border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all">
-                  <img src={r.url} alt={r.label} className="aspect-square object-cover w-full" />
-                  <p className="text-[9px] p-1 text-zinc-600">{r.label}</p>
-                </button>
+                <div key={i} className="group relative rounded-lg overflow-hidden border border-zinc-200 hover:ring-2 hover:ring-brand-400 transition-all">
+                  <button type="button" onClick={() => setLightbox(r.url)} className="w-full cursor-pointer">
+                    <img src={r.url} alt={r.label} className="aspect-square object-cover w-full" />
+                  </button>
+                  <div className="flex items-center justify-between px-1 pb-1">
+                    <p className="text-[9px] text-zinc-600 truncate">{r.label}</p>
+                    <a href={r.rawUrl ?? r.url} download={`${r.label}.png`}
+                      className="text-[9px] text-zinc-400 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                      onClick={(e) => e.stopPropagation()}>
+                      下载
+                    </a>
+                  </div>
+                </div>
               ))}
             </div>
           )}

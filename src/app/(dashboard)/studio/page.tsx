@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Plus, AlertTriangle, Loader2, ChevronRight, FolderOpen } from "lucide-react";
 import Link from "next/link";
@@ -40,6 +40,7 @@ export default function StudioPage() {
   const [projectId, setProjectId] = useState<string | null>(existingId);
   const [projectCreating, setProjectCreating] = useState(false);
   const [projectError, setProjectError] = useState("");
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
   const [activeStyle, setActiveStyle] = useState<string | null>(null);
@@ -123,7 +124,7 @@ export default function StudioPage() {
             }
           }
         })
-        .catch(() => {});
+        .catch(() => { setProjectError("项目加载失败，请检查链接是否有效"); });
       setProjectCreating(false);
     } else {
       // Auto-create a draft project so upload works
@@ -134,6 +135,13 @@ export default function StudioPage() {
         .catch((e) => setProjectError(e.message))
         .finally(() => setProjectCreating(false));
     }
+  }, []);
+
+  // Cleanup polling timer on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    };
   }, []);
 
   const pollTask = useCallback(
@@ -165,7 +173,7 @@ export default function StudioPage() {
             setIsGenerating(false);
             return;
           }
-          if (data.poll) { setTimeout(() => { poll(); }, data.nextPollMs ?? 3000); }
+          if (data.poll) { pollTimerRef.current = setTimeout(() => { poll(); }, data.nextPollMs ?? 3000); }
           else { setIsGenerating(false); }
         } catch { setIsGenerating(false); }
       };
