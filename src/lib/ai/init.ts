@@ -2,6 +2,7 @@ import "server-only";
 
 import { registerProvider } from "./registry";
 import { createReplicateProvider } from "./replicate";
+import { createBriaProvider } from "./bria";
 import { createOpenAIProvider } from "./openai";
 import { createGeminiProvider } from "./gemini";
 import { createLaozhangKontextProvider } from "./laozhang-kontext";
@@ -25,6 +26,16 @@ export function initProviders(): void {
       // SDXL / Playground — disabled until model version is verified
       // registerProvider("sdxl", createReplicateProvider({ modelVersion: "stability-ai/sdxl" }));
       // registerProvider("playground", createReplicateProvider({ modelVersion: "playgroundai/playground-v2.5-1024px-aesthetic" }));
+    } catch {
+      // Provider not available — skip registration
+    }
+
+    // ── Backup img2img engine: bria/generate-background ──
+    // Purpose-built for e-commerce product photography (preserves the product, renders a
+    // new background from bg_prompt). Verified good fit for the core flow and likely
+    // cheaper than flux-2-pro. Exposed in the UI as a selectable "商品图专用" engine.
+    try {
+      registerProvider("bria", createBriaProvider());
     } catch {
       // Provider not available — skip registration
     }

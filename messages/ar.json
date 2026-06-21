@@ -484,6 +484,7 @@
     "engineLabel": "AI Engine",
     "engineFlux": "FLUX.2 Pro (Recommended)",
     "engineFlux2": "FLUX.2 Pro (Recommended)",
+    "engineBria": "Bria · Product BG swap",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL",
     "enginePlayground": "Playground v2.5",

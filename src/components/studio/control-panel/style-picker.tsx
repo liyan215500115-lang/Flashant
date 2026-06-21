@@ -143,9 +143,20 @@ export function StylePicker({ value, onChange, onReferenceImage, onReferenceImag
     // FLUX (flux-2-pro img2img): scene-focused prompt with explicit style keywords +
     //   "keep the product identical to the reference image" instruction (see promptFlux).
     // GPT Image (text-to-image, no reference): full product+scene description (prompt).
-    const prompt = engineType === "flux"
-      ? (isZh ? s.promptFluxZh : s.promptFlux)
-      : (isZh ? s.promptZh : s.prompt);
+    // Bria (product-preserving bg swap): reuses promptFlux but STRIPS the "keep the
+    //   product identical" clause — bria preserves the product automatically, and that
+    //   instruction is irrelevant to it and can even confuse it (see bria.ts).
+    let prompt: string;
+    if (engineType === "flux" || engineType === "bria") {
+      prompt = isZh ? s.promptFluxZh : s.promptFlux;
+      if (engineType === "bria") {
+        prompt = prompt
+          .replace(/Keep the product identical to the reference image,?\s*/i, "")
+          .replace(/保持产品与参考图完全一致[，,]?\s*/g, "");
+      }
+    } else {
+      prompt = isZh ? s.promptZh : s.prompt;
+    }
     onChange(s.key === value ? "" : s.key, s.key === value ? "" : prompt);
   }
 

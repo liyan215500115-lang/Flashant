@@ -496,6 +496,7 @@
     "historyLabel": "History ({count})",
     "engineLabel": "AI Engine",
     "engineFlux": "FLUX.2 Pro (Recommended)",
+    "engineBria": "Bria · Product BG swap",
     "engineGptImage": "GPT Image 2 · Text-only ($0.03)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL (Fast)",

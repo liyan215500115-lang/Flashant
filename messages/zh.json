@@ -496,6 +496,7 @@
     "historyLabel": "历史生成 ({count})",
     "engineLabel": "AI 算力引擎",
     "engineFlux": "FLUX.2 Pro（推荐）",
+    "engineBria": "Bria · 商品图专用换背景",
     "engineGptImage": "GPT Image 2 · 文生图 ($0.03)",
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL（快速模式）",
