@@ -81,12 +81,6 @@ async function overlayTextOnImage(imageUrl: string, text: string, label: string,
       ctx.fillText(text, img.width / 2, img.height - barHeight / 2 + fontSize * 0.35);
       ctx.textAlign = "left";
     }
-    // Label at top-left
-    const labelFontSize = Math.max(11, Math.floor(Math.max(18, Math.floor(img.width / 25)) * 0.55));
-    ctx.font = `${labelFontSize}px Inter, -apple-system, sans-serif`;
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    const labelPad = Math.floor(labelFontSize * 0.5);
-    ctx.fillText(label, labelPad, labelPad + labelFontSize);
   }
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(URL.createObjectURL(b!)), "image/png", 1.0));

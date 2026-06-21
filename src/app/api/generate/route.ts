@@ -228,12 +228,14 @@ export async function POST(req: Request) {
     const predictions = await Promise.all(
       detailTypesArray.map(async (dt) => {
         // Blend the visual template with the user's description so the AI
-        // generates an image that VISUALLY represents the content — not text
-        // rendered on top of the photo.
+        // generates an image that VISUALLY represents the content.
+        // Only add the "no text" guard when the user didn't explicitly ask
+        // for text rendering (e.g. "write", "标注", "text on image").
         const baseVisual = DETAIL_PROMPTS[dt.key];
         const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
+        const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
         const detailPrompt = baseVisual
-          ? `${baseVisual}.${userPrompt ? ` The image should visually convey: ${userPrompt}.` : ""} CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image. Pure photography only.`
+          ? `${baseVisual}.${userPrompt ? ` The image should visually convey: ${userPrompt}.` : ""}${wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image. Pure photography only."}`
           : userPrompt || baseVisual || "Professional product photography";
         try {
           const p = await batchProvider.createPrediction({
