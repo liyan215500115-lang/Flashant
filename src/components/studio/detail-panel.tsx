@@ -157,6 +157,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   async function handleGenerate() {
     if (selected.size === 0 || !projectId) return;
     setGenerating(true);
+    setResults([]);
     const types = [...selected].map(key => ({ key, zh: TYPE_LABELS[key] || key }));
 
     const styleSeed = lockStyle ? Math.abs(hashString(projectId)) % 100000 : undefined;
@@ -180,9 +181,14 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        console.error("Generate failed:", data);
+        alert(`生成失败: ${data.error || data.message || res.status}`);
+        return;
+      }
       const generated = data.generated as Array<{ key: string; url: string; label?: string }> | undefined;
 
-      if (generated && Array.isArray(generated)) {
+      if (generated && Array.isArray(generated) && generated.length > 0) {
         const out: typeof results = [];
         for (const g of generated) {
           const label = TYPE_LABELS[g.key] || g.label || g.key;
@@ -195,9 +201,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         }
         setResults(out);
         onDetailGenerated?.(out);
+      } else {
+        alert(`生成完成但没有返回图片。请检查浏览器控制台。`);
       }
-    } catch {
-      // silently fail
+    } catch (e: any) {
+      alert(`请求失败: ${e.message || "未知错误"}`);
     }
     setGenerating(false);
   }
