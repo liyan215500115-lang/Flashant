@@ -459,62 +459,69 @@ export async function POST(req: Request) {
       })
     );
 
-    // Create records: synchronous providers (OpenAI) get SUCCEEDED immediately,
-    // async providers (Replicate/FLUX) get PROCESSING and rely on webhooks.
-    const generatedImages: Array<{ key: string; url?: string; generatedImageId: string }> = [];
-    let hasSyncResults = false;
+    // Poll async predictions server-side with a hard deadline (Vercel 60s limit).
+    // Sync results (OpenAI) are already done; async (Replicate) get polled up to 50s.
+    const DEADLINE = Date.now() + 50_000;
+    const generated: Array<{ key: string; url: string; label: string }> = [];
 
     for (const p of predictions) {
       if (!p) continue;
-      // Check if prediction returned outputs synchronously (OpenAI does this)
+
+      // Sync results (OpenAI) — use immediately
       const syncOutputs = (p as any).outputs as Array<{ url: string }> | undefined;
-      const isSync = syncOutputs && syncOutputs.length > 0;
+      if (syncOutputs?.length) {
+        const imgUrl = syncOutputs[0].url;
+        await db.generatedImage.create({
+          data: {
+            imageProjectId, productImageId,
+            s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
+            aiProvider: (p as any).engine || "flux",
+            status: "SUCCEEDED", completedAt: new Date(),
+            generationMeta: { sourceType: "detail", detailKey: p.key },
+          },
+        });
+        generated.push({ key: p.key, url: imgUrl, label: p.key });
+        continue;
+      }
 
-      const placeholder = await db.generatedImage.create({
-        data: {
-          imageProjectId, productImageId,
-          s3Key: isSync ? syncOutputs[0].url : "pending",
-          url: isSync ? syncOutputs[0].url : "",
-          promptUsed: p.prompt,
-          aiProvider: (p as any).engine || "flux",
-          status: isSync ? "SUCCEEDED" : "PROCESSING",
-          completedAt: isSync ? new Date() : null,
-          webhookId: isSync ? null : p.predictionId,
-          generationMeta: { sourceType: "detail", detailKey: p.key },
-        },
-      });
+      // Async (Replicate) — poll until done or deadline
+      try {
+        const typeEngine = (p as any).engine || "flux";
+        const provider = typeEngine === "openai" ? getProvider("flux") : getProvider(typeEngine);
+        let result = await provider.getPrediction(p.predictionId);
+        while (result.status === "processing" && Date.now() < DEADLINE) {
+          await new Promise(r => setTimeout(r, 2000));
+          result = await provider.getPrediction(p.predictionId);
+        }
 
-      generatedImages.push({
-        key: p.key,
-        url: isSync ? syncOutputs[0].url : undefined,
-        generatedImageId: placeholder.id,
-      });
-      if (isSync) hasSyncResults = true;
+        if (result.status === "succeeded" && result.outputs.length > 0) {
+          const imgUrl = result.outputs[0].url;
+          await db.generatedImage.create({
+            data: {
+              imageProjectId, productImageId,
+              s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
+              aiProvider: typeEngine, status: "SUCCEEDED", completedAt: new Date(),
+              generationMeta: { sourceType: "detail", detailKey: p.key },
+            },
+          });
+          generated.push({ key: p.key, url: imgUrl, label: p.key });
+        }
+      } catch { /* skip failed prediction */ }
     }
 
-    // If all results are synchronous, return them directly
-    if (hasSyncResults && generatedImages.every(g => g.url)) {
-      const generated = generatedImages.map(g => ({
-        key: g.key,
-        url: g.url!,
-        label: g.key,
-      }));
-      return NextResponse.json({ generated, count: generated.length });
+    // Mark project as generated
+    const pendingCount = await db.task.count({
+      where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
+    });
+    if (pendingCount === 0) {
+      await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
     }
 
-    // Update project status
-    await db.imageProject.update({
-      where: { id: imageProjectId },
-      data: { status: "GENERATING", title: projectTitle || undefined },
-    });
+    if (generated.length === 0) {
+      return NextResponse.json({ error: "generation_failed", message: "All predictions failed" }, { status: 500 });
+    }
 
-    return NextResponse.json({
-      processing: true,
-      poll: true,
-      nextPollMs: 3000,
-      items: generatedImages,
-      count: generatedImages.length,
-    });
+    return NextResponse.json({ generated, count: generated.length });
   }
 
   // Get product image

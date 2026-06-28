@@ -212,53 +212,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       });
       const data = await res.json();
       if (!res.ok) {
-        console.error("Generate failed:", data);
         alert(`生成失败: ${data.error || data.message || res.status}`);
         setGenerating(false);
         return;
       }
 
-      // Async mode: predictions created, poll project until images are ready
-      if (data.processing && data.items) {
-        setStageLabel("等待生成...");
-        const maxPolls = 30;
-        let found = 0;
-        for (let i = 0; i < maxPolls; i++) {
-          await new Promise(r => setTimeout(r, 3000));
-          try {
-            const projRes = await fetch(`/api/products/${projectId}`);
-            if (!projRes.ok) continue;
-            const images: any[] = (await projRes.json()).project?.generatedImages || [];
-            // Match by webhookId OR by checking recent SUCCEEDED images
-            const ready = images.filter((img: any) => {
-              if (img.status !== "SUCCEEDED") return false;
-              return data.items.some((item: any) =>
-                (item.predictionId && img.webhookId === item.predictionId) ||
-                (img.url && img.createdAt && new Date(img.createdAt).getTime() > Date.now() - 120000)
-              );
-            });
-            if (ready.length >= data.items.length) {
-              const out = ready.slice(0, data.items.length).map((img: any) => {
-                const matched = data.items.find((item: any) => img.webhookId === item.predictionId);
-                const key = matched?.key || "detail";
-                return { key, url: img.url, rawUrl: img.url, label: TYPE_LABELS[key] || key };
-              });
-              setResults(out);
-              onDetailGenerated?.(out);
-              found = out.length;
-              break;
-            }
-          } catch { /* retry */ }
-        }
-        if (found === 0) {
-          alert("部分图片生成超时，请去项目页查看。");
-          window.open(`/projects/${projectId}`, "_blank");
-        }
-        setGenerating(false);
-        return;
-      }
-
-      // Sync mode fallback (for backward compat)
       const generated = data.generated as Array<{ key: string; url: string; label?: string }> | undefined;
 
       if (generated && Array.isArray(generated) && generated.length > 0) {
@@ -275,7 +233,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         setResults(out);
         onDetailGenerated?.(out);
       } else {
-        alert(`生成完成但没有返回图片。请检查浏览器控制台。`);
+        alert("生成完成但没有返回图片，请重试。");
       }
     } catch (e: any) {
       alert(`请求失败: ${e.message || "未知错误"}`);
