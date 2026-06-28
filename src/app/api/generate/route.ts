@@ -184,6 +184,23 @@ const CATEGORY_PROFILES: Record<string, {
   },
 };
 
+// Detail types where GPT Image 2 (via OpenAI) produces better results than FLUX.
+// These are white-bg info types where text rendering and clean layouts matter.
+const GPT_IMAGE_TYPES = new Set(["selling_points", "compare", "size"]);
+
+/**
+ * Pick the best engine for a detail type. Returns the provider and engine name.
+ * GPT Image 2 excels at text rendering and clean layouts.
+ * FLUX excels at img2img scene generation and model consistency.
+ */
+function getEngineForDetailType(detailKey: string): { provider: ReturnType<typeof getProvider>; engine: string } {
+  if (GPT_IMAGE_TYPES.has(detailKey)) {
+    try { return { provider: getProvider("openai"), engine: "openai" }; } catch {}
+  }
+  // Default: use FLUX for everything else
+  return { provider: getProvider("flux"), engine: "flux" };
+}
+
 // Model version mapping for engines routed through Replicate.
 // bria is intentionally absent: its provider hardcodes the version internally.
 const ENGINE_MODELS: Record<string, string> = {
@@ -422,8 +439,11 @@ export async function POST(req: Request) {
         const useModelRef = referenceImageUrl && MODEL_SCENE_TYPES.has(dt.key);
         const effectiveProductUrl = isModelCloseup ? "" : useModelRef ? referenceImageUrl : sharedImageUrl;
 
+        // Per-type engine routing: GPT Image 2 for info types, FLUX for scene types
+        const { provider: typeProvider, engine: typeEngine } = getEngineForDetailType(dt.key);
+
         try {
-          const p = await batchProvider.createPrediction({
+          const p = await typeProvider.createPrediction({
             prompt: isModelCloseup ? modelCloseupPrompt : detailPrompt,
             productImageUrl: effectiveProductUrl,
             referenceImageUrl: referenceImageUrl || undefined,
@@ -432,28 +452,54 @@ export async function POST(req: Request) {
             height: 1024,
             seed: seed || undefined,
           });
-          return { key: dt.key, predictionId: p.predictionId, prompt: detailPrompt };
+          return { key: dt.key, predictionId: p.predictionId, prompt: detailPrompt, engine: typeEngine, outputs: (p as any).outputs };
         } catch {
           return null;
         }
       })
     );
 
-    // Create placeholder records and return immediately — don't block the HTTP
-    // response waiting for Replicate. The webhook will update status to SUCCEEDED.
-    const generatedImages: Array<{ key: string; generatedImageId: string; predictionId: string }> = [];
+    // Create records: synchronous providers (OpenAI) get SUCCEEDED immediately,
+    // async providers (Replicate/FLUX) get PROCESSING and rely on webhooks.
+    const generatedImages: Array<{ key: string; url?: string; generatedImageId: string }> = [];
+    let hasSyncResults = false;
+
     for (const p of predictions) {
       if (!p) continue;
+      // Check if prediction returned outputs synchronously (OpenAI does this)
+      const syncOutputs = (p as any).outputs as Array<{ url: string }> | undefined;
+      const isSync = syncOutputs && syncOutputs.length > 0;
+
       const placeholder = await db.generatedImage.create({
         data: {
           imageProjectId, productImageId,
-          s3Key: "pending", url: "", promptUsed: p.prompt,
-          aiProvider: "flux", status: "PROCESSING",
-          webhookId: p.predictionId,
+          s3Key: isSync ? syncOutputs[0].url : "pending",
+          url: isSync ? syncOutputs[0].url : "",
+          promptUsed: p.prompt,
+          aiProvider: (p as any).engine || "flux",
+          status: isSync ? "SUCCEEDED" : "PROCESSING",
+          completedAt: isSync ? new Date() : null,
+          webhookId: isSync ? null : p.predictionId,
           generationMeta: { sourceType: "detail", detailKey: p.key },
         },
       });
-      generatedImages.push({ key: p.key, generatedImageId: placeholder.id, predictionId: p.predictionId });
+
+      generatedImages.push({
+        key: p.key,
+        url: isSync ? syncOutputs[0].url : undefined,
+        generatedImageId: placeholder.id,
+      });
+      if (isSync) hasSyncResults = true;
+    }
+
+    // If all results are synchronous, return them directly
+    if (hasSyncResults && generatedImages.every(g => g.url)) {
+      const generated = generatedImages.map(g => ({
+        key: g.key,
+        url: g.url!,
+        label: g.key,
+      }));
+      return NextResponse.json({ generated, count: generated.length });
     }
 
     // Update project status

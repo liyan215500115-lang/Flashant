@@ -14,11 +14,25 @@ export function createOpenAIProvider(): ImageProvider {
     name: "openai",
 
     async createPrediction(input: ImageGenerationInput) {
+      // GPT Image 2 supports img2img via the `image` parameter (base64 data URL).
+      let imageBase64: string | undefined;
+      if (input.productImageUrl) {
+        try {
+          const res = await fetch(input.productImageUrl);
+          if (res.ok) {
+            const buf = Buffer.from(await res.arrayBuffer());
+            const mime = res.headers.get("content-type") || "image/png";
+            imageBase64 = `data:${mime};base64,${buf.toString("base64")}`;
+          }
+        } catch { /* skip img2img if download fails */ }
+      }
+
       const response = await client.images.generate({
         model: "gpt-image-2",
         prompt: input.prompt,
         n: 1,
         size: "1024x1024",
+        ...(imageBase64 ? { image: imageBase64 } as any : {}),
       });
 
       const url = response.data?.[0]?.url;
