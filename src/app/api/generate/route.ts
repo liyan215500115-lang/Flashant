@@ -137,6 +137,53 @@ const TYPE_TEMPLATES: Record<string, {
   },
 };
 
+// Category → default style + recommended detail types + composition hint.
+// When user selects a category, the frontend auto-selects recommended types
+// and sets the matching style for visual consistency.
+const CATEGORY_PROFILES: Record<string, {
+  name: string;
+  defaultStyle: string;     // STYLE_GUIDANCE key
+  recommendedTypes: string[]; // detail type keys to pre-select
+  compositionHint: string;  // extra composition direction for enhancer
+}> = {
+  beauty: {
+    name: "美妆护肤",
+    defaultStyle: "marble",
+    recommendedTypes: ["selling_points", "detail", "material", "craft", "lifestyle", "scene_atmosphere"],
+    compositionHint: "High-end beauty product, glossy reflections, premium packaging, marble or dark wood surface, luxury cosmetic aesthetic",
+  },
+  fashion: {
+    name: "服饰配饰",
+    defaultStyle: "in_use",
+    recommendedTypes: ["in_use", "multi_angle", "detail", "flatlay", "color_variants", "lifestyle"],
+    compositionHint: "Garment or accessory worn by model, natural body language, candid lifestyle moment, soft natural lighting, editorial fashion lookbook style",
+  },
+  electronics: {
+    name: "3C数码",
+    defaultStyle: "dark_moody",
+    recommendedTypes: ["selling_points", "multi_angle", "detail", "compare", "lifestyle", "scene_atmosphere"],
+    compositionHint: "Sleek tech product, dramatic chiaroscuro lighting, matte dark surfaces, neon accent rim lights, futuristic high-tech atmosphere",
+  },
+  food: {
+    name: "食品饮料",
+    defaultStyle: "natural",
+    recommendedTypes: ["selling_points", "detail", "material", "flatlay", "lifestyle", "brand_story"],
+    compositionHint: "Fresh natural ingredients, golden hour warm light, organic textures, rustic wood or ceramic surfaces, wellness-lifestyle mood",
+  },
+  home: {
+    name: "家居生活",
+    defaultStyle: "cosy",
+    recommendedTypes: ["lifestyle", "scene_atmosphere", "in_use", "multi_angle", "flatlay", "brand_story"],
+    compositionHint: "Warm hygge interior, soft window light through linen, Scandinavian-Japandi aesthetic, natural textures, serene and grounded atmosphere",
+  },
+  general: {
+    name: "通用",
+    defaultStyle: "white",
+    recommendedTypes: ["selling_points", "detail", "multi_angle", "lifestyle"],
+    compositionHint: "Clean professional e-commerce presentation, pure white background, three-point studio lighting, crisp product focus",
+  },
+};
+
 // Model version mapping for engines routed through Replicate.
 // bria is intentionally absent: its provider hardcodes the version internally.
 const ENGINE_MODELS: Record<string, string> = {
@@ -241,6 +288,7 @@ export async function POST(req: Request) {
     baseStyle,
     referenceImageUrl,
     seed,
+    category, // product category for template matching
   } = await req.json();
 
   // Track which engine will actually be used (may fall back to flux at resolve time)
@@ -335,6 +383,8 @@ export async function POST(req: Request) {
         // User content leads the subject. Template fills the rest.
         const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
         const tpl = TYPE_TEMPLATES[dt.key];
+        const catProfile = category ? CATEGORY_PROFILES[category] : null;
+        const categoryHint = catProfile?.compositionHint ? ` ${catProfile.compositionHint}.` : "";
         const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
 
         const styleHint = baseStyle && !wantsTextOnImage
@@ -345,12 +395,13 @@ export async function POST(req: Request) {
           : "";
         const noTextGuard = wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
 
-        // Assemble: identity → subject (user) → composition → lighting → camera → mood → technical → guards
+        // Assemble: category hint → identity → subject → composition → lighting → camera → mood → technical → guards
         const detailPrompt = tpl
           ? [
               identityLock,
               styleHint,
               userPrompt || "Professional product photography",
+              categoryHint,
               tpl.composition,
               tpl.lighting,
               tpl.camera,
@@ -358,7 +409,7 @@ export async function POST(req: Request) {
               tpl.technical,
               noTextGuard,
             ].filter(Boolean).join(". ").trim()
-          : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}. ${noTextGuard}`.trim();
+          : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}`.trim();
         // Model close-ups: person using/wearing the product (e.g. headphones on
         // ears, lotion on face, hat on head). Show the product IN USE but do NOT
         // show the product packaging, bottle, or box.

@@ -118,6 +118,35 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [lockStyle, setLockStyle] = useState(false);
+  const [category, setCategory] = useState("");
+
+  // Category profiles matching route.ts CATEGORY_PROFILES
+  const CATEGORIES: Array<{ key: string; name: string }> = [
+    { key: "", name: "不限品类" },
+    { key: "beauty", name: "美妆护肤" },
+    { key: "fashion", name: "服饰配饰" },
+    { key: "electronics", name: "3C数码" },
+    { key: "food", name: "食品饮料" },
+    { key: "home", name: "家居生活" },
+    { key: "general", name: "通用" },
+  ];
+
+  // Recommended types per category — mirrors route.ts CATEGORY_PROFILES
+  const CATEGORY_RECOMMEND: Record<string, string[]> = {
+    beauty: ["selling_points", "detail", "material", "craft", "lifestyle", "scene_atmosphere"],
+    fashion: ["in_use", "multi_angle", "detail", "flatlay", "color_variants", "lifestyle"],
+    electronics: ["selling_points", "multi_angle", "detail", "compare", "lifestyle", "scene_atmosphere"],
+    food: ["selling_points", "detail", "material", "flatlay", "lifestyle", "brand_story"],
+    home: ["lifestyle", "scene_atmosphere", "in_use", "multi_angle", "flatlay", "brand_story"],
+    general: ["selling_points", "detail", "multi_angle", "lifestyle"],
+  };
+
+  const handleCategoryChange = (catKey: string) => {
+    setCategory(catKey);
+    if (catKey && CATEGORY_RECOMMEND[catKey]) {
+      setSelected(new Set(CATEGORY_RECOMMEND[catKey]));
+    }
+  };
 
   // Sync initialResults after async load (e.g. when project is fetched from API)
   useEffect(() => {
@@ -178,6 +207,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           seed: styleSeed,
           targetPlatform: targetPlatform || undefined,
           numOutputs: 1,
+          category: category || undefined,
         }),
       });
       const data = await res.json();
@@ -261,6 +291,24 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold">{t("studio.detailImages")}</h3>
             <button onClick={() => setOpen(false)} className="text-xs text-zinc-400 hover:text-zinc-600">收起</button>
+          </div>
+
+          {/* Category selector */}
+          <div className="mb-3">
+            <span className="text-[11px] font-medium text-zinc-500 mb-1 block">品类</span>
+            <div className="flex flex-wrap gap-1">
+              {CATEGORIES.map(c => (
+                <button key={c.key} type="button"
+                  onClick={() => handleCategoryChange(c.key)}
+                  className={`text-[10px] px-2 py-1 rounded-md border transition-colors cursor-pointer ${
+                    category === c.key
+                      ? "bg-brand-500 text-white border-brand-500"
+                      : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
+                  }`}>
+                  {c.name}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Grouped type selection */}
