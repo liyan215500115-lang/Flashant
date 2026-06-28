@@ -23,27 +23,118 @@ const MODEL_SCENE_TYPES = new Set(["lifestyle", "scene_atmosphere", "in_use"]);
 
 // ── Module-level constants ──
 
-// Tech-only templates — lens, lighting, and quality directives appended AFTER the AI prompt.
-// Scene/environment description is handled by the prompt enhancer (DeepSeek).
-const DETAIL_TECH_PARAMS: Record<string, string> = {
-  // Info types (white bg, spec sheet style — text overlaid by Canvas)
-  selling_points: "Pure white background, soft diffused studio lighting 5500K, clean minimal e-commerce packshot, 8K sharp focus",
-  material: "Pure white background, 100mm macro lens f/2.8, crisp texture detail, shallow depth of field, soft diffused ring light, 8K",
-  size: "Pure white background with common reference object for scale, f/8, clean studio lighting 5500K, 4K",
-  craft: "Pure white background, soft directional light raking at 30°, revealing surface texture, 4K",
-  compare: "Pure white background, split-screen comparison layout, identical lighting and scale, f/11, 8K",
-  // Scene types (real environments, lifestyle photography)
-  lifestyle: "Natural setting, soft daylight 5600K, 50mm f/2.2, product sharp in foreground, background softly blurred, editorial quality, 4K",
-  scene_atmosphere: "Dramatic directional lighting, 85mm f/1.8, ultra-shallow depth of field, cinematic atmosphere, 4K",
-  in_use: "Candid moment, soft daylight 5500K, 50mm f/2.0, product in sharp focus, editorial lifestyle quality, 4K",
-  // Product-only types
-  detail: "Extreme macro close-up, 100mm f/2.8, very shallow depth of field, soft diffused ring light, premium detail quality, 8K",
-  multi_angle: "Multi-angle composite (front + side + rear + top), pure white background, consistent lighting and scale, clean grid, 8K",
-  color_variants: "Color variants grid, pure white background, consistent lighting and angle, professional catalog, 8K",
-  flatlay: "Overhead flat lay from directly above, clean neutral surface, soft even lighting, editorial catalog style, 8K",
-  // Brand/lifestyle
-  brand_story: "Unboxing scene with packaging and accessories, warm window light 5000K, overhead angle, editorial quality, 4K",
-  gift_accessory: "All items neatly arranged on clean surface, soft even studio lighting, f/11, clean visual inventory, 8K",
+// Structured prompt templates — 5-element formula inspired by awesome-gpt-image-2:
+// [Subject from user] + [Composition] + [Lighting] + [Camera] + [Technical]
+// Subject is user-provided (from enhancer or basePrompt). The rest is per-type defaults.
+const TYPE_TEMPLATES: Record<string, {
+  composition: string;
+  lighting: string;
+  camera: string;
+  mood: string;
+  technical: string;
+}> = {
+  // ── Scene types (model + real environment) ──
+  lifestyle: {
+    composition: "Product naturally placed in a beautiful real-world interior or outdoor setting, product sharp in foreground occupying 40% of frame, background softly blurred",
+    lighting: "Soft natural daylight 5600K from large windows or open shade, warm neutral undertones, gentle shadows",
+    camera: "50mm lens, f/2.2, shallow depth of field, editorial lifestyle composition",
+    mood: "Aspirational yet attainable, warm and inviting atmosphere, Kinfolk/Cereal magazine aesthetic",
+    technical: "4K, photorealistic, professional product photography, sharp focus on product",
+  },
+  scene_atmosphere: {
+    composition: "Product as lone hero, dramatic center framing with generous negative space, 85% product in frame",
+    lighting: "Single dramatic directional key light at 45°, deep rich shadows, controlled specular highlights, cinematic chiaroscuro",
+    camera: "85mm lens, f/1.8, ultra-shallow depth of field, product pin-sharp against dramatic bokeh",
+    mood: "Cinematic, moody, high-end luxury atmosphere, Byredo/Diptyque editorial aesthetic",
+    technical: "4K, photorealistic, maximum quality, cinematic color grading",
+  },
+  in_use: {
+    composition: "Product being actively used or worn by a person, candid mid-action moment, focus on product and interaction area",
+    lighting: "Soft diffused daylight 5500K, natural ambient light, no studio feel",
+    camera: "50mm lens, f/2.0, shallow depth of field, product in sharp focus, editorial lifestyle quality",
+    mood: "Candid and natural, captured moment feel, Everlane/Uniqlo lookbook style, warm genuine atmosphere",
+    technical: "4K, photorealistic, editorial lifestyle photography",
+  },
+  // ── Product detail types ──
+  detail: {
+    composition: "Extreme close-up filling 90% of frame, focus on texture and material quality, no product packaging visible",
+    lighting: "Soft diffused ring light, subtle directional accent at 30° to reveal surface texture, controlled highlights",
+    camera: "100mm macro lens, f/2.8, very shallow depth of field, crisp micro-texture detail",
+    mood: "Premium craftsmanship reveal, tactile and luxurious feel",
+    technical: "8K, maximum sharpness, photorealistic macro photography",
+  },
+  multi_angle: {
+    composition: "Multi-angle composite: front view + 45° side + rear + top-down, equal spacing in clean 2×2 grid layout",
+    lighting: "Consistent soft studio lighting across all views, identical exposure and white balance",
+    camera: "f/8 for full product sharpness across all angles, identical scale and focal length per view",
+    mood: "Clean professional catalog presentation, informative and precise",
+    technical: "8K, photorealistic, professional product catalog photography",
+  },
+  flatlay: {
+    composition: "Overhead flat lay from directly above, product surrounded by complementary accessories, product at center",
+    lighting: "Soft even diffused lighting from two 45° angles, no harsh shadows, clean neutral illumination",
+    camera: "35mm lens, f/8 for full frame sharpness, perfectly perpendicular overhead angle",
+    mood: "Editorial catalog style, curated and intentional arrangement, Kinfolk flat lay aesthetic",
+    technical: "8K, photorealistic, professional flat lay product photography",
+  },
+  color_variants: {
+    composition: "Product color variants in clean horizontal grid, equal spacing, consistent angle and scale across all variants",
+    lighting: "Consistent soft studio lighting, identical exposure for accurate color comparison",
+    camera: "f/11 for edge-to-edge sharpness, fixed camera position across variants",
+    mood: "Professional catalog presentation, clean and informative",
+    technical: "8K, photorealistic, professional product catalog photography",
+  },
+  // ── Info/spec types (white bg + text overlay via Canvas) ──
+  selling_points: {
+    composition: "Product centered on pure white infinity background, filling 85% of frame, generous empty space around product for text overlay",
+    lighting: "Three-point studio lighting: large softbox key from top-left, subtle fill from front, soft rim from back-right, 5500K",
+    camera: "f/8 for full product sharpness, 70mm lens, straight-on product photography angle",
+    mood: "Clean minimal e-commerce packshot, pure professional presentation",
+    technical: "8K sharp focus, pure white background #FFFFFF, professional e-commerce product photography",
+  },
+  material: {
+    composition: "Extreme macro close-up of product material and texture, filling 90% of frame, clean white background, empty space for text overlay",
+    lighting: "Soft diffused ring light, subtle directional accent to reveal surface texture, 5000K",
+    camera: "100mm macro lens, f/2.8, very shallow depth of field, crisp micro-texture detail",
+    mood: "Premium material showcase, tactile and informative",
+    technical: "8K, maximum sharpness, photorealistic macro photography, pure white background",
+  },
+  size: {
+    composition: "Product on pure white background with common reference object for scale comparison, both equally sharp, generous empty space for text overlay",
+    lighting: "Clean studio lighting 5500K, even illumination, no shadows on background",
+    camera: "f/8 for full depth of field, 50mm lens, straight-on angle",
+    mood: "Professional size reference photography, clean and informative",
+    technical: "4K, photorealistic, professional product photography, pure white background",
+  },
+  craft: {
+    composition: "Product on clean white surface, still-life composition revealing workmanship details, empty space for text overlay",
+    lighting: "Soft directional key light raking at 30° to reveal surface texture and craftsmanship, subtle fill at 10%",
+    camera: "85mm lens, f/5.6, shallow depth of field highlighting craftsmanship details",
+    mood: "Artisanal quality reveal, craftsmanship and attention to detail",
+    technical: "4K, photorealistic, professional product photography, pure white background",
+  },
+  compare: {
+    composition: "Split-screen comparison layout: before/after or version A/B side by side on pure white background, clean vertical dividing line centered, identical lighting and scale both sides",
+    lighting: "Consistent studio lighting 5500K both sides, identical exposure",
+    camera: "f/11 for edge-to-edge sharpness both sides, identical focal length",
+    mood: "Professional comparison presentation, clean and informative, empty space for text overlay",
+    technical: "8K, photorealistic, professional product comparison photography, pure white background",
+  },
+  // ── Brand/experience types ──
+  brand_story: {
+    composition: "Premium unboxing scene: packaging box open, tissue paper draped, product nestled in insert, accessories arranged around, overhead or 45° angle",
+    lighting: "Warm window light 5000K, soft natural illumination, gentle wrap-around shadows",
+    camera: "50mm lens, f/4, slight overhead angle, editorial quality",
+    mood: "Premium unboxing experience, anticipation and luxury, editorial magazine quality",
+    technical: "4K, photorealistic, premium editorial product photography",
+  },
+  gift_accessory: {
+    composition: "Main product centered with all included accessories neatly arranged around it on clean white surface, visual inventory layout",
+    lighting: "Soft even studio lighting from two 45° angles, all items equally illuminated, no shadows",
+    camera: "f/11 for edge-to-edge sharpness across all items, 50mm lens",
+    mood: "Clean visual inventory, professional and comprehensive",
+    technical: "8K, photorealistic, professional product photography, pure white background",
+  },
 };
 
 // Model version mapping for engines routed through Replicate.
@@ -239,11 +330,13 @@ export async function POST(req: Request) {
 
     const predictions = await Promise.all(
       detailTypesArray.map(async (dt) => {
-        // Prompt construction: identity lock FIRST (so the AI prioritizes it),
-        // then user content (from enhancer or manual input), then tech params.
+        // 5-element prompt structure (inspired by awesome-gpt-image-2):
+        // [Subject] + [Composition] + [Lighting] + [Camera/Mood] + [Technical]
+        // User content leads the subject. Template fills the rest.
         const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
-        const techParams = DETAIL_TECH_PARAMS[dt.key] || "";
+        const tpl = TYPE_TEMPLATES[dt.key];
         const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
+
         const styleHint = baseStyle && !wantsTextOnImage
           ? ` Match the overall aesthetic of: ${baseStyle}.`
           : "";
@@ -251,8 +344,21 @@ export async function POST(req: Request) {
           ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
           : "";
         const noTextGuard = wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
-        // Identity lock goes first so the AI sees it as the most important instruction
-        const detailPrompt = `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}. ${techParams}.${noTextGuard}`.trim();
+
+        // Assemble: identity → subject (user) → composition → lighting → camera → mood → technical → guards
+        const detailPrompt = tpl
+          ? [
+              identityLock,
+              styleHint,
+              userPrompt || "Professional product photography",
+              tpl.composition,
+              tpl.lighting,
+              tpl.camera,
+              tpl.mood,
+              tpl.technical,
+              noTextGuard,
+            ].filter(Boolean).join(". ").trim()
+          : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}. ${noTextGuard}`.trim();
         // Model close-ups: person using/wearing the product (e.g. headphones on
         // ears, lotion on face, hat on head). Show the product IN USE but do NOT
         // show the product packaging, bottle, or box.
@@ -336,8 +442,9 @@ export async function POST(req: Request) {
 
   // Prompt resolution
   let prompt = "Professional product photography, studio lighting, high quality";
-  if (detailType && DETAIL_TECH_PARAMS[detailType]) {
-    prompt = `${prompt}. ${DETAIL_TECH_PARAMS[detailType]}`;
+  if (detailType && TYPE_TEMPLATES[detailType]) {
+    const tpl = TYPE_TEMPLATES[detailType];
+    prompt = [prompt, tpl.composition, tpl.lighting, tpl.camera, tpl.mood, tpl.technical].filter(Boolean).join(". ");
     if (baseStyle) {
       // Match the main image's lighting, color palette, and overall aesthetic — lock across the entire set.
       // Seed is passed to the provider as a real param (see createPrediction); the prompt carries the
