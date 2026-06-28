@@ -282,43 +282,36 @@ export async function POST(req: Request) {
       })
     );
 
-    const generated: Array<{ key: string; url: string; label: string }> = [];
-    const results = await Promise.all(
-      predictions
-        .filter((p): p is NonNullable<typeof p> => p !== null)
-        .map(async (p) => {
-          try {
-            const result = await pollPrediction(batchProvider, p.predictionId, POLL_MS, MAX_POLLS);
-
-            if (result.status === "succeeded" && result.outputs.length > 0) {
-              const imgUrl = result.outputs[0].url;
-              await db.generatedImage.create({
-                data: {
-                  imageProjectId, productImageId,
-                  s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
-                  aiProvider: "flux", status: "SUCCEEDED", completedAt: new Date(),
-                  generationMeta: { sourceType: "detail", detailKey: p.key },
-                },
-              });
-              return { key: p.key, url: imgUrl, label: p.key };
-            }
-          } catch { /* skip */ }
-          return null;
-        })
-    );
-    for (const r of results) {
-      if (r) generated.push(r);
+    // Create placeholder records and return immediately — don't block the HTTP
+    // response waiting for Replicate. The webhook will update status to SUCCEEDED.
+    const generatedImages: Array<{ key: string; generatedImageId: string; predictionId: string }> = [];
+    for (const p of predictions) {
+      if (!p) continue;
+      const placeholder = await db.generatedImage.create({
+        data: {
+          imageProjectId, productImageId,
+          s3Key: "pending", url: "", promptUsed: p.prompt,
+          aiProvider: "flux", status: "PROCESSING",
+          webhookId: p.predictionId,
+          generationMeta: { sourceType: "detail", detailKey: p.key },
+        },
+      });
+      generatedImages.push({ key: p.key, generatedImageId: placeholder.id, predictionId: p.predictionId });
     }
 
-    // Mark project as generated
-    const pendingCount = await db.task.count({
-      where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
+    // Update project status
+    await db.imageProject.update({
+      where: { id: imageProjectId },
+      data: { status: "GENERATING", title: projectTitle || undefined },
     });
-    if (pendingCount === 0) {
-      await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
-    }
 
-    return NextResponse.json({ generated, count: generated.length });
+    return NextResponse.json({
+      processing: true,
+      poll: true,
+      nextPollMs: 3000,
+      items: generatedImages,
+      count: generatedImages.length,
+    });
   }
 
   // Get product image

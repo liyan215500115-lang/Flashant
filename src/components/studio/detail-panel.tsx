@@ -184,8 +184,41 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       if (!res.ok) {
         console.error("Generate failed:", data);
         alert(`生成失败: ${data.error || data.message || res.status}`);
+        setGenerating(false);
         return;
       }
+
+      // Async mode: predictions created, poll project until images are ready
+      if (data.processing && data.items) {
+        setStageLabel("等待生成...");
+        const maxPolls = 30;
+        for (let i = 0; i < maxPolls; i++) {
+          await new Promise(r => setTimeout(r, 3000));
+          try {
+            const projRes = await fetch(`/api/products/${projectId}`);
+            if (!projRes.ok) continue;
+            const images: any[] = (await projRes.json()).project?.generatedImages || [];
+            const ready = images.filter((img: any) =>
+              data.items.some((item: any) => item.predictionId === img.webhookId && img.status === "SUCCEEDED")
+            );
+            if (ready.length === data.items.length) {
+              const out = ready.map((img: any) => {
+                const key = data.items.find((item: any) => item.predictionId === img.webhookId)?.key || "detail";
+                const isInfo = INFO_TYPES.has(key);
+                const desc = perTypeDesc[key] || "";
+                return { key, url: img.url, rawUrl: img.url, label: TYPE_LABELS[key] || key };
+              });
+              setResults(out);
+              onDetailGenerated?.(out);
+              break;
+            }
+          } catch { /* retry */ }
+        }
+        setGenerating(false);
+        return;
+      }
+
+      // Sync mode fallback (for backward compat)
       const generated = data.generated as Array<{ key: string; url: string; label?: string }> | undefined;
 
       if (generated && Array.isArray(generated) && generated.length > 0) {
