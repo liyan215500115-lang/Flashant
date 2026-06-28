@@ -14,9 +14,12 @@ import { prepareReferenceImage } from "@/lib/reference-image";
 import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES } from "@/lib/ai/constants";
 
 // Detail types where the model/person should be the FOCUS, not the product.
-// When a reference image with a person is present, skip productImageUrl so the
-// AI generates portrait close-ups without forcing the product into the frame.
 const MODEL_CLOSEUP_TYPES = new Set(["detail"]);
+
+// Scene types that should use the main generated image (with model) as img2img
+// reference instead of the bare product photo. This keeps the model consistent
+// across all scene images in a set.
+const MODEL_SCENE_TYPES = new Set(["lifestyle", "scene_atmosphere", "in_use"]);
 
 // ── Module-level constants ──
 
@@ -256,10 +259,16 @@ export async function POST(req: Request) {
         const isModelCloseup = referenceImageUrl && MODEL_CLOSEUP_TYPES.has(dt.key);
         const modelCloseupPrompt = `Extreme close-up of the person from the reference image using or wearing the product. Focus on the face/head/hands where the product is being applied or worn. The product itself should be visible in use (on skin, on head, on body) but do NOT show any product packaging, bottles, boxes, or containers. Keep the person visually IDENTICAL to the reference image — same face, same features, same skin tone. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. CRITICAL: do NOT render any text or labels on the image.`;
 
+        // For scene types with a model reference, use the main generated image
+        // (which includes the model) as img2img source instead of the bare product
+        // photo. This preserves the model across all scene images in the set.
+        const useModelRef = referenceImageUrl && MODEL_SCENE_TYPES.has(dt.key);
+        const effectiveProductUrl = isModelCloseup ? "" : useModelRef ? referenceImageUrl : sharedImageUrl;
+
         try {
           const p = await batchProvider.createPrediction({
             prompt: isModelCloseup ? modelCloseupPrompt : detailPrompt,
-            productImageUrl: isModelCloseup ? "" : sharedImageUrl,
+            productImageUrl: effectiveProductUrl,
             referenceImageUrl: referenceImageUrl || undefined,
             numOutputs: 1,
             width: 1024,
