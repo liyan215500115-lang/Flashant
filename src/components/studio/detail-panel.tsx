@@ -157,43 +157,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   async function handleGenerate() {
     if (selected.size === 0 || !projectId) return;
     setGenerating(true);
-    setStageLabel("优化提示词...");
-    setEnhancing(true);
     const types = [...selected].map(key => ({ key, zh: TYPE_LABELS[key] || key }));
 
     const styleSeed = lockStyle ? Math.abs(hashString(projectId)) % 100000 : undefined;
     const styleRef = lockStyle ? (referenceImageUrl ?? undefined) : undefined;
 
-    // Enhance prompts via AI for each detail type (in parallel, max 8s timeout)
-    let enhancedPrompts: Record<string, string> = {};
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      const enhancementResults = await Promise.allSettled(
-        types.map(t =>
-          fetch("/api/prompts/enhance", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              imageUrl: referenceImageUrl || undefined,
-              productName: basePrompt || undefined,
-              sellingPoints: perTypeDesc[t.key] || undefined,
-              detailType: t.key,
-              targetLanguage: "zh",
-            }),
-            signal: controller.signal,
-          }).then(r => r.ok ? r.json() : { enhanced: "" }).then(d => ({ key: t.key, prompt: d.enhanced || "" }))
-        )
-      );
-      clearTimeout(timeout);
-      for (const r of enhancementResults) {
-        if (r.status === "fulfilled" && r.value.prompt) {
-          enhancedPrompts[r.value.key] = r.value.prompt;
-        }
-      }
-    } catch { /* proceed without enhancement */ }
-    setEnhancing(false);
-
-    setStageLabel("生成图片...");
     try {
       const res = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -202,7 +170,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           productImageId,
           detailTypes: types.map((t) => ({
             key: t.key,
-            prompt: enhancedPrompts[t.key] || [TYPE_LABELS[t.key], basePrompt, perTypeDesc[t.key] || ""].filter(Boolean).join(" — "),
+            prompt: [TYPE_LABELS[t.key], basePrompt, perTypeDesc[t.key] || ""].filter(Boolean).join(" — "),
           })),
           baseStyle: lockStyle ? basePrompt : undefined,
           referenceImageUrl: styleRef,
