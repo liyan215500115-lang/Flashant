@@ -222,27 +222,37 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       if (data.processing && data.items) {
         setStageLabel("等待生成...");
         const maxPolls = 30;
+        let found = 0;
         for (let i = 0; i < maxPolls; i++) {
           await new Promise(r => setTimeout(r, 3000));
           try {
             const projRes = await fetch(`/api/products/${projectId}`);
             if (!projRes.ok) continue;
             const images: any[] = (await projRes.json()).project?.generatedImages || [];
-            const ready = images.filter((img: any) =>
-              data.items.some((item: any) => item.predictionId === img.webhookId && img.status === "SUCCEEDED")
-            );
-            if (ready.length === data.items.length) {
-              const out = ready.map((img: any) => {
-                const key = data.items.find((item: any) => item.predictionId === img.webhookId)?.key || "detail";
-                const isInfo = INFO_TYPES.has(key);
-                const desc = perTypeDesc[key] || "";
+            // Match by webhookId OR by checking recent SUCCEEDED images
+            const ready = images.filter((img: any) => {
+              if (img.status !== "SUCCEEDED") return false;
+              return data.items.some((item: any) =>
+                (item.predictionId && img.webhookId === item.predictionId) ||
+                (img.url && img.createdAt && new Date(img.createdAt).getTime() > Date.now() - 120000)
+              );
+            });
+            if (ready.length >= data.items.length) {
+              const out = ready.slice(0, data.items.length).map((img: any) => {
+                const matched = data.items.find((item: any) => img.webhookId === item.predictionId);
+                const key = matched?.key || "detail";
                 return { key, url: img.url, rawUrl: img.url, label: TYPE_LABELS[key] || key };
               });
               setResults(out);
               onDetailGenerated?.(out);
+              found = out.length;
               break;
             }
           } catch { /* retry */ }
+        }
+        if (found === 0) {
+          alert("部分图片生成超时，请去项目页查看。");
+          window.open(`/projects/${projectId}`, "_blank");
         }
         setGenerating(false);
         return;

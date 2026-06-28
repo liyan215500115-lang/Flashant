@@ -59,7 +59,7 @@ export async function checkGenerationQuota(userId: string): Promise<{
   tier: PlanTier;
 }> {
   // Admin bypass — unlimited generations
-  return { allowed: true, used: 0, limit: Infinity, tier: "ENTERPRISE" as PlanTier };
+  return { allowed: true, used: 0, limit: -1, tier: "ENTERPRISE" as PlanTier };
 }
 
 // ── Lemon Squeezy Checkout ───────────────────────────────────────────────
