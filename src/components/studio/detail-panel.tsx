@@ -113,7 +113,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   const [perTypeDesc, setPerTypeDesc] = useState<Record<string, string>>({});
   const [showCustomDesc, setShowCustomDesc] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [stageLabel, setStageLabel] = useState("");
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lockStyle, setLockStyle] = useState(false);
 
   // Sync initialResults after async load (e.g. when project is fetched from API)
   useEffect(() => {
@@ -122,8 +126,6 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       setOpen(true);
     }
   }, [initialResults]);
-  const [lightbox, setLightbox] = useState<string | null>(null);
-  const [lockStyle, setLockStyle] = useState(false);
 
   const toggleGroup = (groupKey: string) => {
     setExpandedGroups(prev => {
@@ -151,9 +153,6 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       return next;
     });
   };
-
-  const [enhancing, setEnhancing] = useState(false);
-  const [stageLabel, setStageLabel] = useState("");
 
   async function handleGenerate() {
     if (selected.size === 0 || !projectId) return;
