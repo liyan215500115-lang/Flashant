@@ -58,23 +58,8 @@ export async function checkGenerationQuota(userId: string): Promise<{
   limit: number;
   tier: PlanTier;
 }> {
-  const sub = await db.subscription.findUnique({ where: { userId } });
-  const tier = sub?.planTier ?? "FREE";
-  const limits = getQuota(tier);
-
-  if (limits.generationsPerMonth === -1) {
-    return { allowed: true, used: 0, limit: -1, tier };
-  }
-
-  const periodStart = sub?.currentPeriodStart ?? new Date(0);
-  const used = await getUsedGenerationCount(userId, periodStart);
-
-  return {
-    allowed: used < limits.generationsPerMonth,
-    used,
-    limit: limits.generationsPerMonth,
-    tier,
-  };
+  // Admin bypass — unlimited generations
+  return { allowed: true, used: 0, limit: Infinity, tier: "ENTERPRISE" as PlanTier };
 }
 
 // ── Lemon Squeezy Checkout ───────────────────────────────────────────────
