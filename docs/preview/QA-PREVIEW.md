@@ -4,7 +4,31 @@
 
 SKU-A v6 锚点包和首页原图 v6 锁版不在本分支里，不要随这次预发部署。
 
-当前基线：`main` @ `2a6ab9ca6a3cff8267dced23dd29c8252651a019`。生产站点仍是 https://flashant.vercel.app 。
+当前基线：`main` @ `2a6ab9ca6a3cff8267dced23dd29c8252651a019`。生产站点仍是 https://flashant.vercel.app 。生产部署停在该 commit，本分支只产生了 Preview。
+
+## 当前 Preview
+
+Branch alias（Lemon test webhook 用这个，不要用生产域名）：
+
+```text
+https://flashant-git-preview-qa-pa-6bef54-liyan215500115-langs-projects.vercel.app
+```
+
+Webhook：
+
+```text
+https://flashant-git-preview-qa-pa-6bef54-liyan215500115-langs-projects.vercel.app/api/webhooks/lemonsqueezy
+```
+
+2026-11-06 探针（`GET` 上面的 webhook URL）已经是 Preview，并且被锁住，不能开权：
+
+- `environment` = `preview`
+- `billingArmed` = `false`
+- `productionDatabaseLocked` = `true`（Preview 继承了生产库主机）
+- `databaseConfigured` = `true`
+- `webhookSecretConfigured` / `lemonApiKeyConfigured` / `lemonStoreConfigured` = `false`
+
+在探针变成 `productionDatabaseLocked: false` 且 `billingArmed: true` 之前，不要在 Lemon 里保存 webhook。
 
 ## 这条分支做了什么
 
@@ -50,7 +74,7 @@ Test mode 商品用 Dashboard 的 Test mode 开关单独建或单独看。不要
 
 ### 3. 确认 Preview URL
 
-打开本 PR 的 Vercel 检查，或部署列表里 Environment = Preview 的那条。要用 **branch alias**（随这条分支更新），不要用 https://flashant.vercel.app 。
+打开本 PR 的 Vercel 检查。当前 branch alias 见上面「当前 Preview」。不要用 https://flashant.vercel.app 。
 
 部署主机如果是 `flashant.vercel.app`，停手。那是生产。
 
