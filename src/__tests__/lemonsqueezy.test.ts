@@ -149,9 +149,33 @@ describe("createCheckoutSession", () => {
 
     const body = JSON.parse(init.body);
     expect(body.data.type).toBe("checkouts");
+    expect(body.data.attributes.test_mode).toBeUndefined();
     expect(body.data.relationships.variant.data.id).toBe("variant_pro");
     expect(body.data.relationships.store.data.id).toBe("store_1");
 
+    delete process.env.LEMONSQUEEZY_API_KEY;
+    delete process.env.LEMONSQUEEZY_STORE_ID;
+  });
+
+  it("sends test_mode only when the preview gate asks for it", async () => {
+    process.env.LEMONSQUEEZY_API_KEY = "ls_test_key";
+    process.env.LEMONSQUEEZY_STORE_ID = "store_1";
+    const mock = mockFetch(201, {
+      data: { id: "checkout_test", attributes: { url: "https://example.test/checkout" } },
+    });
+    vi.stubGlobal("fetch", mock);
+
+    await createCheckoutSession({
+      userId: "user_1",
+      variantId: "variant_test",
+      planTier: "PRO",
+      successUrl: "https://preview.example/settings/billing?success=true",
+      cancelUrl: "https://preview.example/settings/billing?canceled=true",
+      testMode: true,
+    });
+
+    const body = JSON.parse(mock.mock.calls[0][1].body);
+    expect(body.data.attributes.test_mode).toBe(true);
     delete process.env.LEMONSQUEEZY_API_KEY;
     delete process.env.LEMONSQUEEZY_STORE_ID;
   });
