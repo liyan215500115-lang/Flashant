@@ -11,6 +11,8 @@ interface CheckoutOptions {
   planTier: PlanTier;
   successUrl: string;
   cancelUrl: string;
+  // Preview-only. Live checkouts omit the field entirely.
+  testMode?: boolean;
 }
 
 interface CheckoutSession {
@@ -81,6 +83,7 @@ export async function createCheckoutSession(
     data: {
       type: "checkouts",
       attributes: {
+        ...(options.testMode ? { test_mode: true } : {}),
         checkout_data: {
           custom: { user_id: options.userId },
         },
