@@ -335,11 +335,11 @@
       "ctaSub": "10 Freikredite im Monat. Keine Karte."
     },
     "heroCards": {
-      "before": "Vorher",
-      "after": "Nachher",
-      "beforeCaption": "Ausgangsfoto",
-      "afterCaption": "Flashant-Ausgabe",
-      "footnote": "Vom Produktfoto zum fertigen Bild. Dieselbe Flasche, zwei Fassungen."
+      "before": "Uhr",
+      "after": "Lautsprecher",
+      "beforeCaption": "Omega Speedmaster",
+      "afterCaption": "Bang & Olufsen",
+      "footnote": "Eine Uhr und ein Lautsprecher. Derselbe Ablauf, zwei Kategorien."
     },
     "trustCloud": {
       "title": "14 Marktplätze. Ein Knopf.",
@@ -349,8 +349,8 @@
       "modalTitle": "14 unterstützte Plattformen"
     },
     "styleShowcase": {
-      "title": "Drei Looks. Echte Ergebnisse.",
-      "subtitle": "Material, Lifestyle und Szene — freigegebene Bilder neben den Ausgangsfotos dieses Sets.",
+      "title": "Echte Produktfotos, mehrere Kategorien. Der Wechsel ist sichtbar.",
+      "subtitle": "Material zeigt die Uhr, Lifestyle den Lautsprecher, Szene stellt beide nebeneinander.",
       "outputCaption": "Flashant-Ausgabe",
       "sourceCaption": "Ausgangsfoto",
       "tabs": {
@@ -359,18 +359,18 @@
         "scene": "Szene"
       },
       "tooltips": {
-        "material": "Glas, Flüssigkeit und Holz: ein naher Blick auf die Flasche.",
-        "lifestyle": "Die Flasche im Raum: Kommode, Fensterlicht und Dinge daneben.",
-        "scene": "Ein dunkler Rahmen mit einem Lichtbogen hinter der Flasche."
+        "material": "Stahlgehäuse, Band und weißer Stoff: ein naher Blick auf die Uhr.",
+        "lifestyle": "Gitter, Lederband und eine warme Fläche: der Lautsprecher in ruhiger Umgebung.",
+        "scene": "Uhr und Lautsprecher in einem Set."
       },
       "alts": {
-        "material": "Flashant-Materialausgabe einer Bleu-de-Chanel-Flasche auf dunklem Holz",
-        "lifestyle": "Flashant-Lifestyle-Ausgabe einer Bleu-de-Chanel-Flasche auf einer Kommode",
-        "scene": "Flashant-Szenenausgabe einer Bleu-de-Chanel-Flasche vor einem dunklen Lichtbogen",
+        "material": "Omega Speedmaster auf weißem Stoff: Stahlgehäuse und Band",
+        "lifestyle": "Bang-&-Olufsen-Lautsprecher auf einer warmen Fläche: Gitter und Lederband",
+        "scene": "Omega Speedmaster und Bang-&-Olufsen-Lautsprecher nebeneinander",
         "skuA": "Ausgangsfoto einer Bleu-de-Chanel-Flasche",
         "skuB": "Ausgangsfoto einer Omega Speedmaster auf weißem Stoff",
         "skuC": "Ausgangsfoto eines Bang-&-Olufsen-Lautsprechers",
-        "heroAfter": "Flashant-Lifestyle-Ausgabe einer Bleu-de-Chanel-Flasche auf einer Kommode"
+        "heroAfter": "Bang-&-Olufsen-Lautsprecher auf einer warmen Fläche"
       }
     },
     "beforeAfter": {

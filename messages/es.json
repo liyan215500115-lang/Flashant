@@ -335,11 +335,11 @@
       "ctaSub": "10 créditos gratis al mes. Sin tarjeta."
     },
     "heroCards": {
-      "before": "Antes",
-      "after": "Después",
-      "beforeCaption": "Foto de origen",
-      "afterCaption": "Resultado de Flashant",
-      "footnote": "De la foto de producto al encuadre final. La misma botella, de dos maneras."
+      "before": "Reloj",
+      "after": "Altavoz",
+      "beforeCaption": "Omega Speedmaster",
+      "afterCaption": "Bang & Olufsen",
+      "footnote": "Un reloj y un altavoz. El mismo proceso, dos categorías."
     },
     "trustCloud": {
       "title": "14 marketplaces. Un botón.",
@@ -349,8 +349,8 @@
       "modalTitle": "14 plataformas compatibles"
     },
     "styleShowcase": {
-      "title": "Tres looks. Resultados reales.",
-      "subtitle": "Material, estilo de vida y escena: encuadres aprobados junto a las fotos de origen de este set.",
+      "title": "Fotos reales de varias categorías. Al cambiar, se nota.",
+      "subtitle": "Material es el reloj, estilo de vida es el altavoz, escena los pone juntos.",
       "outputCaption": "Resultado de Flashant",
       "sourceCaption": "Foto de origen",
       "tabs": {
@@ -359,18 +359,18 @@
         "scene": "Escena"
       },
       "tooltips": {
-        "material": "Vidrio, líquido y la madera: una lectura cercana de la botella.",
-        "lifestyle": "La botella en una habitación: cómoda, luz de ventana y objetos cercanos.",
-        "scene": "Un encuadre oscuro con un arco de luz detrás de la botella."
+        "material": "Caja de acero, brazalete y tela blanca: una lectura cercana del reloj.",
+        "lifestyle": "Rejilla, cordón de cuero y una superficie cálida: el altavoz en un entorno quieto.",
+        "scene": "El reloj y el altavoz en un mismo conjunto."
       },
       "alts": {
-        "material": "Resultado de material de Flashant: botella Bleu de Chanel sobre madera oscura",
-        "lifestyle": "Resultado de estilo de vida de Flashant: botella Bleu de Chanel sobre una cómoda",
-        "scene": "Resultado de escena de Flashant: botella Bleu de Chanel frente a un arco de luz oscuro",
+        "material": "Omega Speedmaster sobre tela blanca: caja de acero y brazalete",
+        "lifestyle": "Altavoz Bang & Olufsen sobre una superficie cálida: rejilla y cordón de cuero",
+        "scene": "Omega Speedmaster y altavoz Bang & Olufsen, lado a lado",
         "skuA": "Foto de origen de una botella Bleu de Chanel",
         "skuB": "Foto de origen de un Omega Speedmaster sobre tela blanca",
         "skuC": "Foto de origen de un altavoz Bang & Olufsen",
-        "heroAfter": "Resultado de estilo de vida de Flashant: botella Bleu de Chanel sobre una cómoda"
+        "heroAfter": "Altavoz Bang & Olufsen sobre una superficie cálida"
       }
     },
     "beforeAfter": {

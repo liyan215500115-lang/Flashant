@@ -342,8 +342,8 @@
       "modalTitle": "14 supported platforms"
     },
     "styleShowcase": {
-      "title": "Three looks. Real outputs.",
-      "subtitle": "Material, lifestyle, and scene — approved frames next to the source photos in this set.",
+      "title": "Real product shots, several categories. The switch is visible.",
+      "subtitle": "Material is the watch. Lifestyle is the speaker. Scene puts them side by side.",
       "outputCaption": "Flashant output",
       "sourceCaption": "Source photo",
       "tabs": {
@@ -352,18 +352,18 @@
         "scene": "Scene"
       },
       "tooltips": {
-        "material": "Glass, liquid, and the wood surface — a close read of the bottle.",
-        "lifestyle": "The bottle in a room: dresser, window light, and nearby objects.",
-        "scene": "A dark frame with one arc of light behind the bottle."
+        "material": "Steel case, bracelet, and white fabric — a close read of the watch.",
+        "lifestyle": "Metal grille, leather cord, and a warm surface — the speaker in a quiet setting.",
+        "scene": "The watch and the speaker together, in one set."
       },
       "alts": {
-        "material": "Flashant material output of a Bleu de Chanel bottle on dark wood",
-        "lifestyle": "Flashant lifestyle output of a Bleu de Chanel bottle on a dresser",
-        "scene": "Flashant scene output of a Bleu de Chanel bottle against a dark arc of light",
+        "material": "Omega Speedmaster on white fabric: steel case and bracelet",
+        "lifestyle": "Bang & Olufsen speaker on a warm surface: metal grille and leather cord",
+        "scene": "Omega Speedmaster and Bang & Olufsen speaker side by side",
         "skuA": "Source product photo of a Bleu de Chanel bottle",
         "skuB": "Source product photo of an Omega Speedmaster on white fabric",
         "skuC": "Source product photo of a Bang & Olufsen speaker",
-        "heroAfter": "Flashant lifestyle output of a Bleu de Chanel bottle on a dresser"
+        "heroAfter": "Bang & Olufsen speaker on a warm surface"
       }
     },
     "beforeAfter": {
@@ -467,11 +467,11 @@
       "copyright": "© 2026 Flashant. All rights reserved."
     },
     "heroCards": {
-      "before": "Before",
-      "after": "After",
-      "beforeCaption": "Source photo",
-      "afterCaption": "Flashant output",
-      "footnote": "From a product photo to a finished frame. Same bottle, shown two ways."
+      "before": "Watch",
+      "after": "Speaker",
+      "beforeCaption": "Omega Speedmaster",
+      "afterCaption": "Bang & Olufsen",
+      "footnote": "A watch and a speaker. Same pipeline, two categories."
     }
   },
   "generate": {

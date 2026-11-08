@@ -335,11 +335,11 @@
       "ctaSub": "10 crédits offerts par mois. Sans carte."
     },
     "heroCards": {
-      "before": "Avant",
-      "after": "Après",
-      "beforeCaption": "Photo source",
-      "afterCaption": "Rendu Flashant",
-      "footnote": "De la photo produit au cadre final. Le même flacon, deux traitements."
+      "before": "Montre",
+      "after": "Enceinte",
+      "beforeCaption": "Omega Speedmaster",
+      "afterCaption": "Bang & Olufsen",
+      "footnote": "Une montre et une enceinte. Le même flux, deux catégories."
     },
     "trustCloud": {
       "title": "14 marketplaces. Un bouton.",
@@ -349,8 +349,8 @@
       "modalTitle": "14 plateformes prises en charge"
     },
     "styleShowcase": {
-      "title": "Trois looks. De vrais rendus.",
-      "subtitle": "Matière, lifestyle et scène — des cadres validés à côté des photos source de cette série.",
+      "title": "Photos réelles, plusieurs catégories. Le changement se voit.",
+      "subtitle": "La matière, c'est la montre. Le lifestyle, c'est l'enceinte. La scène les réunit.",
       "outputCaption": "Rendu Flashant",
       "sourceCaption": "Photo source",
       "tabs": {
@@ -359,18 +359,18 @@
         "scene": "Scène"
       },
       "tooltips": {
-        "material": "Verre, liquide et bois : une lecture rapprochée du flacon.",
-        "lifestyle": "Le flacon dans une pièce : commode, lumière de fenêtre et objets autour.",
-        "scene": "Un cadre sombre avec un arc de lumière derrière le flacon."
+        "material": "Boîtier acier, bracelet et tissu blanc : une lecture rapprochée de la montre.",
+        "lifestyle": "Grille, cordon de cuir et surface chaude : l'enceinte dans un cadre calme.",
+        "scene": "La montre et l'enceinte dans le même ensemble."
       },
       "alts": {
-        "material": "Rendu matière Flashant d'un flacon Bleu de Chanel sur bois sombre",
-        "lifestyle": "Rendu lifestyle Flashant d'un flacon Bleu de Chanel sur une commode",
-        "scene": "Rendu de scène Flashant d'un flacon Bleu de Chanel devant un arc de lumière sombre",
+        "material": "Omega Speedmaster sur tissu blanc : boîtier acier et bracelet",
+        "lifestyle": "Enceinte Bang & Olufsen sur une surface chaude : grille et cordon de cuir",
+        "scene": "Omega Speedmaster et enceinte Bang & Olufsen, côte à côte",
         "skuA": "Photo source d'un flacon Bleu de Chanel",
         "skuB": "Photo source d'une Omega Speedmaster sur tissu blanc",
         "skuC": "Photo source d'une enceinte Bang & Olufsen",
-        "heroAfter": "Rendu lifestyle Flashant d'un flacon Bleu de Chanel sur une commode"
+        "heroAfter": "Enceinte Bang & Olufsen sur une surface chaude"
       }
     },
     "beforeAfter": {
