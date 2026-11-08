@@ -337,9 +337,9 @@
     "heroCards": {
       "before": "Avant",
       "after": "Après",
-      "beforeCaption": "Photo source",
+      "beforeCaption": "Photo du téléphone",
       "afterCaption": "Rendu Flashant",
-      "footnote": "De la photo produit au cadre final. Le même flacon, deux traitements."
+      "footnote": "La même montre. Photo du téléphone → rendu Flashant."
     },
     "trustCloud": {
       "title": "14 marketplaces. Un bouton.",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "Trois looks. De vrais rendus.",
-      "subtitle": "Matière, lifestyle et scène — des cadres validés à côté des photos source de cette série.",
+      "subtitle": "Montre, enceinte et parfum. Chaque onglet est le même produit, avant et après.",
       "outputCaption": "Rendu Flashant",
       "sourceCaption": "Photo source",
       "tabs": {
@@ -359,18 +359,23 @@
         "scene": "Scène"
       },
       "tooltips": {
-        "material": "Verre, liquide et bois : une lecture rapprochée du flacon.",
-        "lifestyle": "Le flacon dans une pièce : commode, lumière de fenêtre et objets autour.",
-        "scene": "Un cadre sombre avec un arc de lumière derrière le flacon."
+        "material": "La même montre. Boîtier et bracelet en acier brossé, vus de près.",
+        "lifestyle": "La même enceinte. Grille métal et cordon de cuir, sur une table chaude.",
+        "scene": "Le même flacon. Une ambiance sombre avec un arc de lumière."
+      },
+      "captions": {
+        "material": "Boîtier et bracelet acier",
+        "lifestyle": "Grille métal et cordon cuir",
+        "scene": "Ambiance du flacon"
       },
       "alts": {
-        "material": "Rendu matière Flashant d'un flacon Bleu de Chanel sur bois sombre",
-        "lifestyle": "Rendu lifestyle Flashant d'un flacon Bleu de Chanel sur une commode",
+        "material": "Cadre rapproché Flashant du même boîtier et bracelet en acier",
+        "lifestyle": "Cadre lifestyle Flashant de la même enceinte olive, grille métal et cordon cuir sur une table en bois",
         "scene": "Rendu de scène Flashant d'un flacon Bleu de Chanel devant un arc de lumière sombre",
         "skuA": "Photo source d'un flacon Bleu de Chanel",
         "skuB": "Photo source d'une Omega Speedmaster sur tissu blanc",
         "skuC": "Photo source d'une enceinte Bang & Olufsen",
-        "heroAfter": "Rendu lifestyle Flashant d'un flacon Bleu de Chanel sur une commode"
+        "heroAfter": "Rendu Flashant du même chronographe en acier et bracelet sur fond sombre"
       }
     },
     "beforeAfter": {

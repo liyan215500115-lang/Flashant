@@ -337,9 +337,9 @@
     "heroCards": {
       "before": "Antes",
       "after": "Después",
-      "beforeCaption": "Foto de origen",
+      "beforeCaption": "Foto del móvil",
       "afterCaption": "Resultado de Flashant",
-      "footnote": "De la foto de producto al encuadre final. La misma botella, de dos maneras."
+      "footnote": "El mismo reloj. Foto del móvil → resultado de Flashant."
     },
     "trustCloud": {
       "title": "14 marketplaces. Un botón.",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "Tres looks. Resultados reales.",
-      "subtitle": "Material, estilo de vida y escena: encuadres aprobados junto a las fotos de origen de este set.",
+      "subtitle": "Reloj, altavoz y perfume. Cada pestaña es el mismo producto, antes y después.",
       "outputCaption": "Resultado de Flashant",
       "sourceCaption": "Foto de origen",
       "tabs": {
@@ -359,18 +359,23 @@
         "scene": "Escena"
       },
       "tooltips": {
-        "material": "Vidrio, líquido y la madera: una lectura cercana de la botella.",
-        "lifestyle": "La botella en una habitación: cómoda, luz de ventana y objetos cercanos.",
-        "scene": "Un encuadre oscuro con un arco de luz detrás de la botella."
+        "material": "El mismo reloj. Caja y brazalete de acero cepillado, de cerca.",
+        "lifestyle": "El mismo altavoz. Malla metálica y cordón de piel, sobre una mesa cálida.",
+        "scene": "La misma botella. Un ambiente oscuro con un arco de luz."
+      },
+      "captions": {
+        "material": "Caja y brazalete de acero",
+        "lifestyle": "Malla y cordón de piel",
+        "scene": "Ambiente del frasco"
       },
       "alts": {
-        "material": "Resultado de material de Flashant: botella Bleu de Chanel sobre madera oscura",
-        "lifestyle": "Resultado de estilo de vida de Flashant: botella Bleu de Chanel sobre una cómoda",
+        "material": "Encuadre cercano de Flashant de la misma caja y brazalete de acero",
+        "lifestyle": "Encuadre de estilo de vida de Flashant del mismo altavoz oliva, malla metálica y cordón de piel sobre madera",
         "scene": "Resultado de escena de Flashant: botella Bleu de Chanel frente a un arco de luz oscuro",
         "skuA": "Foto de origen de una botella Bleu de Chanel",
         "skuB": "Foto de origen de un Omega Speedmaster sobre tela blanca",
         "skuC": "Foto de origen de un altavoz Bang & Olufsen",
-        "heroAfter": "Resultado de estilo de vida de Flashant: botella Bleu de Chanel sobre una cómoda"
+        "heroAfter": "Encuadre de Flashant del mismo cronógrafo de acero y brazalete sobre fondo oscuro"
       }
     },
     "beforeAfter": {

@@ -343,7 +343,7 @@
     },
     "styleShowcase": {
       "title": "三种成片，都是实拍。",
-      "subtitle": "材质、生活场景、氛围。成片旁边是这组产品的原图。",
+      "subtitle": "腕表、音箱、香水。每个分类都是同一件实物的原图和成片。",
       "outputCaption": "闪象成片",
       "sourceCaption": "产品原图",
       "tabs": {
@@ -352,18 +352,23 @@
         "scene": "氛围"
       },
       "tooltips": {
-        "material": "玻璃、液体和木面，近看瓶身材质。",
-        "lifestyle": "放在房间里：斗柜、窗光，旁边还有日常物件。",
-        "scene": "暗调画面，瓶后一道弧光。"
+        "material": "同一块腕表。钢壳拉丝和钢链表链，近看材质。",
+        "lifestyle": "同一只音箱。金属网罩和皮绳，暖色台面。",
+        "scene": "同一瓶香水。暗调氛围，瓶后一道光。"
+      },
+      "captions": {
+        "material": "钢壳表链",
+        "lifestyle": "金属网罩皮绳",
+        "scene": "瓶身氛围"
       },
       "alts": {
-        "material": "闪象材质成片：深色木面上的 Bleu de Chanel 香水瓶",
-        "lifestyle": "闪象生活场景成片：斗柜上的 Bleu de Chanel 香水瓶",
+        "material": "闪象材质成片：同一块钢壳计时表的表壳与钢链",
+        "lifestyle": "闪象生活场景成片：同一只橄榄色音箱，金属网罩和皮绳，暖色木台",
         "scene": "闪象氛围成片：一道暗弧光前的 Bleu de Chanel 香水瓶",
         "skuA": "Bleu de Chanel 香水瓶的产品原图",
         "skuB": "白色织物上的 Omega Speedmaster 产品原图",
         "skuC": "Bang & Olufsen 音箱的产品原图",
-        "heroAfter": "闪象生活场景成片：斗柜上的 Bleu de Chanel 香水瓶"
+        "heroAfter": "闪象成片：同一块钢壳计时表和钢链，暗底"
       }
     },
     "beforeAfter": {
@@ -469,9 +474,9 @@
     "heroCards": {
       "before": "原图",
       "after": "成片",
-      "beforeCaption": "产品原图",
+      "beforeCaption": "手机原图",
       "afterCaption": "闪象成片",
-      "footnote": "同一瓶香水，从产品原图到成片。"
+      "footnote": "同一块腕表 · 手机原图 → 闪象成片。"
     }
   },
   "generate": {

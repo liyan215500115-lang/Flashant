@@ -337,9 +337,9 @@
     "heroCards": {
       "before": "Antes",
       "after": "Depois",
-      "beforeCaption": "Foto de origem",
+      "beforeCaption": "Foto do celular",
       "afterCaption": "Resultado Flashant",
-      "footnote": "Da foto do produto ao enquadramento final. O mesmo frasco, de dois jeitos."
+      "footnote": "O mesmo relógio. Foto do celular → resultado Flashant."
     },
     "trustCloud": {
       "title": "14 marketplaces. Um botão.",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "Três looks. Resultados reais.",
-      "subtitle": "Material, lifestyle e cena — quadros aprovados ao lado das fotos de origem deste conjunto.",
+      "subtitle": "Relógio, caixa de som e perfume. Cada aba é o mesmo produto, antes e depois.",
       "outputCaption": "Resultado Flashant",
       "sourceCaption": "Foto de origem",
       "tabs": {
@@ -359,18 +359,23 @@
         "scene": "Cena"
       },
       "tooltips": {
-        "material": "Vidro, líquido e a madeira: uma leitura de perto do frasco.",
-        "lifestyle": "O frasco no quarto: cômoda, luz da janela e objetos ao lado.",
-        "scene": "Um quadro escuro com um arco de luz atrás do frasco."
+        "material": "O mesmo relógio. Caixa e pulseira de aço escovado, de perto.",
+        "lifestyle": "A mesma caixa de som. Tela metálica e cordão de couro, numa mesa quente.",
+        "scene": "O mesmo frasco. Um clima escuro com um arco de luz."
+      },
+      "captions": {
+        "material": "Caixa e pulseira de aço",
+        "lifestyle": "Tela e cordão de couro",
+        "scene": "Clima do frasco"
       },
       "alts": {
-        "material": "Resultado de material da Flashant: frasco Bleu de Chanel sobre madeira escura",
-        "lifestyle": "Resultado lifestyle da Flashant: frasco Bleu de Chanel sobre uma cômoda",
+        "material": "Quadro próximo da Flashant da mesma caixa e pulseira de aço",
+        "lifestyle": "Quadro lifestyle da Flashant da mesma caixa de som oliva, tela metálica e cordão de couro sobre madeira",
         "scene": "Resultado de cena da Flashant: frasco Bleu de Chanel contra um arco de luz escuro",
         "skuA": "Foto de origem de um frasco Bleu de Chanel",
         "skuB": "Foto de origem de um Omega Speedmaster sobre tecido branco",
         "skuC": "Foto de origem de uma caixa de som Bang & Olufsen",
-        "heroAfter": "Resultado lifestyle da Flashant: frasco Bleu de Chanel sobre uma cômoda"
+        "heroAfter": "Quadro da Flashant do mesmo cronógrafo de aço e pulseira em fundo escuro"
       }
     },
     "beforeAfter": {

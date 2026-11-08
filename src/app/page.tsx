@@ -13,6 +13,12 @@ import { WorkflowSteps } from "@/components/landing/workflow-steps";
 import { RoiTable } from "@/components/landing/roi-table";
 import { BottomCta } from "@/components/landing/bottom-cta";
 import { PricingCards } from "@/components/landing/pricing-cards";
+import {
+  HOMEPAGE_HERO,
+  HOMEPAGE_HERO_ALT,
+  HOMEPAGE_SLIDER,
+  HOMEPAGE_STYLE_FRAMES,
+} from "@/lib/landing/homepage-slots";
 import { getTranslator } from "@/lib/locale.server";
 
 export default async function LandingPage() {
@@ -31,64 +37,26 @@ export default async function LandingPage() {
 
   const outputCaption = t("landing.styleShowcase.outputCaption");
   const sourceCaption = t("landing.styleShowcase.sourceCaption");
-  const sourceTiles = [
-    {
-      src: "/marketing/v6/sku-a-showcase.webp",
-      alt: t("landing.styleShowcase.alts.skuA"),
-      caption: sourceCaption,
-    },
-    {
-      src: "/marketing/v6/sku-b-omega-watch.webp",
-      alt: t("landing.styleShowcase.alts.skuB"),
-      caption: sourceCaption,
-    },
-    {
-      src: "/marketing/v6/sku-c-bo-speaker.webp",
-      alt: t("landing.styleShowcase.alts.skuC"),
-      caption: sourceCaption,
-    },
-  ];
-  const styleData = [
-    {
-      key: "material",
-      label: t("landing.styleShowcase.tabs.material"),
-      tooltip: t("landing.styleShowcase.tooltips.material"),
+  const styleData = HOMEPAGE_STYLE_FRAMES.map((frame) => {
+    const productCaption = t(`landing.styleShowcase.captions.${frame.key}`);
+    return {
+      key: frame.key,
+      label: t(`landing.styleShowcase.tabs.${frame.key}`),
+      tooltip: t(`landing.styleShowcase.tooltips.${frame.key}`),
       images: [
         {
-          src: "/marketing/v6/after-material.webp",
-          alt: t("landing.styleShowcase.alts.material"),
-          caption: outputCaption,
+          src: frame.before,
+          alt: t(frame.beforeAltKey),
+          caption: `${productCaption} · ${sourceCaption}`,
         },
-        ...sourceTiles,
-      ],
-    },
-    {
-      key: "lifestyle",
-      label: t("landing.styleShowcase.tabs.lifestyle"),
-      tooltip: t("landing.styleShowcase.tooltips.lifestyle"),
-      images: [
         {
-          src: "/marketing/v6/after-lifestyle.webp",
-          alt: t("landing.styleShowcase.alts.lifestyle"),
-          caption: outputCaption,
+          src: frame.after,
+          alt: t(frame.afterAltKey),
+          caption: `${productCaption} · ${outputCaption}`,
         },
-        ...sourceTiles,
       ],
-    },
-    {
-      key: "scene",
-      label: t("landing.styleShowcase.tabs.scene"),
-      tooltip: t("landing.styleShowcase.tooltips.scene"),
-      images: [
-        {
-          src: "/marketing/v6/after-scene.webp",
-          alt: t("landing.styleShowcase.alts.scene"),
-          caption: outputCaption,
-        },
-        ...sourceTiles,
-      ],
-    },
-  ];
+    };
+  });
 
   return (
     <div className="bg-white relative">
@@ -143,10 +111,10 @@ export default async function LandingPage() {
 
         {/* Right: product transformation preview */}
         <HeroCards
-          beforeSrc="/marketing/v6/sku-a-bleu-chanel.webp"
-          afterSrc="/marketing/v6/hero-after-lifestyle.webp"
-          beforeAlt={t("landing.styleShowcase.alts.skuA")}
-          afterAlt={t("landing.styleShowcase.alts.heroAfter")}
+          beforeSrc={HOMEPAGE_HERO.before}
+          afterSrc={HOMEPAGE_HERO.after}
+          beforeAlt={t(HOMEPAGE_HERO_ALT.before)}
+          afterAlt={t(HOMEPAGE_HERO_ALT.after)}
           beforeBadge={t("landing.heroCards.before")}
           afterBadge={t("landing.heroCards.after")}
           beforeCaption={t("landing.heroCards.beforeCaption")}
@@ -189,8 +157,8 @@ export default async function LandingPage() {
           </div>
 
           <BeforeAfterSlider
-            beforeSrc="/marketing/v6/slider-before-sku-a.webp"
-            afterSrc="/marketing/v6/slider-after-material.webp"
+            beforeSrc={HOMEPAGE_SLIDER.before}
+            afterSrc={HOMEPAGE_SLIDER.after}
             beforeLabel={t("landing.beforeAfter.beforeLabel")}
             afterLabel={t("landing.beforeAfter.afterLabel")}
           />

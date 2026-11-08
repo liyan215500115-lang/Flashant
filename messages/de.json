@@ -337,9 +337,9 @@
     "heroCards": {
       "before": "Vorher",
       "after": "Nachher",
-      "beforeCaption": "Ausgangsfoto",
+      "beforeCaption": "Handyfoto",
       "afterCaption": "Flashant-Ausgabe",
-      "footnote": "Vom Produktfoto zum fertigen Bild. Dieselbe Flasche, zwei Fassungen."
+      "footnote": "Dieselbe Uhr. Handyfoto → Flashant-Ausgabe."
     },
     "trustCloud": {
       "title": "14 Marktplätze. Ein Knopf.",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "Drei Looks. Echte Ergebnisse.",
-      "subtitle": "Material, Lifestyle und Szene — freigegebene Bilder neben den Ausgangsfotos dieses Sets.",
+      "subtitle": "Uhr, Lautsprecher und Parfum. Jeder Tab ist dasselbe Produkt, vorher und nachher.",
       "outputCaption": "Flashant-Ausgabe",
       "sourceCaption": "Ausgangsfoto",
       "tabs": {
@@ -359,18 +359,23 @@
         "scene": "Szene"
       },
       "tooltips": {
-        "material": "Glas, Flüssigkeit und Holz: ein naher Blick auf die Flasche.",
-        "lifestyle": "Die Flasche im Raum: Kommode, Fensterlicht und Dinge daneben.",
-        "scene": "Ein dunkler Rahmen mit einem Lichtbogen hinter der Flasche."
+        "material": "Dieselbe Uhr. Gebürstetes Stahlgehäuse und Stahlband, aus der Nähe.",
+        "lifestyle": "Derselbe Lautsprecher. Metallgitter und Lederkordel, auf einem warmen Holztisch.",
+        "scene": "Dieselbe Flasche. Dunkle Stimmung mit einem Lichtbogen."
+      },
+      "captions": {
+        "material": "Stahlgehäuse und Stahlband",
+        "lifestyle": "Metallgitter und Lederkordel",
+        "scene": "Flakon-Stimmung"
       },
       "alts": {
-        "material": "Flashant-Materialausgabe einer Bleu-de-Chanel-Flasche auf dunklem Holz",
-        "lifestyle": "Flashant-Lifestyle-Ausgabe einer Bleu-de-Chanel-Flasche auf einer Kommode",
+        "material": "Nahe Flashant-Aufnahme desselben Stahlgehäuses und Stahlbands",
+        "lifestyle": "Flashant-Lifestyle desselben olivfarbenen Lautsprechers mit Metallgitter und Lederkordel auf Holz",
         "scene": "Flashant-Szenenausgabe einer Bleu-de-Chanel-Flasche vor einem dunklen Lichtbogen",
         "skuA": "Ausgangsfoto einer Bleu-de-Chanel-Flasche",
         "skuB": "Ausgangsfoto einer Omega Speedmaster auf weißem Stoff",
         "skuC": "Ausgangsfoto eines Bang-&-Olufsen-Lautsprechers",
-        "heroAfter": "Flashant-Lifestyle-Ausgabe einer Bleu-de-Chanel-Flasche auf einer Kommode"
+        "heroAfter": "Flashant-Aufnahme desselben Stahlchronographen und Stahlbands auf dunklem Grund"
       }
     },
     "beforeAfter": {
