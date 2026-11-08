@@ -7,6 +7,8 @@ import { getProvider } from "@/lib/ai/registry";
 import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
 import { serverT } from "@/lib/server-t";
 import { getSignedGetUrl } from "@/lib/s3";
+import { moderationHttpResponse, promptsForModeration, screenGenerationPrompts } from "@/lib/creem/moderation";
+import { sharedStaticPromptFragments } from "@/lib/creem/static-fragments";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -17,6 +19,13 @@ export async function POST(req: Request) {
   if (!imageProjectId || !productImageIds?.length) {
     return NextResponse.json({ error: "imageProjectId and productImageIds required" }, { status: 400 });
   }
+
+  const moderation = await screenGenerationPrompts({
+    userId,
+    prompts: promptsForModeration({ prompt }, sharedStaticPromptFragments()),
+  });
+  const blocked = moderationHttpResponse(moderation);
+  if (blocked) return blocked;
 
   const project = await db.imageProject.findUnique({ where: { id: imageProjectId } });
   if (!project || project.userId !== userId) return NextResponse.json({ error: "Project not found" }, { status: 404 });

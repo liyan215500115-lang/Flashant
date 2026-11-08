@@ -12,6 +12,8 @@ import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { prepareReferenceImage } from "@/lib/reference-image";
 import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES, BEAUTY_DARK_SURFACE_GUARD } from "@/lib/ai/constants";
+import { moderationHttpResponse, promptsForModeration, screenGenerationPrompts } from "@/lib/creem/moderation";
+import { sharedStaticPromptFragments } from "@/lib/creem/static-fragments";
 
 // Detail types where the model/person should be the FOCUS, not the product.
 const MODEL_CLOSEUP_TYPES = new Set(["detail"]);
@@ -282,6 +284,25 @@ async function pollPrediction(
   return result;
 }
 
+/** Static copy the model sees. Creem screens the user-controlled remainder only. */
+function generationStaticFragments(): string[] {
+  const fragments = sharedStaticPromptFragments();
+  for (const template of Object.values(TYPE_TEMPLATES)) {
+    fragments.push(template.composition, template.lighting, template.camera, template.mood, template.technical);
+  }
+  for (const profile of Object.values(CATEGORY_PROFILES)) {
+    fragments.push(profile.compositionHint);
+  }
+  fragments.push(
+    BEAUTY_DARK_SURFACE_GUARD,
+    "CRITICAL: Keep the product and any person visually IDENTICAL to the reference image — same shape, same color, same materials, same details. Only change the background, scene, pose, framing, or camera angle. Do NOT substitute the product with a different one.",
+    "CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.",
+    "Keep any person visually identical to the reference image — same face, same body, same clothing.",
+    "Extreme close-up of the person from the reference image using or wearing the product. Focus on the face/head/hands where the product is being applied or worn. The product itself should be visible in use (on skin, on head, on body) but do NOT show any product packaging, bottles, boxes, or containers. Keep the person visually IDENTICAL to the reference image — same face, same features, same skin tone. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. CRITICAL: do NOT render any text or labels on the image.",
+  );
+  return fragments;
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -317,6 +338,18 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+
+  // Screen user-controlled text before any task, queue, or model call.
+  // Static scene templates are stripped and are not sent to Creem.
+  const moderation = await screenGenerationPrompts({
+    userId,
+    prompts: promptsForModeration(
+      { prompt: customPrompt, baseStyle, detailTypes },
+      generationStaticFragments(),
+    ),
+  });
+  const blocked = moderationHttpResponse(moderation);
+  if (blocked) return blocked;
 
   // Verify project ownership
   const project = await db.imageProject.findUnique({

@@ -51,7 +51,10 @@ REPLICATE_API_KEY    — FLUX 生图
 DEEPSEEK_API_KEY     — prompt 增强
 DATABASE_URL         — Neon PostgreSQL
 S3_*                 — Cloudflare R2 图片存储
-LEMONSQUEEZY_*       — 支付/订阅
+LEMONSQUEEZY_*       — 支付/订阅（本合规改动不切换 Lemon）
+CREEM_API_KEY        — 仅生图 prompt 审核。creem_test_ 走 test-api，creem_ 走 api.creem.io
+CREEM_TEST_MODE      — 可选，显式选择 sandbox 或 live host
+CREEM_MODERATION     — enforce（默认，无 key 则 503）或 off（仅本地）
 OPENAI_API_KEY       — GPT Image 2 (暂未接入)
 ```
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ArrowDown, ArrowRight } from "lucide-react";
-import { Logo } from "@/components/landing/logo";
+import { SiteFooter } from "@/components/legal/site-footer";
 import { Navbar } from "@/components/landing/navbar";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { HeroCards } from "@/components/landing/hero-cards";
@@ -315,15 +315,7 @@ export default async function LandingPage() {
         userLoggedIn={!!user}
       />
 
-      {/* ═══════════ Footer ═══════════ */}
-      <footer className="py-10 px-6 border-t border-zinc-100">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Logo size={22} />
-          <p className="text-xs text-zinc-400">
-            {t("landing.footer.copyright")}
-          </p>
-        </div>
-      </footer>
+      <SiteFooter copyright={t("landing.footer.copyright")} />
     </div>
   );
 }
