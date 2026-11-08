@@ -347,9 +347,9 @@
       "outputCaption": "闪象成片",
       "sourceCaption": "产品原图",
       "tabs": {
-        "material": "材质",
-        "lifestyle": "生活场景",
-        "scene": "氛围"
+        "material": "材质 · 腕表",
+        "lifestyle": "生活 · 音箱",
+        "scene": "氛围 · 香水"
       },
       "tooltips": {
         "material": "同一块腕表。钢壳拉丝和钢链表链，近看材质。",
@@ -357,9 +357,9 @@
         "scene": "同一瓶香水。暗调氛围，瓶后一道光。"
       },
       "captions": {
-        "material": "钢壳表链",
-        "lifestyle": "金属网罩皮绳",
-        "scene": "瓶身氛围"
+        "material": "钢壳腕表",
+        "lifestyle": "音箱金属网罩",
+        "scene": "香水瓶"
       },
       "alts": {
         "material": "闪象材质成片：同一块钢壳计时表的表壳与钢链",

@@ -347,19 +347,19 @@
       "outputCaption": "Flashant output",
       "sourceCaption": "Source photo",
       "tabs": {
-        "material": "Material",
-        "lifestyle": "Lifestyle",
-        "scene": "Scene"
+        "material": "Material · Watch",
+        "lifestyle": "Lifestyle · Speaker",
+        "scene": "Scene · Perfume"
       },
       "tooltips": {
         "material": "Same watch. Brushed steel case and bracelet, read up close.",
         "lifestyle": "Same speaker. Metal mesh and a leather cord, on a warm wood table.",
-        "scene": "Same bottle. A dark mood with one arc of light."
+        "scene": "Same perfume bottle. A dark mood with one arc of light."
       },
       "captions": {
-        "material": "Steel case and bracelet",
-        "lifestyle": "Mesh and leather cord",
-        "scene": "Bottle mood"
+        "material": "Steel watch case and bracelet",
+        "lifestyle": "Speaker mesh and leather cord",
+        "scene": "Perfume bottle"
       },
       "alts": {
         "material": "Flashant close frame of the same steel chronograph case and bracelet",

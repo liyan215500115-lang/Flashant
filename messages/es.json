@@ -354,19 +354,19 @@
       "outputCaption": "Resultado de Flashant",
       "sourceCaption": "Foto de origen",
       "tabs": {
-        "material": "Material",
-        "lifestyle": "Estilo de vida",
-        "scene": "Escena"
+        "material": "Material · Reloj",
+        "lifestyle": "Lifestyle · Altavoz",
+        "scene": "Escena · Perfume"
       },
       "tooltips": {
         "material": "El mismo reloj. Caja y brazalete de acero cepillado, de cerca.",
         "lifestyle": "El mismo altavoz. Malla metálica y cordón de piel, sobre una mesa cálida.",
-        "scene": "La misma botella. Un ambiente oscuro con un arco de luz."
+        "scene": "El mismo perfume. Un ambiente oscuro con un arco de luz."
       },
       "captions": {
-        "material": "Caja y brazalete de acero",
-        "lifestyle": "Malla y cordón de piel",
-        "scene": "Ambiente del frasco"
+        "material": "Caja de acero del reloj",
+        "lifestyle": "Altavoz: malla y cordón de piel",
+        "scene": "Frasco de perfume"
       },
       "alts": {
         "material": "Encuadre cercano de Flashant de la misma caja y brazalete de acero",
