@@ -335,11 +335,11 @@
       "ctaSub": "10 créditos grátis por mês. Sem cartão."
     },
     "heroCards": {
-      "before": "Antes",
-      "after": "Depois",
-      "beforeCaption": "Foto de origem",
-      "afterCaption": "Resultado Flashant",
-      "footnote": "Da foto do produto ao enquadramento final. O mesmo frasco, de dois jeitos."
+      "before": "Relógio",
+      "after": "Caixa de som",
+      "beforeCaption": "Omega Speedmaster",
+      "afterCaption": "Bang & Olufsen",
+      "footnote": "Um relógio e uma caixa de som. O mesmo processo, duas categorias."
     },
     "trustCloud": {
       "title": "14 marketplaces. Um botão.",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "Três looks. Resultados reais.",
-      "subtitle": "Material, lifestyle e cena — quadros aprovados ao lado das fotos de origem deste conjunto.",
+      "subtitle": "Material é o relógio, lifestyle é a caixa de som, cena coloca os dois lado a lado.",
       "outputCaption": "Resultado Flashant",
       "sourceCaption": "Foto de origem",
       "tabs": {
@@ -359,18 +359,18 @@
         "scene": "Cena"
       },
       "tooltips": {
-        "material": "Vidro, líquido e a madeira: uma leitura de perto do frasco.",
-        "lifestyle": "O frasco no quarto: cômoda, luz da janela e objetos ao lado.",
-        "scene": "Um quadro escuro com um arco de luz atrás do frasco."
+        "material": "Caixa de aço, pulseira e tecido branco: uma leitura de perto do relógio.",
+        "lifestyle": "Grade, cordão de couro e uma superfície quente: a caixa de som em um ambiente calmo.",
+        "scene": "O relógio e a caixa de som no mesmo conjunto."
       },
       "alts": {
-        "material": "Resultado de material da Flashant: frasco Bleu de Chanel sobre madeira escura",
-        "lifestyle": "Resultado lifestyle da Flashant: frasco Bleu de Chanel sobre uma cômoda",
-        "scene": "Resultado de cena da Flashant: frasco Bleu de Chanel contra um arco de luz escuro",
+        "material": "Omega Speedmaster sobre tecido branco: caixa de aço e pulseira",
+        "lifestyle": "Caixa de som Bang & Olufsen sobre uma superfície quente: grade e cordão de couro",
+        "scene": "Omega Speedmaster e caixa de som Bang & Olufsen, lado a lado",
         "skuA": "Foto de origem de um frasco Bleu de Chanel",
         "skuB": "Foto de origem de um Omega Speedmaster sobre tecido branco",
         "skuC": "Foto de origem de uma caixa de som Bang & Olufsen",
-        "heroAfter": "Resultado lifestyle da Flashant: frasco Bleu de Chanel sobre uma cômoda"
+        "heroAfter": "Caixa de som Bang & Olufsen sobre uma superfície quente"
       }
     },
     "beforeAfter": {

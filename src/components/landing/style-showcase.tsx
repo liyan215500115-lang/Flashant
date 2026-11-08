@@ -39,15 +39,21 @@ export function StyleShowcase({ title, subtitle, styles }: StyleShowcaseProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center justify-center gap-2 mb-10 flex-wrap">
+        <div className="flex items-center justify-center gap-2 mb-10 flex-wrap" role="tablist">
           {styles.map((s, i) => (
             <button
               key={s.key}
+              type="button"
+              role="tab"
+              id={`style-tab-${s.key}`}
+              aria-selected={i === active}
+              aria-pressed={i === active}
+              aria-controls={`style-panel-${s.key}`}
               onClick={() => setActive(i)}
-              className={`relative inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
+              className={`relative inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300 ${
                 i === active
-                  ? "bg-brand-900 text-white shadow-lg shadow-brand-900/20"
-                  : "bg-zinc-50 text-zinc-600 hover:text-zinc-700 hover:bg-zinc-100"
+                  ? "border-brand-900 bg-brand-900 text-white shadow-lg shadow-brand-900/20"
+                  : "border-zinc-300 bg-white text-zinc-800 shadow-sm hover:border-zinc-400 hover:bg-white"
               }`}
             >
               {i === active && <Sparkles size={13} className="text-holo-400" />}
@@ -61,8 +67,17 @@ export function StyleShowcase({ title, subtitle, styles }: StyleShowcaseProps) {
           {current.tooltip}
         </p>
 
-        {/* 2x2 Image Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+        <div
+          id={`style-panel-${current.key}`}
+          role="tabpanel"
+          aria-labelledby={`style-tab-${current.key}`}
+          data-style-key={current.key}
+          className={
+            current.images.length > 1
+              ? "grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6"
+              : "mx-auto grid max-w-3xl grid-cols-1"
+          }
+        >
           {current.images.map((image) => (
             <div
               key={`${current.key}-${image.src}`}

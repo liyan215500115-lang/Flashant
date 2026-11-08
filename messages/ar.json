@@ -335,11 +335,11 @@
       "ctaSub": "10 أرصدة مجانية شهريًا. بلا بطاقة."
     },
     "heroCards": {
-      "before": "قبل",
-      "after": "بعد",
-      "beforeCaption": "صورة المصدر",
-      "afterCaption": "مخرجات Flashant",
-      "footnote": "من صورة المنتج إلى الإطار النهائي. الزجاجة نفسها بطريقتين."
+      "before": "ساعة",
+      "after": "سماعة",
+      "beforeCaption": "Omega Speedmaster",
+      "afterCaption": "Bang & Olufsen",
+      "footnote": "ساعة وسماعة. المسار نفسه، فئتان."
     },
     "trustCloud": {
       "title": "14 سوقًا. زر واحد.",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "ثلاث لقطات. مخرجات حقيقية.",
-      "subtitle": "الخامة، وأسلوب الحياة، والمشهد — إطارات معتمدة بجانب صور المصدر في هذه المجموعة.",
+      "subtitle": "الخامة للساعة، وأسلوب الحياة للسماعة، والمشهد يضعهما جنبًا إلى جنب.",
       "outputCaption": "مخرجات Flashant",
       "sourceCaption": "صورة المصدر",
       "tabs": {
@@ -359,18 +359,18 @@
         "scene": "المشهد"
       },
       "tooltips": {
-        "material": "زجاج وسائل وسطح خشبي: قراءة قريبة للزجاجة.",
-        "lifestyle": "الزجاجة في غرفة: خزانة، ضوء النافذة، وأشياء بجانبها.",
-        "scene": "إطار داكن بقوس ضوء واحد خلف الزجاجة."
+        "material": "علبة فولاذية وسوار وقماش أبيض: نظرة قريبة على الساعة.",
+        "lifestyle": "شبكة وحبل جلدي وسطح دافئ: السماعة في إطار هادئ.",
+        "scene": "الساعة والسماعة في مجموعة واحدة."
       },
       "alts": {
-        "material": "مخرجات خامة من Flashant لزجاجة Bleu de Chanel على خشب داكن",
-        "lifestyle": "مخرجات أسلوب حياة من Flashant لزجاجة Bleu de Chanel على خزانة",
-        "scene": "مخرجات مشهد من Flashant لزجاجة Bleu de Chanel أمام قوس ضوء داكن",
+        "material": "Omega Speedmaster على قماش أبيض: علبة فولاذية وسوار",
+        "lifestyle": "سماعة Bang & Olufsen على سطح دافئ: شبكة وحبل جلدي",
+        "scene": "Omega Speedmaster وسماعة Bang & Olufsen جنبًا إلى جنب",
         "skuA": "صورة مصدر لزجاجة Bleu de Chanel",
         "skuB": "صورة مصدر لساعة Omega Speedmaster على قماش أبيض",
         "skuC": "صورة مصدر لمكبر صوت Bang & Olufsen",
-        "heroAfter": "مخرجات أسلوب حياة من Flashant لزجاجة Bleu de Chanel على خزانة"
+        "heroAfter": "سماعة Bang & Olufsen على سطح دافئ"
       }
     },
     "beforeAfter": {

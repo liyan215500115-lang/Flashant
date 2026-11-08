@@ -335,11 +335,11 @@
       "ctaSub": "매월 10크레딧 무료. 카드 불필요."
     },
     "heroCards": {
-      "before": "전",
-      "after": "후",
-      "beforeCaption": "원본 사진",
-      "afterCaption": "Flashant 결과",
-      "footnote": "같은 병을 원본 사진과 완성 컷으로 나란히 봅니다."
+      "before": "시계",
+      "after": "스피커",
+      "beforeCaption": "Omega Speedmaster",
+      "afterCaption": "Bang & Olufsen",
+      "footnote": "시계와 스피커. 같은 과정, 두 가지 카테고리."
     },
     "trustCloud": {
       "title": "14개 마켓. 버튼 하나.",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "세 가지 룩. 실제 결과.",
-      "subtitle": "재질, 라이프스타일, 장면. 승인된 결과 옆에 이 세트의 원본 사진을 둡니다.",
+      "subtitle": "재질은 시계, 라이프스타일은 스피커, 장면은 둘을 나란히 둡니다.",
       "outputCaption": "Flashant 결과",
       "sourceCaption": "원본 사진",
       "tabs": {
@@ -359,18 +359,18 @@
         "scene": "장면"
       },
       "tooltips": {
-        "material": "유리, 액체, 나무 상판. 병을 가까이 보여주는 컷입니다.",
-        "lifestyle": "방 안의 병. 서랍장, 창가 빛, 곁의 물건.",
-        "scene": "어두운 프레임, 병 뒤로 한 줄의 호 빛."
+        "material": "스틸 케이스, 브레이슬릿, 흰 천. 시계를 가까이 보여 줍니다.",
+        "lifestyle": "그릴, 가죽 끈, 따뜻한 상판. 스피커의 조용한 컷.",
+        "scene": "시계와 스피커를 한 세트에 둡니다."
       },
       "alts": {
-        "material": "Flashant 재질 결과. 어두운 나무 위의 Bleu de Chanel 병",
-        "lifestyle": "Flashant 라이프스타일 결과. 서랍장 위의 Bleu de Chanel 병",
-        "scene": "Flashant 장면 결과. 어두운 호 빛 앞의 Bleu de Chanel 병",
+        "material": "흰 천 위의 Omega Speedmaster. 스틸 케이스와 브레이슬릿",
+        "lifestyle": "따뜻한 상판 위의 Bang & Olufsen 스피커. 그릴과 가죽 끈",
+        "scene": "Omega Speedmaster와 Bang & Olufsen 스피커를 나란히 둔 장면",
         "skuA": "Bleu de Chanel 병 원본 사진",
         "skuB": "흰 천 위의 Omega Speedmaster 원본 사진",
         "skuC": "Bang & Olufsen 스피커 원본 사진",
-        "heroAfter": "Flashant 라이프스타일 결과. 서랍장 위의 Bleu de Chanel 병"
+        "heroAfter": "따뜻한 상판 위의 Bang & Olufsen 스피커"
       }
     },
     "beforeAfter": {
