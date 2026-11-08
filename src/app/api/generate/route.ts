@@ -11,7 +11,7 @@ import { getSignedGetUrl } from "@/lib/s3";
 import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { prepareReferenceImage } from "@/lib/reference-image";
-import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES } from "@/lib/ai/constants";
+import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES, BEAUTY_DARK_SURFACE_GUARD } from "@/lib/ai/constants";
 
 // Detail types where the model/person should be the FOCUS, not the product.
 const MODEL_CLOSEUP_TYPES = new Set(["detail"]);
@@ -148,9 +148,9 @@ const CATEGORY_PROFILES: Record<string, {
 }> = {
   beauty: {
     name: "美妆护肤",
-    defaultStyle: "marble",
+    defaultStyle: "dark_moody",
     recommendedTypes: ["selling_points", "detail", "material", "craft", "lifestyle", "scene_atmosphere"],
-    compositionHint: "High-end beauty product, glossy reflections, premium packaging, marble or dark wood surface, luxury cosmetic aesthetic",
+    compositionHint: "High-end beauty product, glossy reflections, premium packaging, dark matte charcoal or near-black wood surface, cool cyan-blue rim light, luxury cosmetic aesthetic",
   },
   fashion: {
     name: "服饰配饰",
@@ -411,6 +411,8 @@ export async function POST(req: Request) {
           ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
           : "";
         const noTextGuard = wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
+        // Beauty-only. Electronics stays dark_moody without this charcoal/cyan guard.
+        const beautySurfaceGuard = category === "beauty" ? BEAUTY_DARK_SURFACE_GUARD : "";
 
         // Assemble: category hint → identity → subject → composition → lighting → camera → mood → technical → guards
         const detailPrompt = tpl
@@ -425,8 +427,9 @@ export async function POST(req: Request) {
               tpl.mood,
               tpl.technical,
               noTextGuard,
+              beautySurfaceGuard,
             ].filter(Boolean).join(". ").trim()
-          : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}`.trim();
+          : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}${beautySurfaceGuard ? ` ${beautySurfaceGuard}` : ""}`.trim();
         // Model close-ups: person using/wearing the product (e.g. headphones on
         // ears, lotion on face, hat on head). Show the product IN USE but do NOT
         // show the product packaging, bottle, or box.
