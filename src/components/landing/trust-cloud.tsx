@@ -29,16 +29,19 @@ const MORE_PLATFORMS = [
 interface TrustCloudProps {
   title: string;
   subtitle: string;
+  badge: string;
+  moreLabel: string;
+  modalTitle: string;
 }
 
-export function TrustCloud({ title, subtitle }: TrustCloudProps) {
+export function TrustCloud({ title, subtitle, badge, moreLabel, modalTitle }: TrustCloudProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <section className="py-32 md:py-40 px-6 bg-white">
       <div className="max-w-3xl mx-auto text-center animate-on-scroll">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium mb-6">
-          <Zap size={12} className="text-holo-500" /> One-Click Publishing
+          <Zap size={12} className="text-holo-500" /> {badge}
         </div>
         <h3 className="text-lg font-semibold text-zinc-800 mb-2">{title}</h3>
         <p className="text-sm text-zinc-500 mb-12">{subtitle}</p>
@@ -61,7 +64,7 @@ export function TrustCloud({ title, subtitle }: TrustCloudProps) {
             onClick={() => setOpen(true)}
             className="flex items-center gap-2 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-5 py-3 hover:border-brand-300 hover:bg-brand-50 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
           >
-            <span className="text-sm font-semibold text-zinc-500 hover:text-brand-700">+10 more</span>
+            <span className="text-sm font-semibold text-zinc-500 hover:text-brand-700">{moreLabel}</span>
           </button>
         </div>
       </div>
@@ -71,7 +74,7 @@ export function TrustCloud({ title, subtitle }: TrustCloudProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)}>
           <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h4 className="text-base font-semibold text-zinc-900">14 supported platforms</h4>
+              <h4 className="text-base font-semibold text-zinc-900">{modalTitle}</h4>
               <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors">
                 <X size={18} />
               </button>

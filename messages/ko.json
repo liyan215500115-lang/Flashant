@@ -9,11 +9,11 @@
     "back": "Back"
   },
   "nav": {
-    "workspace": "Workspace",
-    "products": "Products",
-    "settings": "Settings",
-    "newProject": "New Project",
-    "signOut": "Sign Out"
+    "workspace": "작업 공간",
+    "products": "상품",
+    "settings": "설정",
+    "newProject": "새 프로젝트",
+    "signOut": "로그아웃"
   },
   "auth": {
     "loginTitle": "Welcome Back",
@@ -165,7 +165,11 @@
     "confirmDeleteDesc": "? This action cannot be undone. Generated images and task data will be permanently deleted.",
     "cancel": "Cancel",
     "confirmDeleteBtn": "Confirm Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "publishDownload": "Publish / Download",
+    "selectTypes": "Select Content Types",
+    "generateBtn": "Generate {count} Detail Images",
+    "results": "Results"
   },
   "publish": {
     "title": "Publish Images",
@@ -269,7 +273,12 @@
     "desc": "Upload product images, AI generates multi-scene e-commerce photos",
     "preparing": "Preparing...",
     "retry": "Retry",
-    "projectError": "Failed to create project"
+    "projectError": "Failed to create project",
+    "detailImages": "Detail Images",
+    "detailImagesDesc": "Generate 14 types of product listing detail images",
+    "sectionProductImage": "Product Image",
+    "sectionPublishSettings": "Publish Settings",
+    "sectionGenerateSettings": "Generate Settings"
   },
   "onboarding": {
     "welcome": "Welcome to Flashant",
@@ -311,133 +320,153 @@
   },
   "landing": {
     "nav": {
-      "features": "Features",
-      "styles": "Styles",
-      "pricing": "Pricing",
-      "signIn": "Sign In",
-      "startFree": "Start Free"
+      "features": "기능",
+      "styles": "스타일",
+      "pricing": "요금",
+      "signIn": "로그인",
+      "startFree": "무료로 시작",
+      "language": "언어"
     },
     "hero": {
-      "headline": "Stunning Product Visuals.",
-      "headlineHighlight": "Generated in a Flash.",
-      "subheadline": "Meet Flashant, your smart, friendly AI visual assistant. Turn ordinary product photos into high-converting, studio-quality masterpieces for Amazon, Shopify, and TikTok Shop — in seconds.",
-      "cta": "Start Creating for Free",
-      "ctaSub": "No credit card required. 10 free credits monthly."
+      "headline": "상품 사진, 순식간에.",
+      "headlineHighlight": "스튜디오도, 기다림도 없이.",
+      "subheadline": "상품 사진을 올리고 스타일을 고르면, 몇 초 만에 플랫폼에 맞는 이미지가 나옵니다. 14개 마켓플레이스.",
+      "cta": "무료로 시작",
+      "ctaSub": "매월 10크레딧 무료. 카드 불필요."
+    },
+    "heroCards": {
+      "before": "전",
+      "after": "후",
+      "beforeCaption": "원본 사진",
+      "afterCaption": "Flashant 결과",
+      "footnote": "같은 병을 원본 사진과 완성 컷으로 나란히 봅니다."
     },
     "trustCloud": {
-      "title": "Built for Cross-Border Sellers",
-      "subtitle": "Images auto-locked to platform compliance rules out of the box"
+      "title": "14개 마켓. 버튼 하나.",
+      "subtitle": "크기, 배경, 여백은 각 플랫폼 규칙에 자동으로 맞춥니다.",
+      "badge": "원클릭 게시",
+      "more": "+10개",
+      "modalTitle": "지원 플랫폼 14곳"
     },
     "styleShowcase": {
-      "title": "Four Signature Styles.",
-      "subtitle": "Pick your aesthetic. Click. Generate. It's that simple.",
+      "title": "세 가지 룩. 실제 결과.",
+      "subtitle": "재질, 라이프스타일, 장면. 승인된 결과 옆에 이 세트의 원본 사진을 둡니다.",
+      "outputCaption": "Flashant 결과",
+      "sourceCaption": "원본 사진",
       "tabs": {
-        "cosmetics": "Nordic Minimalist",
-        "luxury": "Luxury Marble",
-        "cyber": "Cyberpunk Tech",
-        "whiteBg": "Pure White BG"
+        "material": "재질",
+        "lifestyle": "라이프스타일",
+        "scene": "장면"
       },
       "tooltips": {
-        "cosmetics": "Breathe elegance into your brand. Soft shadows, airy tones.",
-        "luxury": "Elevate your perceived value instantly with premium textures.",
-        "cyber": "Stop the scroll with futuristic energy. Engineered for Gen-Z.",
-        "whiteBg": "100% Amazon SP-API Guideline Compliant. Locked 1:1."
+        "material": "유리, 액체, 나무 상판. 병을 가까이 보여주는 컷입니다.",
+        "lifestyle": "방 안의 병. 서랍장, 창가 빛, 곁의 물건.",
+        "scene": "어두운 프레임, 병 뒤로 한 줄의 호 빛."
+      },
+      "alts": {
+        "material": "Flashant 재질 결과. 어두운 나무 위의 Bleu de Chanel 병",
+        "lifestyle": "Flashant 라이프스타일 결과. 서랍장 위의 Bleu de Chanel 병",
+        "scene": "Flashant 장면 결과. 어두운 호 빛 앞의 Bleu de Chanel 병",
+        "skuA": "Bleu de Chanel 병 원본 사진",
+        "skuB": "흰 천 위의 Omega Speedmaster 원본 사진",
+        "skuC": "Bang & Olufsen 스피커 원본 사진",
+        "heroAfter": "Flashant 라이프스타일 결과. 서랍장 위의 Bleu de Chanel 병"
       }
     },
     "beforeAfter": {
-      "title": "From Phone Snap to Studio Masterpiece",
-      "desc": "Drag the slider to see the Flashant difference",
-      "beforeLabel": "Raw Smartphone Photo",
-      "afterLabel": "Flashant Magic Generated"
+      "title": "휴대폰 사진과 결과",
+      "desc": "선을 끌어 비교하세요",
+      "beforeLabel": "원본 사진",
+      "afterLabel": "Flashant 결과"
     },
     "workflow": {
-      "title": "Three Steps. Infinite Content.",
-      "subtitle": "Your industrial-grade visual pipeline, simplified.",
+      "title": "프로 사진까지 세 단계",
+      "subtitle": "원본에서 쓸 수 있는 소재까지 3분 안",
       "step1": {
-        "title": "Drag & Drop",
-        "desc": "Drop your raw product image. Our system instantly isolates the subject without losing a single edge detail."
+        "title": "업로드",
+        "desc": "상품 사진을 놓으세요. PNG, JPG, WebP. 장당 20MB까지."
       },
       "step2": {
-        "title": "Wave the Magic Wand",
-        "desc": "Speak in your native language. Click the Magic Wand to instantly upgrade your text into highly descriptive, conversion-optimized English prompts."
+        "title": "스타일 선택",
+        "desc": "룩과 플랫폼을 고르면 크기와 배경 규격은 엔진이 맞춥니다."
       },
       "step3": {
-        "title": "Batch Harvest",
-        "desc": "Run multiple style concepts together. Stash them in your Asset Grid and download the entire e-commerce launch kit in one .zip file."
+        "title": "다운로드 또는 게시",
+        "desc": "세트를 .zip으로 받거나 Shopify, TikTok Shop에 바로 게시합니다."
       }
     },
     "roi": {
-      "title": "The Numbers Don't Lie.",
-      "subtitle": "A real cost comparison for a single product listing shoot.",
-      "col1": "Traditional Agency / Studio",
-      "col2": "Flashant AI Helper",
+      "title": "SKU 하나에 실제로 드는 비용",
+      "subtitle": "리스팅당 메인 이미지 5장 기준",
+      "col1": "스튜디오에 맡기기",
+      "col2": "Flashant 사용",
       "rows": {
         "cost": {
-          "label": "Cost",
-          "old": "$50–$100 per photo",
-          "new": "$0.02 per photo"
+          "label": "비용",
+          "old": "약 $50–100 / SKU",
+          "new": "약 $0.02 / SKU"
         },
         "speed": {
-          "label": "Speed",
-          "old": "3–5 Days turnaround",
-          "new": "10 Seconds instant delivery"
+          "label": "기간",
+          "old": "영업일 3–5일",
+          "new": "몇 초"
         },
         "revision": {
-          "label": "Revision",
-          "old": "Limited rounds, extra fees",
-          "new": "Infinite variations in a flash"
+          "label": "수정",
+          "old": "추가 비용과 메일",
+          "new": "언제든, 횟수 제한 없음"
         },
         "compliance": {
-          "label": "Compliance",
-          "old": "Manual checking",
-          "new": "Auto-locked to platform rules"
+          "label": "규정",
+          "old": "플랫폼마다 수동 확인",
+          "new": "내보낼 때 자동 맞춤"
         }
       },
-      "winner": "Flashant wins on every metric."
+      "winner": "Flashant는 SKU당 커피 한 잔 정도를 아껴 줍니다."
     },
     "bottomCta": {
-      "title": "Ready to Transform Your Product Images?",
-      "subtitle": "Join 5,000+ cross-border sellers who ship studio-quality visuals in seconds, not days.",
-      "cta": "Start Creating for Free",
-      "ctaSub": "No credit card required. 10 free credits monthly."
+      "title": "휴대폰 사진 대신, 이 컷을 내보내세요.",
+      "subtitle": "무료로 시작. 월 10크레딧. 카드 불필요.",
+      "cta": "무료로 시작",
+      "ctaSub": "매월 10크레딧 무료"
     },
     "pricing": {
-      "title": "Simple Pricing",
-      "desc": "Start free, upgrade as you grow",
-      "currentPlanPrefix": "You are on the ",
-      "currentPlanSuffix": " plan",
-      "freePlan": "Free",
-      "popular": "Popular",
-      "currentPlan": "Current Plan",
-      "getStarted": "Get Started",
-      "learnMore": "Learn More",
-      "goToWorkspace": "Go to Workspace",
+      "title": "단순한 요금",
+      "desc": "무료로 시작하고, 사용량에 맞춰 키우세요.",
+      "currentPlanPrefix": "현재 플랜: ",
+      "currentPlanSuffix": "",
+      "freePlan": "무료",
+      "popular": "인기",
+      "currentPlan": "현재 플랜",
+      "getStarted": "시작하기",
+      "learnMore": "자세히",
+      "goToWorkspace": "작업 공간으로",
       "plans": {
         "free": {
-          "name": "Free",
-          "desc": "For individual sellers",
-          "feature1": "10 AI generations / month",
-          "feature2": "AI Prompts + Listing Generator",
-          "feature3": "Background Removal + 14 Platforms",
-          "feature4": "5 Scene Templates"
+          "name": "무료",
+          "desc": "시작용",
+          "feature1": "월 10회",
+          "feature2": "장면 템플릿 5종",
+          "feature3": "14개 플랫폼 내보내기",
+          "feature4": "AI 프롬프트 도움"
         },
         "pro": {
           "name": "Pro",
-          "desc": "For growing brands",
-          "feature1": "100 AI generations / month",
-          "feature2": "Unlimited AI Prompts & Listings",
-          "feature3": "Shopify One-Click Publish",
-          "feature4": "Brand Logo Overlay",
-          "feature5": "All Templates + HD"
+          "desc": "성장하는 브랜드",
+          "feature1": "월 100회",
+          "feature2": "모든 템플릿 + HD",
+          "feature3": "Shopify 원클릭",
+          "feature4": "브랜드 로고 오버레이",
+          "feature5": "AI 프롬프트 무제한"
         },
         "business": {
           "name": "Business",
-          "desc": "For brand teams",
-          "feature1": "1,000 AI generations / month",
-          "feature2": "Unlimited AI Prompts & Listings",
-          "feature3": "Shopify One-Click Publish",
-          "feature4": "Brand Logo Overlay",
-          "feature5": "All Templates + HD"
+          "desc": "브랜드 팀",
+          "feature1": "월 600회",
+          "feature2": "모든 템플릿 + HD",
+          "feature3": "Shopify 원클릭",
+          "feature4": "브랜드 로고 오버레이",
+          "feature5": "AI 프롬프트 무제한 + API"
         }
       }
     },
@@ -511,7 +540,13 @@
     "uploadHintBatch": "Batch up to {max} · PNG / JPG / WebP",
     "languageLabel": "Target Language",
     "productLabel": "Product",
-    "productPlaceholder": "e.g. Silver Earrings, Wireless Earbuds..."
+    "productPlaceholder": "e.g. Silver Earrings, Wireless Earbuds...",
+    "upscaleButton": "Upscale 4x",
+    "upscaleLoading": "Upscaling...",
+    "upscaleSuccess": "Upscaled",
+    "upscaleError": "Upscale failed",
+    "engineGptImage": "GPT Image 2 · Text-only ($0.03)",
+    "engineFluxPro": "FLUX.2 Pro (Backup)"
   },
   "assets": {
     "title": "Asset Center",

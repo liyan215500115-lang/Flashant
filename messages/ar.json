@@ -9,11 +9,11 @@
     "back": "Back"
   },
   "nav": {
-    "workspace": "Workspace",
-    "products": "Products",
-    "settings": "Settings",
-    "newProject": "New Project",
-    "signOut": "Sign Out"
+    "workspace": "مساحة العمل",
+    "products": "المنتجات",
+    "settings": "الإعدادات",
+    "newProject": "مشروع جديد",
+    "signOut": "تسجيل الخروج"
   },
   "auth": {
     "loginTitle": "Welcome Back",
@@ -165,7 +165,11 @@
     "confirmDeleteDesc": "? This action cannot be undone. Generated images and task data will be permanently deleted.",
     "cancel": "Cancel",
     "confirmDeleteBtn": "Confirm Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "publishDownload": "Publish / Download",
+    "selectTypes": "Select Content Types",
+    "generateBtn": "Generate {count} Detail Images",
+    "results": "Results"
   },
   "publish": {
     "title": "Publish Images",
@@ -269,7 +273,12 @@
     "desc": "Upload product images, AI generates multi-scene e-commerce photos",
     "preparing": "Preparing...",
     "retry": "Retry",
-    "projectError": "Failed to create project"
+    "projectError": "Failed to create project",
+    "detailImages": "Detail Images",
+    "detailImagesDesc": "Generate 14 types of product listing detail images",
+    "sectionProductImage": "Product Image",
+    "sectionPublishSettings": "Publish Settings",
+    "sectionGenerateSettings": "Generate Settings"
   },
   "onboarding": {
     "welcome": "Welcome to Flashant",
@@ -311,138 +320,158 @@
   },
   "landing": {
     "nav": {
-      "features": "Features",
-      "styles": "Styles",
-      "pricing": "Pricing",
-      "signIn": "Sign In",
-      "startFree": "Start Free"
+      "features": "المزايا",
+      "styles": "الأنماط",
+      "pricing": "الأسعار",
+      "signIn": "تسجيل الدخول",
+      "startFree": "ابدأ مجانًا",
+      "language": "اللغة"
     },
     "hero": {
-      "headline": "Stunning Product Visuals.",
-      "headlineHighlight": "Generated in a Flash.",
-      "subheadline": "Meet Flashant, your smart, friendly AI visual assistant. Turn ordinary product photos into high-converting, studio-quality masterpieces for Amazon, Shopify, and TikTok Shop — in seconds.",
-      "cta": "Start Creating for Free",
-      "ctaSub": "No credit card required. 10 free credits monthly."
+      "headline": "صور المنتج في لحظة.",
+      "headlineHighlight": "بلا استوديو. بلا انتظار.",
+      "subheadline": "ارفع صورة، اختر نمطًا، واحصل على صور جاهزة لكل منصة خلال ثوانٍ. يعمل مع 14 سوقًا.",
+      "cta": "ابدأ مجانًا",
+      "ctaSub": "10 أرصدة مجانية شهريًا. بلا بطاقة."
+    },
+    "heroCards": {
+      "before": "قبل",
+      "after": "بعد",
+      "beforeCaption": "صورة المصدر",
+      "afterCaption": "مخرجات Flashant",
+      "footnote": "من صورة المنتج إلى الإطار النهائي. الزجاجة نفسها بطريقتين."
     },
     "trustCloud": {
-      "title": "Built for Cross-Border Sellers",
-      "subtitle": "Images auto-locked to platform compliance rules out of the box"
+      "title": "14 سوقًا. زر واحد.",
+      "subtitle": "كل صورة تُضبط تلقائيًا على المقاس والخلفية والهوامش الخاصة بالمنصة.",
+      "badge": "نشر بنقرة واحدة",
+      "more": "+10 أخرى",
+      "modalTitle": "14 منصة مدعومة"
     },
     "styleShowcase": {
-      "title": "Four Signature Styles.",
-      "subtitle": "Pick your aesthetic. Click. Generate. It's that simple.",
+      "title": "ثلاث لقطات. مخرجات حقيقية.",
+      "subtitle": "الخامة، وأسلوب الحياة، والمشهد — إطارات معتمدة بجانب صور المصدر في هذه المجموعة.",
+      "outputCaption": "مخرجات Flashant",
+      "sourceCaption": "صورة المصدر",
       "tabs": {
-        "cosmetics": "Nordic Minimalist",
-        "luxury": "Luxury Marble",
-        "cyber": "Cyberpunk Tech",
-        "whiteBg": "Pure White BG"
+        "material": "الخامة",
+        "lifestyle": "أسلوب الحياة",
+        "scene": "المشهد"
       },
       "tooltips": {
-        "cosmetics": "Breathe elegance into your brand. Soft shadows, airy tones.",
-        "luxury": "Elevate your perceived value instantly with premium textures.",
-        "cyber": "Stop the scroll with futuristic energy. Engineered for Gen-Z.",
-        "whiteBg": "100% Amazon SP-API Guideline Compliant. Locked 1:1."
+        "material": "زجاج وسائل وسطح خشبي: قراءة قريبة للزجاجة.",
+        "lifestyle": "الزجاجة في غرفة: خزانة، ضوء النافذة، وأشياء بجانبها.",
+        "scene": "إطار داكن بقوس ضوء واحد خلف الزجاجة."
+      },
+      "alts": {
+        "material": "مخرجات خامة من Flashant لزجاجة Bleu de Chanel على خشب داكن",
+        "lifestyle": "مخرجات أسلوب حياة من Flashant لزجاجة Bleu de Chanel على خزانة",
+        "scene": "مخرجات مشهد من Flashant لزجاجة Bleu de Chanel أمام قوس ضوء داكن",
+        "skuA": "صورة مصدر لزجاجة Bleu de Chanel",
+        "skuB": "صورة مصدر لساعة Omega Speedmaster على قماش أبيض",
+        "skuC": "صورة مصدر لمكبر صوت Bang & Olufsen",
+        "heroAfter": "مخرجات أسلوب حياة من Flashant لزجاجة Bleu de Chanel على خزانة"
       }
     },
     "beforeAfter": {
-      "title": "From Phone Snap to Studio Masterpiece",
-      "desc": "Drag the slider to see the Flashant difference",
-      "beforeLabel": "Raw Smartphone Photo",
-      "afterLabel": "Flashant Magic Generated"
+      "title": "صورة الهاتف مقابل النتيجة",
+      "desc": "اسحب الخط للمقارنة",
+      "beforeLabel": "الصورة الأصلية",
+      "afterLabel": "مخرجات Flashant"
     },
     "workflow": {
-      "title": "Three Steps. Infinite Content.",
-      "subtitle": "Your industrial-grade visual pipeline, simplified.",
+      "title": "ثلاث خطوات إلى صورة احترافية",
+      "subtitle": "من اللقطة الخام إلى ملفات جاهزة في أقل من ثلاث دقائق",
       "step1": {
-        "title": "Drag & Drop",
-        "desc": "Drop your raw product image. Our system instantly isolates the subject without losing a single edge detail."
+        "title": "ارفع",
+        "desc": "أفلت صورة المنتج. PNG أو JPG أو WebP، حتى 20 ميغابايت للصورة."
       },
       "step2": {
-        "title": "Wave the Magic Wand",
-        "desc": "Speak in your native language. Click the Magic Wand to instantly upgrade your text into highly descriptive, conversion-optimized English prompts."
+        "title": "اختر نمطًا",
+        "desc": "اختر المظهر والمنصة. المحرك يتولى المقاس والخلفية."
       },
       "step3": {
-        "title": "Batch Harvest",
-        "desc": "Run multiple style concepts together. Stash them in your Asset Grid and download the entire e-commerce launch kit in one .zip file."
+        "title": "نزّل أو انشر",
+        "desc": "خذ المجموعة كملف zip، أو انشرها مباشرة على Shopify أو TikTok Shop."
       }
     },
     "roi": {
-      "title": "The Numbers Don't Lie.",
-      "subtitle": "A real cost comparison for a single product listing shoot.",
-      "col1": "Traditional Agency / Studio",
-      "col2": "Flashant AI Helper",
+      "title": "ما يكلفه SKU واحد فعلًا",
+      "subtitle": "على أساس 5 صور رئيسية لكل بطاقة",
+      "col1": "استئجار استوديو",
+      "col2": "استخدام Flashant",
       "rows": {
         "cost": {
-          "label": "Cost",
-          "old": "$50–$100 per photo",
-          "new": "$0.02 per photo"
+          "label": "التكلفة",
+          "old": "~50–100 دولار / SKU",
+          "new": "~0.02 دولار / SKU"
         },
         "speed": {
-          "label": "Speed",
-          "old": "3–5 Days turnaround",
-          "new": "10 Seconds instant delivery"
+          "label": "المدة",
+          "old": "3–5 أيام عمل",
+          "new": "ثوانٍ"
         },
         "revision": {
-          "label": "Revision",
-          "old": "Limited rounds, extra fees",
-          "new": "Infinite variations in a flash"
+          "label": "التعديلات",
+          "old": "رسوم إضافية ومراسلات أكثر",
+          "new": "بلا حد، في أي وقت"
         },
         "compliance": {
-          "label": "Compliance",
-          "old": "Manual checking",
-          "new": "Auto-locked to platform rules"
+          "label": "المطابقة",
+          "old": "فحص يدوي لكل منصة",
+          "new": "ضبط تلقائي عند التصدير"
         }
       },
-      "winner": "Flashant wins on every metric."
+      "winner": "يوفر Flashant لكل SKU ما يقارب ثمن فنجان قهوة."
     },
     "bottomCta": {
-      "title": "Ready to Transform Your Product Images?",
-      "subtitle": "Join 5,000+ cross-border sellers who ship studio-quality visuals in seconds, not days.",
-      "cta": "Start Creating for Free",
-      "ctaSub": "No credit card required. 10 free credits monthly."
+      "title": "استبدل صورة الهاتف. انشر هذه.",
+      "subtitle": "البداية مجانية. 10 أرصدة شهريًا. بلا بطاقة.",
+      "cta": "ابدأ مجانًا",
+      "ctaSub": "10 أرصدة مجانية شهريًا"
     },
     "pricing": {
-      "title": "Simple Pricing",
-      "desc": "Start free, upgrade as you grow",
-      "currentPlanPrefix": "You are on the ",
-      "currentPlanSuffix": " plan",
-      "freePlan": "Free",
-      "popular": "Popular",
-      "currentPlan": "Current Plan",
-      "getStarted": "Get Started",
-      "learnMore": "Learn More",
-      "goToWorkspace": "Go to Workspace",
+      "title": "أسعار بسيطة",
+      "desc": "ابدأ مجانًا. توسّع حسب الاستخدام.",
+      "currentPlanPrefix": "أنت على خطة ",
+      "currentPlanSuffix": "",
+      "freePlan": "مجاني",
+      "popular": "الأكثر اختيارًا",
+      "currentPlan": "الخطة الحالية",
+      "getStarted": "ابدأ",
+      "learnMore": "اعرف المزيد",
+      "goToWorkspace": "إلى مساحة العمل",
       "plans": {
         "free": {
-          "name": "Free",
-          "desc": "For individual sellers",
-          "feature1": "10 AI generations / month",
-          "feature2": "AI Prompts + Listing Generator",
-          "feature3": "Background Removal + 14 Platforms",
-          "feature4": "5 Scene Templates"
+          "name": "مجاني",
+          "desc": "للبداية",
+          "feature1": "10 / شهر",
+          "feature2": "5 قوالب مشاهد",
+          "feature3": "تصدير إلى 14 منصة",
+          "feature4": "مساعدة مطالبات بالذكاء الاصطناعي"
         },
         "pro": {
           "name": "Pro",
-          "desc": "For growing brands",
-          "feature1": "100 AI generations / month",
-          "feature2": "Unlimited AI Prompts & Listings",
-          "feature3": "Shopify One-Click Publish",
-          "feature4": "Brand Logo Overlay",
-          "feature5": "All Templates + HD"
+          "desc": "علامات تنمو",
+          "feature1": "100 / شهر",
+          "feature2": "كل القوالب + HD",
+          "feature3": "Shopify بنقرة",
+          "feature4": "شعار العلامة فوق الصورة",
+          "feature5": "مطالبات ذكاء اصطناعي بلا حد"
         },
         "business": {
           "name": "Business",
-          "desc": "For brand teams",
-          "feature1": "1,000 AI generations / month",
-          "feature2": "Unlimited AI Prompts & Listings",
-          "feature3": "Shopify One-Click Publish",
-          "feature4": "Brand Logo Overlay",
-          "feature5": "All Templates + HD"
+          "desc": "فرق العلامات",
+          "feature1": "600 / شهر",
+          "feature2": "كل القوالب + HD",
+          "feature3": "Shopify بنقرة",
+          "feature4": "شعار العلامة فوق الصورة",
+          "feature5": "مطالبات ذكاء اصطناعي بلا حد + API"
         }
       }
     },
     "footer": {
-      "copyright": "© 2026 Flashant. All rights reserved."
+      "copyright": "© 2026 Flashant. جميع الحقوق محفوظة."
     }
   },
   "generate": {
@@ -511,7 +540,13 @@
     "uploadHintBatch": "Batch up to {max} · PNG / JPG / WebP",
     "languageLabel": "Target Language",
     "productLabel": "Product",
-    "productPlaceholder": "e.g. Silver Earrings, Wireless Earbuds..."
+    "productPlaceholder": "e.g. Silver Earrings, Wireless Earbuds...",
+    "upscaleButton": "Upscale 4x",
+    "upscaleLoading": "Upscaling...",
+    "upscaleSuccess": "Upscaled",
+    "upscaleError": "Upscale failed",
+    "engineGptImage": "GPT Image 2 · Text-only ($0.03)",
+    "engineFluxPro": "FLUX.2 Pro (Backup)"
   },
   "assets": {
     "title": "Asset Center",

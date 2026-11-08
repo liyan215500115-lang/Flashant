@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,24 +7,13 @@ import { Store, User, Plug, Palette, CreditCard } from "lucide-react";
 import { BrandPresetsCard } from "@/components/settings/brand-presets-card";
 import { ProfileEditCard } from "@/components/settings/profile-edit-card";
 import { Suspense } from "react";
-import zh from "../../../../messages/zh.json";
-import en from "../../../../messages/en.json";
+import { getTranslator } from "@/lib/locale.server";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("NEXT_LOCALE")?.value === "zh" ? "zh" : "en";
-  const messages = locale === "zh" ? zh : en;
-  const t = (key: string): string => {
-    let val: unknown = messages;
-    for (const k of key.split(".")) {
-      if (val && typeof val === "object") val = (val as Record<string, unknown>)[k];
-      else return "";
-    }
-    return typeof val === "string" ? val : "";
-  };
+  const { t } = await getTranslator();
 
   const userId = session.user.id;
 

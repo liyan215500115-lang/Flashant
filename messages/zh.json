@@ -324,7 +324,8 @@
       "styles": "风格",
       "pricing": "价格",
       "signIn": "登录",
-      "startFree": "免费开始"
+      "startFree": "免费开始",
+      "language": "语言"
     },
     "hero": {
       "headline": "产品图，",
@@ -335,22 +336,34 @@
     },
     "trustCloud": {
       "title": "14 个平台。一键出图。",
-      "subtitle": "每个平台的主图尺寸、背景色、留白比例自动对齐，出图即合规。"
+      "subtitle": "每个平台的主图尺寸、背景色、留白比例自动对齐，出图即合规。",
+      "badge": "一键发布",
+      "more": "+10 个",
+      "modalTitle": "14 个支持的平台"
     },
     "styleShowcase": {
-      "title": "四种风格，一键切换",
-      "subtitle": "选个喜欢的，剩下的交给引擎",
+      "title": "三种成片，都是实拍。",
+      "subtitle": "材质、生活场景、氛围。成片旁边是这组产品的原图。",
+      "outputCaption": "闪象成片",
+      "sourceCaption": "产品原图",
       "tabs": {
-        "cosmetics": "北欧轻奢",
-        "luxury": "大理石台面",
-        "cyber": "赛博质感",
-        "whiteBg": "纯白底图"
+        "material": "材质",
+        "lifestyle": "生活场景",
+        "scene": "氛围"
       },
       "tooltips": {
-        "cosmetics": "柔光浅影，适合美妆和护肤品类。",
-        "luxury": "高光质感，瞬间拉高品牌溢价。",
-        "cyber": "强对比霓虹调，适合 3C 数码和潮牌。",
-        "whiteBg": "亚马逊主图规格，100% 合规。"
+        "material": "玻璃、液体和木面，近看瓶身材质。",
+        "lifestyle": "放在房间里：斗柜、窗光，旁边还有日常物件。",
+        "scene": "暗调画面，瓶后一道弧光。"
+      },
+      "alts": {
+        "material": "闪象材质成片：深色木面上的 Bleu de Chanel 香水瓶",
+        "lifestyle": "闪象生活场景成片：斗柜上的 Bleu de Chanel 香水瓶",
+        "scene": "闪象氛围成片：一道暗弧光前的 Bleu de Chanel 香水瓶",
+        "skuA": "Bleu de Chanel 香水瓶的产品原图",
+        "skuB": "白色织物上的 Omega Speedmaster 产品原图",
+        "skuC": "Bang & Olufsen 音箱的产品原图",
+        "heroAfter": "闪象生活场景成片：斗柜上的 Bleu de Chanel 香水瓶"
       }
     },
     "beforeAfter": {
@@ -452,6 +465,13 @@
     },
     "footer": {
       "copyright": "© 2026 闪象 AI. 保留所有权利。"
+    },
+    "heroCards": {
+      "before": "原图",
+      "after": "成片",
+      "beforeCaption": "产品原图",
+      "afterCaption": "闪象成片",
+      "footnote": "同一瓶香水，从产品原图到成片。"
     }
   },
   "generate": {

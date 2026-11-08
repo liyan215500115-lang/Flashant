@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { getServerLocale } from "@/lib/server-t";
+import { getTranslator } from "@/lib/locale.server";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getServerLocale();
-  if (locale === "en") {
+  const { locale } = await getTranslator();
+  if (locale !== "zh") {
     return {
       title: "Flashant — Stunning Visuals. Generated in a Flash.",
       description:
@@ -26,11 +26,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getServerLocale();
+  const { locale, messages } = await getTranslator();
   return (
     <html lang={locale} className="scroll-smooth" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
       <body className="min-h-screen flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers locale={locale} messages={messages}>{children}</Providers>
       </body>
     </html>
   );

@@ -324,7 +324,8 @@
       "styles": "Styles",
       "pricing": "Pricing",
       "signIn": "Sign In",
-      "startFree": "Start Free"
+      "startFree": "Start Free",
+      "language": "Language"
     },
     "hero": {
       "headline": "Product photos done in a flash.",
@@ -335,22 +336,34 @@
     },
     "trustCloud": {
       "title": "14 marketplaces. One button.",
-      "subtitle": "Every image auto-matched to each platform's size, background, and margin rules."
+      "subtitle": "Every image auto-matched to each platform's size, background, and margin rules.",
+      "badge": "One-Click Publishing",
+      "more": "+10 more",
+      "modalTitle": "14 supported platforms"
     },
     "styleShowcase": {
-      "title": "Four styles. One click.",
-      "subtitle": "Pick a look. The engine handles the rest.",
+      "title": "Three looks. Real outputs.",
+      "subtitle": "Material, lifestyle, and scene — approved frames next to the source photos in this set.",
+      "outputCaption": "Flashant output",
+      "sourceCaption": "Source photo",
       "tabs": {
-        "cosmetics": "Nordic Soft",
-        "luxury": "Marble Desk",
-        "cyber": "Cyberpunk",
-        "whiteBg": "Pure White"
+        "material": "Material",
+        "lifestyle": "Lifestyle",
+        "scene": "Scene"
       },
       "tooltips": {
-        "cosmetics": "Soft light and shadow — great for beauty and skincare.",
-        "luxury": "High-end gloss — instantly lifts premium feel.",
-        "cyber": "Bold neons — ideal for tech, gaming, and streetwear.",
-        "whiteBg": "Amazon main image spec. 100% compliant."
+        "material": "Glass, liquid, and the wood surface — a close read of the bottle.",
+        "lifestyle": "The bottle in a room: dresser, window light, and nearby objects.",
+        "scene": "A dark frame with one arc of light behind the bottle."
+      },
+      "alts": {
+        "material": "Flashant material output of a Bleu de Chanel bottle on dark wood",
+        "lifestyle": "Flashant lifestyle output of a Bleu de Chanel bottle on a dresser",
+        "scene": "Flashant scene output of a Bleu de Chanel bottle against a dark arc of light",
+        "skuA": "Source product photo of a Bleu de Chanel bottle",
+        "skuB": "Source product photo of an Omega Speedmaster on white fabric",
+        "skuC": "Source product photo of a Bang & Olufsen speaker",
+        "heroAfter": "Flashant lifestyle output of a Bleu de Chanel bottle on a dresser"
       }
     },
     "beforeAfter": {
@@ -452,6 +465,13 @@
     },
     "footer": {
       "copyright": "© 2026 Flashant. All rights reserved."
+    },
+    "heroCards": {
+      "before": "Before",
+      "after": "After",
+      "beforeCaption": "Source photo",
+      "afterCaption": "Flashant output",
+      "footnote": "From a product photo to a finished frame. Same bottle, shown two ways."
     }
   },
   "generate": {

@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getSignedGetUrl } from "@/lib/s3";
@@ -7,26 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Package, Image, ArrowRight, ChevronRight, Zap, TrendingUp, Play } from "lucide-react";
-import zh from "../../../../messages/zh.json";
-import en from "../../../../messages/en.json";
-
-function resolve(path: string, messages: Record<string, unknown>): string {
-  const keys = path.split(".");
-  let val: unknown = messages;
-  for (const k of keys) {
-    if (val && typeof val === "object" && k in (val as Record<string, unknown>)) {
-      val = (val as Record<string, unknown>)[k];
-    } else return path;
-  }
-  return typeof val === "string" ? val : path;
-}
-
-async function getT() {
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("NEXT_LOCALE")?.value === "zh" ? "zh" : "en";
-  const messages = locale === "zh" ? zh : en;
-  return (key: string) => resolve(key, messages as unknown as Record<string, unknown>);
-}
+import { getTranslator } from "@/lib/locale.server";
 
 const STATUS_STYLE: Record<string, string> = {
   DRAFT: "bg-zinc-100 text-zinc-600 border-zinc-200",
@@ -40,8 +20,7 @@ export default async function DashboardPage() {
   if (!session?.user?.id) return null;
 
   const userId = session.user.id;
-  const t = await getT();
-  const locale = (await Promise.resolve((await cookies()).get("NEXT_LOCALE")))?.value === "zh" ? "zh" : "en";
+  const { t, locale } = await getTranslator();
   const isZh = locale === "zh";
 
   const [projects, generatedCount, subscription, totalProjects] = await Promise.all([
