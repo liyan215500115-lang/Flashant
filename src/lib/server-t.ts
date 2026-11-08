@@ -13,6 +13,10 @@ const messages: Record<string, Record<Locale, string>> = {
     zh: "额度已用完。请升级套餐继续使用。",
     en: "Quota exhausted. Please upgrade to continue.",
   },
+  "error.promptRejected": {
+    zh: "这个描述无法用于生成，请修改后再试。",
+    en: "This prompt cannot be used for generation. Please revise it and try again.",
+  },
   "error.brandNameRequired": {
     zh: "品牌名称不能为空",
     en: "Brand name is required",

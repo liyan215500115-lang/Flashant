@@ -10,6 +10,8 @@ const API_AUTH_PATTERNS = [
   "/api/publish",
   "/api/tasks",
   "/api/lemonsqueezy",
+  "/api/billing",
+  "/api/creem",
   "/api/upload-url",
   "/api/quota",
   "/api/prompts",

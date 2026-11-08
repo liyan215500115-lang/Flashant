@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { planDisplayName, resolveEffectivePlan } from "@/lib/billing/quota";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -136,11 +137,7 @@ export default async function SettingsPage() {
             <div className="flex justify-between py-2 border-b border-border">
               <span className="text-sm text-muted-foreground">{t("billing.currentTier")}</span>
               <Badge variant="default">
-                {subscription?.planTier === "PRO"
-                  ? "Pro"
-                  : subscription?.planTier === "BUSINESS"
-                    ? "Business"
-                    : "Free"}
+                {planDisplayName(resolveEffectivePlan(subscription))}
               </Badge>
             </div>
             <Link

@@ -1,11 +1,14 @@
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
+import { isCreemArmed } from "@/lib/billing/provider";
+import { checkGenerationQuota, planDisplayName, resolveEffectivePlan } from "@/lib/billing/quota";
+import { creemAnnualProductsConfigured } from "@/lib/creem/products";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Zap } from "lucide-react";
 import { PlanComparison } from "@/components/settings/plan-comparison";
+import { ManageBillingButton } from "@/app/(dashboard)/settings/billing/BillingActions";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import zh from "../../../../../messages/zh.json";
 import en from "../../../../../messages/en.json";
@@ -31,9 +34,14 @@ const PLANS = [
   },
 ];
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ success?: string; canceled?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) return null;
+  const params = searchParams ? await searchParams : {};
 
   const cookieStore = await cookies();
   const locale = cookieStore.get("NEXT_LOCALE")?.value === "zh" ? "zh" : "en";
@@ -54,8 +62,11 @@ export default async function BillingPage() {
     checkGenerationQuota(userId),
   ]);
 
-  const currentTier = subscription?.planTier ?? "FREE";
+  const creem = isCreemArmed();
+  const currentTier = quota.tier || resolveEffectivePlan(subscription);
   const isCancelAtPeriodEnd = subscription?.cancelAtPeriodEnd ?? false;
+  const canManageCreem =
+    creem && subscription?.billingProvider === "creem" && Boolean(subscription.billingCustomerId);
 
   return (
     <div className="max-w-[720px] mx-auto">
@@ -67,7 +78,21 @@ export default async function BillingPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-brand-900 dark:text-brand-300 tracking-tight">{t("billing.title")}</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("billing.desc")}</p>
+        {creem && (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{t("billing.paymentsNote")}</p>
+        )}
       </div>
+
+      {params.success === "true" && (
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
+          {t("billing.checkoutSuccess")}
+        </div>
+      )}
+      {params.canceled === "true" && (
+        <div className="mb-4 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
+          {t("billing.checkoutCanceled")}
+        </div>
+      )}
 
       {/* Current Usage */}
       <Card className="mb-6">
@@ -88,7 +113,7 @@ export default async function BillingPage() {
               </span>
             </div>
             <Badge variant="default">
-              {currentTier === "FREE" ? "Free" : currentTier === "PRO" ? "Pro" : "Business"}
+              {planDisplayName(currentTier)}
             </Badge>
           </div>
 
@@ -120,12 +145,22 @@ export default async function BillingPage() {
               {t("billing.cancelAtPeriodEnd")}
             </p>
           )}
+
+          {canManageCreem && (
+            <div className="mt-4">
+              <ManageBillingButton />
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Plans */}
       <h2 className="text-lg font-semibold mb-4">{t("billing.availablePlans")}</h2>
-      <PlanComparison plans={PLANS} currentTier={currentTier} userId={userId} />
+      <PlanComparison
+        plans={PLANS}
+        currentTier={currentTier}
+        annualEnabled={!creem || creemAnnualProductsConfigured()}
+      />
     </div>
   );
 }

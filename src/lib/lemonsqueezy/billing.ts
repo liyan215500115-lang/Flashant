@@ -1,7 +1,17 @@
 import "server-only";
 
+import { isCreemArmed } from "@/lib/billing/provider";
 import { db } from "@/lib/db";
 import type { PlanTier } from "@prisma/client";
+
+export {
+  checkGenerationQuota,
+  getQuota,
+  getUsedGenerationCount,
+  getUserQuota,
+  planDisplayName,
+  resolveEffectivePlan,
+} from "@/lib/billing/quota";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -18,55 +28,15 @@ interface CheckoutSession {
   sessionId: string;
 }
 
-// ── Tier Limits ──────────────────────────────────────────────────────────
-
-const TIER_LIMITS: Record<PlanTier, { generationsPerMonth: number; platforms: number }> = {
-  FREE: { generationsPerMonth: 10, platforms: 0 },
-  PRO: { generationsPerMonth: 100, platforms: 1 },
-  BUSINESS: { generationsPerMonth: 600, platforms: 1 },
-  ENTERPRISE: { generationsPerMonth: -1, platforms: 4 },
-};
-
-// ── Quota Functions ──────────────────────────────────────────────────────
-
-export function getQuota(planTier: PlanTier) {
-  return TIER_LIMITS[planTier] ?? TIER_LIMITS.FREE;
-}
-
-export async function getUserQuota(userId: string) {
-  const sub = await db.subscription.findUnique({ where: { userId } });
-  const tier = sub?.planTier ?? "FREE";
-  return getQuota(tier);
-}
-
-export async function getUsedGenerationCount(
-  userId: string,
-  periodStart: Date
-): Promise<number> {
-  const count = await db.generatedImage.count({
-    where: {
-      project: { userId },
-      createdAt: { gte: periodStart },
-    },
-  });
-  return count;
-}
-
-export async function checkGenerationQuota(userId: string): Promise<{
-  allowed: boolean;
-  used: number;
-  limit: number;
-  tier: PlanTier;
-}> {
-  // Admin bypass — unlimited generations
-  return { allowed: true, used: 0, limit: -1, tier: "ENTERPRISE" as PlanTier };
-}
-
 // ── Lemon Squeezy Checkout ───────────────────────────────────────────────
 
 export async function createCheckoutSession(
   options: CheckoutOptions
 ): Promise<CheckoutSession> {
+  if (isCreemArmed()) {
+    throw new Error("Lemon Squeezy is disabled while BILLING_PROVIDER=creem");
+  }
+
   const apiKey = process.env.LEMONSQUEEZY_API_KEY;
   if (!apiKey) {
     throw new Error("LEMONSQUEEZY_API_KEY is not set");

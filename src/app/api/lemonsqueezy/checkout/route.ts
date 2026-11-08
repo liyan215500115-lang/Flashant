@@ -1,8 +1,19 @@
 import { auth } from "@/lib/auth";
+import { isCreemArmed } from "@/lib/billing/provider";
 import { createCheckoutSession } from "@/lib/lemonsqueezy/billing";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+  if (isCreemArmed()) {
+    return NextResponse.json(
+      {
+        error: "lemon_disabled",
+        message: "Lemon Squeezy is disabled while BILLING_PROVIDER=creem",
+      },
+      { status: 409 }
+    );
+  }
+
   try {
     const session = await auth();
     if (!session?.user?.id) {

@@ -17,16 +17,16 @@ interface Plan {
 interface PlanComparisonProps {
   plans: Plan[];
   currentTier: string;
-  userId: string;
+  annualEnabled?: boolean;
 }
 
-export function PlanComparison({ plans, currentTier, userId }: PlanComparisonProps) {
+export function PlanComparison({ plans, currentTier, annualEnabled = true }: PlanComparisonProps) {
   const { t } = useT();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
 
   return (
     <div>
-      {/* Toggle */}
+      {annualEnabled && (
       <div className="flex items-center justify-center gap-3 mb-6">
         <span
           className={`text-sm cursor-pointer transition-colors ${
@@ -61,12 +61,14 @@ export function PlanComparison({ plans, currentTier, userId }: PlanComparisonPro
           </span>
         </span>
       </div>
+      )}
 
       {/* Plan grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {plans.map((plan) => {
           const isCurrent = currentTier === plan.tier;
-          const price = billingPeriod === "annual" ? plan.annualPrice : plan.monthlyPrice;
+          const period = annualEnabled ? billingPeriod : "monthly";
+          const price = period === "annual" ? plan.annualPrice : plan.monthlyPrice;
 
           return (
             <Card
@@ -96,11 +98,11 @@ export function PlanComparison({ plans, currentTier, userId }: PlanComparisonPro
                     {plan.tier === "FREE" ? "$0" : `$${price}`}
                     {plan.tier !== "FREE" && (
                       <span className="text-sm font-normal text-muted-foreground">
-                        /{billingPeriod === "monthly" ? "mo" : "yr"}
+                        /{period === "monthly" ? "mo" : "yr"}
                       </span>
                     )}
                   </span>
-                  {plan.tier !== "FREE" && billingPeriod === "annual" && (
+                  {plan.tier !== "FREE" && period === "annual" && (
                     <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
                       ${plan.monthlyPrice * 12 - plan.annualPrice} {t("billing.saved")}
                     </p>
@@ -119,8 +121,7 @@ export function PlanComparison({ plans, currentTier, userId }: PlanComparisonPro
                 <BillingActions
                   tier={plan.tier}
                   isCurrent={isCurrent}
-                  userId={userId}
-                  annual={billingPeriod === "annual"}
+                  annual={period === "annual"}
                 />
               </CardContent>
             </Card>
