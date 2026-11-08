@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isPublicLegalPath, normalizePathname } from "@/lib/legal/paths";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -25,8 +26,17 @@ export async function proxy(request: NextRequest) {
   const localeCookie = request.cookies.get("NEXT_LOCALE")?.value;
   const locale = localeCookie && ["en", "zh", "es", "pt-BR", "ja", "de", "fr", "ko", "ar", "it"].includes(localeCookie) ? localeCookie : "en";
 
+  // /aup is a permanent alias of the Acceptable Use Policy.
+  if (normalizePathname(pathname) === "/aup") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/acceptable-use";
+    const res = NextResponse.redirect(url, 301);
+    res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 31536000 });
+    return res;
+  }
+
   // Public paths — no auth needed
-  if (pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  if (pathname === "/" || isPublicLegalPath(pathname) || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     const res = NextResponse.next();
     res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 31536000 });
     return res;
