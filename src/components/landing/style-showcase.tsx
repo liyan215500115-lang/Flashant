@@ -3,11 +3,17 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 
+interface StyleImage {
+  src: string;
+  alt: string;
+  caption?: string;
+}
+
 interface StyleDef {
   key: string;
   label: string;
   tooltip: string;
-  images: string[];
+  images: StyleImage[];
 }
 
 interface StyleShowcaseProps {
@@ -57,18 +63,22 @@ export function StyleShowcase({ title, subtitle, styles }: StyleShowcaseProps) {
 
         {/* 2x2 Image Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-          {current.images.map((src, i) => (
+          {current.images.map((image) => (
             <div
-              key={`${current.key}-${i}`}
-              className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200/60 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-500 cursor-pointer"
+              key={`${current.key}-${image.src}`}
+              className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200/60 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-500"
             >
               <img
-                src={src}
-                alt={`${current.label} example ${i + 1}`}
+                src={image.src}
+                alt={image.alt}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              {image.caption ? (
+                <span className="absolute bottom-3 left-3 text-[11px] font-medium text-white bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1">
+                  {image.caption}
+                </span>
+              ) : null}
             </div>
           ))}
         </div>

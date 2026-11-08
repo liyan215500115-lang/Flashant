@@ -1,32 +1,10 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { ResetPasswordForm } from "./ResetPasswordForm";
 import { Logo } from "@/components/landing/logo";
-import zh from "../../../messages/zh.json";
-import en from "../../../messages/en.json";
-
-function resolve(path: string, messages: Record<string, unknown>): string {
-  const keys = path.split(".");
-  let val: unknown = messages;
-  for (const k of keys) {
-    if (val && typeof val === "object" && k in (val as Record<string, unknown>)) {
-      val = (val as Record<string, unknown>)[k];
-    } else {
-      return path;
-    }
-  }
-  return typeof val === "string" ? val : path;
-}
-
-async function getT() {
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("NEXT_LOCALE")?.value === "zh" ? "zh" : "en";
-  const messages = locale === "zh" ? zh : en;
-  return (key: string) => resolve(key, messages as unknown as Record<string, unknown>);
-}
+import { getTranslator } from "@/lib/locale.server";
 
 export default async function ResetPasswordPage() {
-  const t = await getT();
+  const { t } = await getTranslator();
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-zinc-50">

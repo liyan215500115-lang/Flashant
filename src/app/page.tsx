@@ -1,10 +1,8 @@
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ArrowDown, ArrowRight } from "lucide-react";
 import { Logo } from "@/components/landing/logo";
-import { LogoMark } from "@/components/landing/logo-mark";
 import { Navbar } from "@/components/landing/navbar";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { HeroCards } from "@/components/landing/hero-cards";
@@ -15,24 +13,13 @@ import { WorkflowSteps } from "@/components/landing/workflow-steps";
 import { RoiTable } from "@/components/landing/roi-table";
 import { BottomCta } from "@/components/landing/bottom-cta";
 import { PricingCards } from "@/components/landing/pricing-cards";
-import zh from "../../messages/zh.json";
-import en from "../../messages/en.json";
+import { getTranslator } from "@/lib/locale.server";
 
 export default async function LandingPage() {
   const session = await auth();
   const user = session?.user ?? null;
 
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("NEXT_LOCALE")?.value === "zh" ? "zh" : "en";
-  const messages = locale === "zh" ? zh : en;
-  const t = (key: string): string => {
-    let val: unknown = messages;
-    for (const k of key.split(".")) {
-      if (val && typeof val === "object") val = (val as Record<string, unknown>)[k];
-      else return "";
-    }
-    return typeof val === "string" ? val : "";
-  };
+  const { locale, t } = await getTranslator();
 
   let subscription = null;
   if (user?.id) {
@@ -42,50 +29,63 @@ export default async function LandingPage() {
     });
   }
 
-  // ── Mock style showcase data ──
+  const outputCaption = t("landing.styleShowcase.outputCaption");
+  const sourceCaption = t("landing.styleShowcase.sourceCaption");
+  const sourceTiles = [
+    {
+      src: "/marketing/v6/sku-a-showcase.webp",
+      alt: t("landing.styleShowcase.alts.skuA"),
+      caption: sourceCaption,
+    },
+    {
+      src: "/marketing/v6/sku-b-omega-watch.webp",
+      alt: t("landing.styleShowcase.alts.skuB"),
+      caption: sourceCaption,
+    },
+    {
+      src: "/marketing/v6/sku-c-bo-speaker.webp",
+      alt: t("landing.styleShowcase.alts.skuC"),
+      caption: sourceCaption,
+    },
+  ];
   const styleData = [
     {
-      key: "cosmetics",
-      label: t("landing.styleShowcase.tabs.cosmetics"),
-      tooltip: t("landing.styleShowcase.tooltips.cosmetics"),
+      key: "material",
+      label: t("landing.styleShowcase.tabs.material"),
+      tooltip: t("landing.styleShowcase.tooltips.material"),
       images: [
-        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=600&h=450&fit=crop&q=85",
+        {
+          src: "/marketing/v6/after-material.webp",
+          alt: t("landing.styleShowcase.alts.material"),
+          caption: outputCaption,
+        },
+        ...sourceTiles,
       ],
     },
     {
-      key: "luxury",
-      label: t("landing.styleShowcase.tabs.luxury"),
-      tooltip: t("landing.styleShowcase.tooltips.luxury"),
+      key: "lifestyle",
+      label: t("landing.styleShowcase.tabs.lifestyle"),
+      tooltip: t("landing.styleShowcase.tooltips.lifestyle"),
       images: [
-        "https://images.unsplash.com/photo-1618220178548-1b4e1c7c2b06?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1616486029423-aaa4789e8c9a?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1586105251261-72a756497a11?w=600&h=450&fit=crop&q=85",
+        {
+          src: "/marketing/v6/after-lifestyle.webp",
+          alt: t("landing.styleShowcase.alts.lifestyle"),
+          caption: outputCaption,
+        },
+        ...sourceTiles,
       ],
     },
     {
-      key: "cyber",
-      label: t("landing.styleShowcase.tabs.cyber"),
-      tooltip: t("landing.styleShowcase.tooltips.cyber"),
+      key: "scene",
+      label: t("landing.styleShowcase.tabs.scene"),
+      tooltip: t("landing.styleShowcase.tooltips.scene"),
       images: [
-        "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=450&fit=crop&q=85",
-      ],
-    },
-    {
-      key: "whiteBg",
-      label: t("landing.styleShowcase.tabs.whiteBg"),
-      tooltip: t("landing.styleShowcase.tooltips.whiteBg"),
-      images: [
-        "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1546865611-2cb84010f5a5?w=600&h=450&fit=crop&q=85",
-        "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&h=450&fit=crop&q=85",
+        {
+          src: "/marketing/v6/after-scene.webp",
+          alt: t("landing.styleShowcase.alts.scene"),
+          caption: outputCaption,
+        },
+        ...sourceTiles,
       ],
     },
   ];
@@ -109,6 +109,7 @@ export default async function LandingPage() {
           settings: t("settings.title"),
           signOut: t("nav.signOut"),
           currentPlan: t("billing.currentTier"),
+          language: t("landing.nav.language"),
         }}
       />
 
@@ -141,7 +142,17 @@ export default async function LandingPage() {
         </div>
 
         {/* Right: product transformation preview */}
-        <HeroCards />
+        <HeroCards
+          beforeSrc="/marketing/v6/sku-a-bleu-chanel.webp"
+          afterSrc="/marketing/v6/hero-after-lifestyle.webp"
+          beforeAlt={t("landing.styleShowcase.alts.skuA")}
+          afterAlt={t("landing.styleShowcase.alts.heroAfter")}
+          beforeBadge={t("landing.heroCards.before")}
+          afterBadge={t("landing.heroCards.after")}
+          beforeCaption={t("landing.heroCards.beforeCaption")}
+          afterCaption={t("landing.heroCards.afterCaption")}
+          footnote={t("landing.heroCards.footnote")}
+        />
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
           <ArrowDown size={16} className="text-zinc-300 animate-bounce" />
@@ -152,6 +163,9 @@ export default async function LandingPage() {
       <TrustCloud
         title={t("landing.trustCloud.title")}
         subtitle={t("landing.trustCloud.subtitle")}
+        badge={t("landing.trustCloud.badge")}
+        moreLabel={t("landing.trustCloud.more")}
+        modalTitle={t("landing.trustCloud.modalTitle")}
       />
 
       {/* ═══════════ Section 3: Style Showcase ═══════════ */}
@@ -175,8 +189,8 @@ export default async function LandingPage() {
           </div>
 
           <BeforeAfterSlider
-            beforeSrc="https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1200&h=750&fit=crop&q=85"
-            afterSrc="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1200&h=750&fit=crop&q=85"
+            beforeSrc="/marketing/v6/slider-before-sku-a.webp"
+            afterSrc="/marketing/v6/slider-after-material.webp"
             beforeLabel={t("landing.beforeAfter.beforeLabel")}
             afterLabel={t("landing.beforeAfter.afterLabel")}
           />

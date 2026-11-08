@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Globe, LogOut, LayoutDashboard, Menu, X, Sparkles } from "lucide-react";
 import { Logo } from "@/components/landing/logo";
+import { LOCALE_OPTIONS, localeShortLabel, resolveLocale } from "@/lib/locales";
 
 interface NavbarProps {
   user: { id?: string; name?: string | null; email?: string | null; role?: string | null } | null;
@@ -21,6 +21,7 @@ interface NavbarProps {
     settings: string;
     signOut: string;
     currentPlan: string;
+    language: string;
   };
 }
 
@@ -49,15 +50,21 @@ function getCookieLocale(): string {
   return match?.[1] || "en";
 }
 
+function persistLocale(locale: string) {
+  document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
+}
+
 export function Navbar({ user, subscription, locale, navLabels }: NavbarProps) {
-  const [lang, setLang] = useState(locale || getCookieLocale);
+  const lang = resolveLocale(locale || getCookieLocale());
+  const [langOpen, setLangOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const router = useRouter();
 
-  function toggleLang() {
-    const next = lang === "zh" ? "en" : "zh";
-    document.cookie = `NEXT_LOCALE=${next};path=/;max-age=31536000`;
+  function selectLang(next: string) {
+    const resolved = resolveLocale(next);
+    setLangOpen(false);
+    if (resolved === lang) return;
+    persistLocale(resolved);
     window.location.reload();
   }
 
@@ -93,14 +100,46 @@ export function Navbar({ user, subscription, locale, navLabels }: NavbarProps) {
 
         {/* Right: actions */}
         <div className="flex items-center gap-3">
-          {/* Language switcher */}
-          <button
-            onClick={toggleLang}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-zinc-400 hover:text-brand-900 hover:bg-brand-50 transition-colors"
-          >
-            <Globe size={13} />
-            {lang === "en" ? "中文" : "EN"}
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={langOpen}
+              aria-label={navLabels.language}
+              onClick={() => setLangOpen((open) => !open)}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-zinc-400 hover:text-brand-900 hover:bg-brand-50 transition-colors"
+            >
+              <Globe size={13} />
+              {localeShortLabel(lang)}
+            </button>
+            {langOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setLangOpen(false)} />
+                <div
+                  role="listbox"
+                  aria-label={navLabels.language}
+                  className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-zinc-200/60 py-1 z-20"
+                >
+                  {LOCALE_OPTIONS.map((option) => (
+                    <button
+                      key={option.code}
+                      type="button"
+                      role="option"
+                      aria-selected={option.code === lang}
+                      onClick={() => selectLang(option.code)}
+                      className={`flex w-full items-center justify-between px-3 py-2 text-sm transition-colors ${
+                        option.code === lang
+                          ? "text-brand-900 bg-brand-50 font-medium"
+                          : "text-zinc-600 hover:bg-zinc-50"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {user ? (
             <div className="relative">
