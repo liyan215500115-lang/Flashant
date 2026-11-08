@@ -337,9 +337,9 @@
     "heroCards": {
       "before": "前",
       "after": "後",
-      "beforeCaption": "商品写真",
+      "beforeCaption": "スマホ写真",
       "afterCaption": "Flashantの仕上がり",
-      "footnote": "同じボトルを、商品写真と仕上がりで見比べられます。"
+      "footnote": "同じ腕時計です。スマホ写真 → Flashantの仕上がり。"
     },
     "trustCloud": {
       "title": "14のモール。ボタンひとつ。",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "3つの仕上がり。どれも実写です。",
-      "subtitle": "素材感、ライフスタイル、シーン。承認済みの仕上がりの横に、このセットの商品写真を並べています。",
+      "subtitle": "時計、スピーカー、香水。各タブは同じ商品のビフォーとアフターです。",
       "outputCaption": "Flashantの仕上がり",
       "sourceCaption": "商品写真",
       "tabs": {
@@ -359,18 +359,23 @@
         "scene": "シーン"
       },
       "tooltips": {
-        "material": "ガラス、液体、木の天板。ボトルを近くで見せる仕上がりです。",
-        "lifestyle": "部屋の中のボトル。チェスト、窓の光、まわりの小物。",
-        "scene": "暗い画面に、ボトルの後ろへ一本の弧光。"
+        "material": "同じ腕時計です。ブラッシュ仕上げのスティールケースとブレスを近くで。",
+        "lifestyle": "同じスピーカーです。金属メッシュと革ひも。暖かい木の台の上。",
+        "scene": "同じボトルです。暗いムードに、光の弧が一本。"
+      },
+      "captions": {
+        "material": "スティールのケースとブレス",
+        "lifestyle": "メタルメッシュと革ひも",
+        "scene": "ボトルのムード"
       },
       "alts": {
-        "material": "Flashantの素材感出力。暗い木の上のBleu de Chanelのボトル",
-        "lifestyle": "Flashantのライフスタイル出力。チェストの上のBleu de Chanelのボトル",
+        "material": "Flashantの素材感。同じスティール製クロノグラフのケースとブレス",
+        "lifestyle": "Flashantのライフスタイル。同じオリーブ色のスピーカー、金属メッシュと革ひも、木の台",
         "scene": "Flashantのシーン出力。暗い弧光を背にしたBleu de Chanelのボトル",
         "skuA": "Bleu de Chanelのボトルの商品写真",
         "skuB": "白い布の上のOmega Speedmasterの商品写真",
         "skuC": "Bang & Olufsenスピーカーの商品写真",
-        "heroAfter": "Flashantのライフスタイル出力。チェストの上のBleu de Chanelのボトル"
+        "heroAfter": "Flashantの仕上がり。同じスティール製クロノグラフとブレス、暗い背景"
       }
     },
     "beforeAfter": {

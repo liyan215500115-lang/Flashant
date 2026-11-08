@@ -337,9 +337,9 @@
     "heroCards": {
       "before": "Prima",
       "after": "Dopo",
-      "beforeCaption": "Foto di partenza",
+      "beforeCaption": "Foto del telefono",
       "afterCaption": "Output Flashant",
-      "footnote": "Dalla foto prodotto al fotogramma finito. La stessa bottiglia, due versioni."
+      "footnote": "Lo stesso orologio. Foto del telefono → output Flashant."
     },
     "trustCloud": {
       "title": "14 marketplace. Un pulsante.",
@@ -350,7 +350,7 @@
     },
     "styleShowcase": {
       "title": "Tre look. Output veri.",
-      "subtitle": "Materiale, lifestyle e scena — fotogrammi approvati accanto alle foto di partenza di questo set.",
+      "subtitle": "Orologio, speaker e profumo. Ogni scheda è lo stesso prodotto, prima e dopo.",
       "outputCaption": "Output Flashant",
       "sourceCaption": "Foto di partenza",
       "tabs": {
@@ -359,18 +359,23 @@
         "scene": "Scena"
       },
       "tooltips": {
-        "material": "Vetro, liquido e legno: una lettura ravvicinata della bottiglia.",
-        "lifestyle": "La bottiglia in una stanza: cassettiera, luce della finestra e oggetti vicini.",
-        "scene": "Un fotogramma scuro con un arco di luce dietro la bottiglia."
+        "material": "Lo stesso orologio. Cassa e bracciale in acciaio spazzolato, da vicino.",
+        "lifestyle": "Lo stesso speaker. Rete metallica e cordino in pelle, su un tavolo caldo.",
+        "scene": "La stessa bottiglia. Un'atmosfera scura con un arco di luce."
+      },
+      "captions": {
+        "material": "Cassa e bracciale in acciaio",
+        "lifestyle": "Rete e cordino in pelle",
+        "scene": "Atmosfera del flacone"
       },
       "alts": {
-        "material": "Output materiale Flashant di una bottiglia Bleu de Chanel su legno scuro",
-        "lifestyle": "Output lifestyle Flashant di una bottiglia Bleu de Chanel su una cassettiera",
+        "material": "Inquadratura ravvicinata Flashant della stessa cassa e bracciale in acciaio",
+        "lifestyle": "Inquadratura lifestyle Flashant dello stesso speaker oliva, rete metallica e cordino in pelle su legno",
         "scene": "Output di scena Flashant di una bottiglia Bleu de Chanel contro un arco di luce scuro",
         "skuA": "Foto di partenza di una bottiglia Bleu de Chanel",
         "skuB": "Foto di partenza di un Omega Speedmaster su tessuto bianco",
         "skuC": "Foto di partenza di un altoparlante Bang & Olufsen",
-        "heroAfter": "Output lifestyle Flashant di una bottiglia Bleu de Chanel su una cassettiera"
+        "heroAfter": "Inquadratura Flashant dello stesso cronografo in acciaio e bracciale su fondo scuro"
       }
     },
     "beforeAfter": {
