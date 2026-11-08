@@ -256,7 +256,11 @@
     "monthly": "Monthly",
     "annual": "Annual",
     "savePercent": "Save 17%",
-    "saved": "saved"
+    "saved": "saved",
+    "checkoutSuccess": "Payment received. Your plan updates as soon as Creem confirms the subscription.",
+    "checkoutCanceled": "Checkout was closed before payment. Your plan is unchanged.",
+    "manageSubscription": "Manage subscription",
+    "paymentsNote": "Payments are processed by Creem for an individual seller. Flashant does not charge you directly."
   },
   "status": {
     "DRAFT": "Draft",

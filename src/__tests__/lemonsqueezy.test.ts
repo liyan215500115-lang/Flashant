@@ -78,6 +78,8 @@ describe("checkGenerationQuota", () => {
     const result = await checkGenerationQuota("user_1");
     expect(result.allowed).toBe(true);
     expect(result.used).toBe(15);
+    expect(result.tier).toBe("PRO");
+    expect(result.limit).toBe(100);
   });
 
   it("blocks when usage has reached limit", async () => {
@@ -180,6 +182,23 @@ describe("createCheckoutSession", () => {
       })
     ).rejects.toThrow("LEMONSQUEEZY_STORE_ID");
     delete process.env.LEMONSQUEEZY_API_KEY;
+  });
+
+  it("refuses Lemon checkout while Creem is armed", async () => {
+    process.env.BILLING_PROVIDER = "creem";
+    try {
+      await expect(
+        createCheckoutSession({
+          userId: "user_1",
+          variantId: "v_1",
+          planTier: "PRO",
+          successUrl: "/success",
+          cancelUrl: "/cancel",
+        })
+      ).rejects.toThrow("BILLING_PROVIDER=creem");
+    } finally {
+      delete process.env.BILLING_PROVIDER;
+    }
   });
 
   it("throws on LS API error", async () => {

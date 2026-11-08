@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
-import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
+import { checkGenerationQuota } from "@/lib/billing/quota";
+import { screenGenerationPrompts } from "@/lib/creem/moderation";
 
 export const maxDuration = 60; // seconds — Vercel Pro max
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
@@ -336,6 +337,25 @@ export async function POST(req: Request) {
         tier: quota.tier,
       },
       { status: 402 }
+    );
+  }
+
+  // Creem live review requires prompt moderation. Off unless CREEM_MODERATION=enforce.
+  const detailPrompts = Array.isArray(detailTypes)
+    ? detailTypes.map((item: { prompt?: string }) => item?.prompt)
+    : [];
+  const moderation = await screenGenerationPrompts({
+    userId,
+    prompts: [customPrompt, ...detailPrompts],
+  });
+  if (!moderation.allowed) {
+    return NextResponse.json(
+      {
+        error: "prompt_rejected",
+        message: await serverT("error.promptRejected"),
+        decision: moderation.decision,
+      },
+      { status: 400 }
     );
   }
 

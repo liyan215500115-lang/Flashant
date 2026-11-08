@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
-import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
+import { checkGenerationQuota } from "@/lib/billing/quota";
+import { screenGenerationPrompts } from "@/lib/creem/moderation";
 import { serverT } from "@/lib/server-t";
 import { getSignedGetUrl } from "@/lib/s3";
 
@@ -24,6 +25,14 @@ export async function POST(req: Request) {
   const quota = await checkGenerationQuota(userId);
   if (!quota.allowed) {
     return NextResponse.json({ error: "quota_exceeded", message: `Quota: ${quota.used}/${quota.limit}`, tier: quota.tier }, { status: 402 });
+  }
+
+  const moderation = await screenGenerationPrompts({ userId, prompts: [prompt] });
+  if (!moderation.allowed) {
+    return NextResponse.json(
+      { error: "prompt_rejected", message: await serverT("error.promptRejected"), decision: moderation.decision },
+      { status: 400 }
+    );
   }
 
   const provider = getProvider(engineType || "flux");

@@ -41,7 +41,7 @@ npm run dev    # localhost:3000
 - **Prompt 模板**: `TYPE_TEMPLATES` (五要素：构图/光照/镜头/氛围/技术)
 - **品类匹配**: `CATEGORY_PROFILES` — 6 个品类，每个有默认 style + 推荐类型
 - **引擎路由**: `getEngineForDetailType()` — Info 类型走 GPT Image 2，场景走 FLUX
-- **额度**: `src/lib/lemonsqueezy/billing.ts` — 已设 admin bypass (无限)
+- **额度**: `src/lib/billing/quota.ts` — 按订阅套餐计额度。`BILLING_PROVIDER=creem` 时走 Creem，见 `docs/CREEM_BILLING.md`
 - **套图面板**: `src/components/studio/detail-panel.tsx` — 品类选择 → 分组类型 → 一键生成
 
 ## .env 关键变量
@@ -51,13 +51,15 @@ REPLICATE_API_KEY    — FLUX 生图
 DEEPSEEK_API_KEY     — prompt 增强
 DATABASE_URL         — Neon PostgreSQL
 S3_*                 — Cloudflare R2 图片存储
-LEMONSQUEEZY_*       — 支付/订阅
+BILLING_PROVIDER     — creem 或 lemonsqueezy（默认）
+CREEM_*              — Creem 测试支付，见 docs/CREEM_BILLING.md
+LEMONSQUEEZY_*       — Lemon 支付（Creem 开启后结账与 webhook 写入会停用）
 OPENAI_API_KEY       — GPT Image 2 (暂未接入)
 ```
 
 ## 已解决的问题
 
-- 额度限制 → admin bypass (无限)
+- 额度按套餐计算（`src/lib/billing/quota.ts`）。以前的 admin bypass 会让 /api/quota 一律返回 ENTERPRISE，已去掉
 - 详情图超时 → 服务端轮询 50s deadline
 - 删除图片 → 软删除 (status=DELETED)
 - 不同页面额度不一致 → 统一显示"本月剩余 X/Y"

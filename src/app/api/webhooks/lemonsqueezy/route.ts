@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isCreemArmed } from "@/lib/billing/provider";
 import { handleSubscriptionEvent } from "@/lib/lemonsqueezy/billing";
 import crypto from "crypto";
 
@@ -44,6 +45,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
     console.warn("Lemon Squeezy webhook signature validation skipped (dev mode)");
+  }
+
+  if (isCreemArmed()) {
+    return NextResponse.json({ received: true, skipped: "lemon_disabled" });
   }
 
   let event: { meta?: { event_name?: string }; data?: { id?: string } };

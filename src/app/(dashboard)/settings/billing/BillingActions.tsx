@@ -10,16 +10,10 @@ import { toast } from "sonner";
 interface BillingActionsProps {
   tier: string;
   isCurrent: boolean;
-  userId: string;
   annual?: boolean;
 }
 
-const VARIANT_IDS: Record<string, string> = {
-  PRO: process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRO_VARIANT_ID ?? "",
-  BUSINESS: process.env.NEXT_PUBLIC_LEMONSQUEEZY_BUSINESS_VARIANT_ID ?? "",
-};
-
-export function BillingActions({ tier, isCurrent, userId, annual }: BillingActionsProps) {
+export function BillingActions({ tier, isCurrent, annual }: BillingActionsProps) {
   const { t } = useT();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,30 +44,22 @@ export function BillingActions({ tier, isCurrent, userId, annual }: BillingActio
     setError("");
 
     try {
-      const variantId = VARIANT_IDS[tier];
-      if (!variantId) {
-        setError(t("billing.unavailable"));
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch("/api/lemonsqueezy/checkout", {
+      const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          variantId,
           planTier: tier,
+          interval: annual ? "annual" : "monthly",
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.message || t("error.createFailed"));
       }
 
-      const { url } = await res.json();
-      if (url) {
-        window.location.href = url;
+      if (data.url) {
+        window.location.href = data.url;
       } else {
         setError(t("billing.unavailable"));
       }
@@ -99,6 +85,37 @@ export function BillingActions({ tier, isCurrent, userId, annual }: BillingActio
       {error && (
         <p className="text-xs text-destructive mt-2 text-center">{error}</p>
       )}
+    </div>
+  );
+}
+
+export function ManageBillingButton() {
+  const { t } = useT();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function openPortal() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        throw new Error(data.message || t("billing.unavailable"));
+      }
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("billing.unavailable"));
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <Button variant="outline" size="sm" onClick={openPortal} disabled={loading}>
+        {loading ? t("billing.redirecting") : t("billing.manageSubscription")}
+      </Button>
+      {error && <p className="text-xs text-destructive mt-2">{error}</p>}
     </div>
   );
 }

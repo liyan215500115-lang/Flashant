@@ -34,6 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Billing
+
+Subscriptions use Lemon Squeezy until `BILLING_PROVIDER=creem`. Creem setup, Preview env, webhook, and the test card are in [docs/CREEM_BILLING.md](docs/CREEM_BILLING.md). Do not point this branch at production env or the production database.
 Sat Jun  6 22:04:16 CST 2026
 Sat Jun  6 22:24:43 CST 2026
 Sun Jun  7 09:43:23 CST 2026

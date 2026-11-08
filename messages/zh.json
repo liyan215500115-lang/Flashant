@@ -256,7 +256,11 @@
     "monthly": "月付",
     "annual": "年付",
     "savePercent": "省 17%",
-    "saved": "已省"
+    "saved": "已省",
+    "checkoutSuccess": "已收到付款。Creem 确认订阅后，套餐会更新。",
+    "checkoutCanceled": "结账已关闭，尚未付款。当前套餐不变。",
+    "manageSubscription": "管理订阅",
+    "paymentsNote": "付款由 Creem 代收，卖家为个人。闪象不会直接向你扣款。"
   },
   "status": {
     "DRAFT": "草稿",
