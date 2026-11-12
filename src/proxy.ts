@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isPublicLegalPath, normalizePathname } from "@/lib/legal/paths";
+import { isPublicCrawlerPath, isPublicLegalPath, normalizePathname } from "@/lib/legal/paths";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -35,8 +35,14 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // Public paths — no auth needed
-  if (pathname === "/" || isPublicLegalPath(pathname) || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // Public paths — no auth needed. robots.txt and sitemap.xml stay public so
+  // crawlers can discover the legal pages; app pages and API routes do not.
+  if (
+    pathname === "/" ||
+    isPublicLegalPath(pathname) ||
+    isPublicCrawlerPath(pathname) ||
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+  ) {
     const res = NextResponse.next();
     res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 31536000 });
     return res;
