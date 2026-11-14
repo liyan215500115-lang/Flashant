@@ -409,7 +409,7 @@
         "cost": {
           "label": "Coût",
           "old": "~50–100 USD / SKU",
-          "new": "~0,02 USD / SKU"
+          "new": "~0,50–1 USD / SKU"
         },
         "speed": {
           "label": "Délai",
@@ -419,7 +419,7 @@
         "revision": {
           "label": "Retouches",
           "old": "Frais et e-mails en plus",
-          "new": "Sans limite, à tout moment"
+          "new": "Décompté du quota du mois, sans frais en plus"
         },
         "compliance": {
           "label": "Conformité",
@@ -427,7 +427,7 @@
           "new": "Ajustement automatique à l'export"
         }
       },
-      "winner": "Flashant vous fait économiser environ le prix d'un café par SKU."
+      "winner": "Flashant coûte environ 0,50–1 USD par SKU."
     },
     "bottomCta": {
       "title": "Remplacez la photo du téléphone. Publiez celle-ci.",

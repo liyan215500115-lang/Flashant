@@ -409,7 +409,7 @@
         "cost": {
           "label": "Custo",
           "old": "~US$ 50–100 / SKU",
-          "new": "~US$ 0,02 / SKU"
+          "new": "~US$ 0,50–1 / SKU"
         },
         "speed": {
           "label": "Prazo",
@@ -419,7 +419,7 @@
         "revision": {
           "label": "Ajustes",
           "old": "Taxa extra e mais e-mails",
-          "new": "Sem limite, quando quiser"
+          "new": "Contam na cota deste mês, sem taxa extra"
         },
         "compliance": {
           "label": "Conformidade",
@@ -427,7 +427,7 @@
           "new": "Ajuste automático na exportação"
         }
       },
-      "winner": "A Flashant economiza, por SKU, mais ou menos o preço de um café."
+      "winner": "A Flashant custa cerca de US$ 0,50–1 por SKU."
     },
     "bottomCta": {
       "title": "Troque a foto do celular. Publique esta.",

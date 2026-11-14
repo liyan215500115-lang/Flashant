@@ -409,7 +409,7 @@
         "cost": {
           "label": "Kosten",
           "old": "~50–100 USD / SKU",
-          "new": "~0,02 USD / SKU"
+          "new": "~0,50–1 USD / SKU"
         },
         "speed": {
           "label": "Dauer",
@@ -419,7 +419,7 @@
         "revision": {
           "label": "Korrekturen",
           "old": "Aufpreis und extra Mails",
-          "new": "Unbegrenzt, jederzeit"
+          "new": "Geht vom Monatskontingent ab, ohne Aufpreis"
         },
         "compliance": {
           "label": "Vorgaben",
@@ -427,7 +427,7 @@
           "new": "Beim Export automatisch angepasst"
         }
       },
-      "winner": "Flashant spart pro SKU ungefähr den Preis eines Kaffees."
+      "winner": "Flashant kostet etwa 0,50–1 USD pro SKU."
     },
     "bottomCta": {
       "title": "Weg mit dem Handyfoto. Dieses Bild liefern.",
