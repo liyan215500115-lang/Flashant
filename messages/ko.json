@@ -354,19 +354,19 @@
       "outputCaption": "Flashant 결과",
       "sourceCaption": "원본 사진",
       "tabs": {
-        "material": "재질",
-        "lifestyle": "라이프스타일",
-        "scene": "장면"
+        "material": "재질 · 시계",
+        "lifestyle": "라이프스타일 · 스피커",
+        "scene": "장면 · 향수"
       },
       "tooltips": {
         "material": "같은 손목시계입니다. 브러시드 스틸 케이스와 브레이슬릿을 가까이에서.",
         "lifestyle": "같은 스피커입니다. 메탈 메시와 가죽 끈, 따뜻한 나무 테이블 위.",
-        "scene": "같은 병입니다. 어두운 무드와 한 줄의 빛."
+        "scene": "같은 향수입니다. 어두운 무드와 한 줄의 빛."
       },
       "captions": {
-        "material": "스틸 케이스와 브레이슬릿",
-        "lifestyle": "메탈 메시와 가죽 끈",
-        "scene": "병의 무드"
+        "material": "스틸 시계 케이스",
+        "lifestyle": "스피커 메시와 가죽 끈",
+        "scene": "향수 병"
       },
       "alts": {
         "material": "같은 스틸 크로노그래프 케이스와 브레이슬릿의 Flashant 근접 컷",

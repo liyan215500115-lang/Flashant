@@ -108,6 +108,12 @@ describe("homepage same-SKU slots", () => {
     expect(zh("landing.heroCards.after")).toBe("成片");
     expect(en("landing.styleShowcase.tooltips.material").toLowerCase()).not.toContain("bottle");
     expect(en("landing.styleShowcase.tooltips.lifestyle").toLowerCase()).not.toContain("bottle");
+    expect(en("landing.styleShowcase.tabs.material").toLowerCase()).toContain("watch");
+    expect(en("landing.styleShowcase.tabs.lifestyle").toLowerCase()).toContain("speaker");
+    expect(en("landing.styleShowcase.tabs.scene").toLowerCase()).toContain("perfume");
+    expect(zh("landing.styleShowcase.tabs.material")).toContain("腕表");
+    expect(zh("landing.styleShowcase.tabs.lifestyle")).toContain("音箱");
+    expect(zh("landing.styleShowcase.tabs.scene")).toContain("香水");
     expect(en("landing.styleShowcase.captions.material").toLowerCase()).toContain("steel");
     expect(en("landing.styleShowcase.captions.lifestyle").toLowerCase()).toContain("leather");
     expect(en("landing.styleShowcase.captions.scene").toLowerCase()).toContain("bottle");

@@ -354,19 +354,19 @@
       "outputCaption": "Flashantの仕上がり",
       "sourceCaption": "商品写真",
       "tabs": {
-        "material": "素材感",
-        "lifestyle": "ライフスタイル",
-        "scene": "シーン"
+        "material": "素材 · 時計",
+        "lifestyle": "ライフスタイル · スピーカー",
+        "scene": "シーン · 香水"
       },
       "tooltips": {
         "material": "同じ腕時計です。ブラッシュ仕上げのスティールケースとブレスを近くで。",
         "lifestyle": "同じスピーカーです。金属メッシュと革ひも。暖かい木の台の上。",
-        "scene": "同じボトルです。暗いムードに、光の弧が一本。"
+        "scene": "同じ香水です。暗いムードに、光の弧が一本。"
       },
       "captions": {
-        "material": "スティールのケースとブレス",
-        "lifestyle": "メタルメッシュと革ひも",
-        "scene": "ボトルのムード"
+        "material": "スティールの腕時計",
+        "lifestyle": "スピーカーのメッシュと革ひも",
+        "scene": "香水ボトル"
       },
       "alts": {
         "material": "Flashantの素材感。同じスティール製クロノグラフのケースとブレス",

@@ -354,19 +354,19 @@
       "outputCaption": "Flashant-Ausgabe",
       "sourceCaption": "Ausgangsfoto",
       "tabs": {
-        "material": "Material",
-        "lifestyle": "Lifestyle",
-        "scene": "Szene"
+        "material": "Material · Uhr",
+        "lifestyle": "Lifestyle · Lautsprecher",
+        "scene": "Szene · Parfum"
       },
       "tooltips": {
         "material": "Dieselbe Uhr. Gebürstetes Stahlgehäuse und Stahlband, aus der Nähe.",
         "lifestyle": "Derselbe Lautsprecher. Metallgitter und Lederkordel, auf einem warmen Holztisch.",
-        "scene": "Dieselbe Flasche. Dunkle Stimmung mit einem Lichtbogen."
+        "scene": "Dasselbe Parfum. Dunkle Stimmung mit einem Lichtbogen."
       },
       "captions": {
-        "material": "Stahlgehäuse und Stahlband",
-        "lifestyle": "Metallgitter und Lederkordel",
-        "scene": "Flakon-Stimmung"
+        "material": "Stahlgehäuse der Uhr",
+        "lifestyle": "Lautsprecher mit Lederkordel",
+        "scene": "Parfumflakon"
       },
       "alts": {
         "material": "Nahe Flashant-Aufnahme desselben Stahlgehäuses und Stahlbands",

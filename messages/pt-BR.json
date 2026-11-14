@@ -354,19 +354,19 @@
       "outputCaption": "Resultado Flashant",
       "sourceCaption": "Foto de origem",
       "tabs": {
-        "material": "Material",
-        "lifestyle": "Lifestyle",
-        "scene": "Cena"
+        "material": "Material · Relógio",
+        "lifestyle": "Lifestyle · Caixa de som",
+        "scene": "Cena · Perfume"
       },
       "tooltips": {
         "material": "O mesmo relógio. Caixa e pulseira de aço escovado, de perto.",
         "lifestyle": "A mesma caixa de som. Tela metálica e cordão de couro, numa mesa quente.",
-        "scene": "O mesmo frasco. Um clima escuro com um arco de luz."
+        "scene": "O mesmo perfume. Um clima escuro com um arco de luz."
       },
       "captions": {
-        "material": "Caixa e pulseira de aço",
-        "lifestyle": "Tela e cordão de couro",
-        "scene": "Clima do frasco"
+        "material": "Caixa de aço do relógio",
+        "lifestyle": "Caixa de som: tela e cordão de couro",
+        "scene": "Frasco de perfume"
       },
       "alts": {
         "material": "Quadro próximo da Flashant da mesma caixa e pulseira de aço",

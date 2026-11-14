@@ -354,19 +354,19 @@
       "outputCaption": "Rendu Flashant",
       "sourceCaption": "Photo source",
       "tabs": {
-        "material": "Matière",
-        "lifestyle": "Lifestyle",
-        "scene": "Scène"
+        "material": "Matière · Montre",
+        "lifestyle": "Lifestyle · Enceinte",
+        "scene": "Scène · Parfum"
       },
       "tooltips": {
         "material": "La même montre. Boîtier et bracelet en acier brossé, vus de près.",
         "lifestyle": "La même enceinte. Grille métal et cordon de cuir, sur une table chaude.",
-        "scene": "Le même flacon. Une ambiance sombre avec un arc de lumière."
+        "scene": "Le même parfum. Une ambiance sombre avec un arc de lumière."
       },
       "captions": {
-        "material": "Boîtier et bracelet acier",
-        "lifestyle": "Grille métal et cordon cuir",
-        "scene": "Ambiance du flacon"
+        "material": "Boîtier acier de la montre",
+        "lifestyle": "Enceinte : grille et cordon cuir",
+        "scene": "Flacon de parfum"
       },
       "alts": {
         "material": "Cadre rapproché Flashant du même boîtier et bracelet en acier",

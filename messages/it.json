@@ -354,19 +354,19 @@
       "outputCaption": "Output Flashant",
       "sourceCaption": "Foto di partenza",
       "tabs": {
-        "material": "Materiale",
-        "lifestyle": "Lifestyle",
-        "scene": "Scena"
+        "material": "Materiale · Orologio",
+        "lifestyle": "Lifestyle · Speaker",
+        "scene": "Scena · Profumo"
       },
       "tooltips": {
         "material": "Lo stesso orologio. Cassa e bracciale in acciaio spazzolato, da vicino.",
         "lifestyle": "Lo stesso speaker. Rete metallica e cordino in pelle, su un tavolo caldo.",
-        "scene": "La stessa bottiglia. Un'atmosfera scura con un arco di luce."
+        "scene": "Lo stesso profumo. Un'atmosfera scura con un arco di luce."
       },
       "captions": {
-        "material": "Cassa e bracciale in acciaio",
-        "lifestyle": "Rete e cordino in pelle",
-        "scene": "Atmosfera del flacone"
+        "material": "Cassa in acciaio dell'orologio",
+        "lifestyle": "Speaker: rete e cordino in pelle",
+        "scene": "Flacone di profumo"
       },
       "alts": {
         "material": "Inquadratura ravvicinata Flashant della stessa cassa e bracciale in acciaio",
