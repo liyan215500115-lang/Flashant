@@ -402,7 +402,7 @@
         "cost": {
           "label": "Cost",
           "old": "~$50–100 / SKU",
-          "new": "~$0.02 / SKU"
+          "new": "~$0.50–1 / SKU"
         },
         "speed": {
           "label": "Turnaround",
@@ -412,7 +412,7 @@
         "revision": {
           "label": "Revisions",
           "old": "Extra fees, extra emails",
-          "new": "Unlimited, anytime"
+          "new": "Counts toward this month's quota, no extra fee"
         },
         "compliance": {
           "label": "Compliance",
@@ -420,7 +420,7 @@
           "new": "Auto-matched on export"
         }
       },
-      "winner": "Flashant saves you about the cost of a coffee per SKU."
+      "winner": "Flashant runs about $0.50–1 per SKU."
     },
     "bottomCta": {
       "title": "Swap the phone snap. Ship this instead.",

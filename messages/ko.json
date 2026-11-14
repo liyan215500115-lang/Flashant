@@ -409,7 +409,7 @@
         "cost": {
           "label": "비용",
           "old": "약 $50–100 / SKU",
-          "new": "약 $0.02 / SKU"
+          "new": "약 $0.50–1 / SKU"
         },
         "speed": {
           "label": "기간",
@@ -419,7 +419,7 @@
         "revision": {
           "label": "수정",
           "old": "추가 비용과 메일",
-          "new": "언제든, 횟수 제한 없음"
+          "new": "이번 달 생성 한도에서 차감, 추가 요금 없음"
         },
         "compliance": {
           "label": "규정",
@@ -427,7 +427,7 @@
           "new": "내보낼 때 자동 맞춤"
         }
       },
-      "winner": "Flashant는 SKU당 커피 한 잔 정도를 아껴 줍니다."
+      "winner": "Flashant는 SKU당 약 $0.50–1입니다."
     },
     "bottomCta": {
       "title": "휴대폰 사진 대신, 이 컷을 내보내세요.",

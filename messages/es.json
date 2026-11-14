@@ -409,7 +409,7 @@
         "cost": {
           "label": "Coste",
           "old": "~50–100 USD / SKU",
-          "new": "~0,02 USD / SKU"
+          "new": "~0,50–1 USD / SKU"
         },
         "speed": {
           "label": "Plazo",
@@ -419,7 +419,7 @@
         "revision": {
           "label": "Cambios",
           "old": "Coste extra y más correos",
-          "new": "Sin límite, cuando quieras"
+          "new": "Cuenta para la cuota de este mes, sin coste extra"
         },
         "compliance": {
           "label": "Cumplimiento",
@@ -427,7 +427,7 @@
           "new": "Se ajusta solo al exportar"
         }
       },
-      "winner": "Flashant te ahorra, por SKU, más o menos lo que cuesta un café."
+      "winner": "Flashant cuesta unos 0,50–1 USD por SKU."
     },
     "bottomCta": {
       "title": "Cambia la foto del móvil. Publica esto.",
