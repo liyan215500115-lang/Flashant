@@ -13,6 +13,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
       updateMany: vi.fn(),
       create: vi.fn(),
     },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -104,6 +105,11 @@ describe("save generated image", () => {
 });
 
 describe("delete project image", () => {
+  const tx = {
+    generatedImage: { updateMany: vi.fn() },
+    productImage: { delete: vi.fn() },
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     authMock.mockResolvedValue({ user: { id: "user_1" } });
@@ -111,9 +117,12 @@ describe("delete project image", () => {
     dbMock.generatedImage.updateMany.mockResolvedValue({ count: 2 });
     dbMock.generatedImage.update.mockResolvedValue({});
     dbMock.productImage.delete.mockResolvedValue({});
+    tx.generatedImage.updateMany.mockResolvedValue({ count: 2 });
+    tx.productImage.delete.mockResolvedValue({});
+    dbMock.$transaction.mockImplementation(async (run: (client: typeof tx) => Promise<unknown>) => run(tx));
   });
 
-  it("hides generated derivatives when the original is deleted", async () => {
+  it("disconnects generated rows before deleting the original", async () => {
     dbMock.productImage.findFirst.mockResolvedValue({ id: "orig_1" });
     const res = await deleteImage(
       new Request("http://localhost/api/products/proj_1/images", {
@@ -125,11 +134,17 @@ describe("delete project image", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(dbMock.generatedImage.updateMany).toHaveBeenCalledWith({
+    expect(dbMock.$transaction).toHaveBeenCalledTimes(1);
+    expect(tx.generatedImage.updateMany).toHaveBeenCalledWith({
       where: { productImageId: "orig_1", imageProjectId: "proj_1" },
-      data: { status: "DELETED" },
+      data: { status: "DELETED", productImageId: null },
     });
-    expect(dbMock.productImage.delete).toHaveBeenCalledWith({ where: { id: "orig_1" } });
+    expect(tx.productImage.delete).toHaveBeenCalledWith({ where: { id: "orig_1" } });
+    const updateOrder = tx.generatedImage.updateMany.mock.invocationCallOrder[0];
+    const deleteOrder = tx.productImage.delete.mock.invocationCallOrder[0];
+    expect(updateOrder).toBeLessThan(deleteOrder);
+    expect(dbMock.generatedImage.updateMany).not.toHaveBeenCalled();
+    expect(dbMock.productImage.delete).not.toHaveBeenCalled();
   });
 
   it("soft-deletes a single generated image without touching other rows", async () => {
@@ -151,5 +166,7 @@ describe("delete project image", () => {
     });
     expect(dbMock.generatedImage.updateMany).not.toHaveBeenCalled();
     expect(dbMock.productImage.delete).not.toHaveBeenCalled();
+    expect(dbMock.$transaction).not.toHaveBeenCalled();
+    expect(tx.generatedImage.updateMany).not.toHaveBeenCalled();
   });
 });

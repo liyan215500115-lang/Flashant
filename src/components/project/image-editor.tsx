@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { RotateCw, Sun, Contrast, Download, X, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 
 interface ImageEditorProps {
   imageUrl: string;
@@ -87,6 +88,7 @@ export function ImageEditor({ imageUrl, onSave, onClose }: ImageEditorProps) {
     setSaving(true);
     canvas.toBlob(async (blob) => {
       if (!blob) {
+        toast.error("无法导出图片，请重试");
         setSaving(false);
         return;
       }

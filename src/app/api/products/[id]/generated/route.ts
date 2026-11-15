@@ -40,6 +40,8 @@ export async function POST(
       s3Key: body.s3Key,
       url: body.url,
       promptUsed: typeof body.promptUsed === "string" ? body.promptUsed.slice(0, 500) : "manual-edit",
+      // Not an AI generation. When quota enforcement returns, getUsedGenerationCount
+      // should skip aiProvider "manual" so an edit does not consume a free-tier slot.
       aiProvider: "manual",
       fileSize: typeof body.fileSize === "number" ? body.fileSize : null,
       mimeType: typeof body.mimeType === "string" ? body.mimeType : "image/png",
