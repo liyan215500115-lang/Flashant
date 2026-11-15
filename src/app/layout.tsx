@@ -7,17 +7,25 @@ import { getTranslator } from "@/lib/locale.server";
 export async function generateMetadata(): Promise<Metadata> {
   const { locale } = await getTranslator();
   if (locale !== "zh") {
+    const title = "Flashant — Stunning Visuals. Generated in a Flash.";
+    const description =
+      "Upload a product photo, pick a style, and get images you can download in seconds. Connect Shopify when you want to publish.";
     return {
-      title: "Flashant — Stunning Visuals. Generated in a Flash.",
-      description:
-        "Flashant — AI product image generation pipeline. Upload product photos, generate white-background, scene, and model images. Publish to Shopify, Amazon, TikTok Shop.",
+      title,
+      description,
       icons: { icon: "/logo.svg" },
+      openGraph: { title, description },
+      twitter: { card: "summary", title, description },
     };
   }
+  const title = "闪象 Flashant — 一键闪象，万象更新";
+  const description =
+    "上传一张商品图，选好风格，几秒就能下载成片。需要发布时，再连接 Shopify。";
   return {
-    title: "闪象 Flashant — 一键闪象，万象更新",
-    description:
-      "闪象 Flashant，AI 商品图生成管线。上传产品图，一键生成白底图、场景图、模特图，发布到 Shopify / Amazon / TikTok Shop。",
+    title,
+    description,
+    openGraph: { title, description },
+    twitter: { card: "summary", title, description },
   };
 }
 

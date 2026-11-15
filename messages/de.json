@@ -331,7 +331,7 @@
     "hero": {
       "headline": "Produktfotos im Handumdrehen.",
       "headlineHighlight": "Kein Studio. Kein Warten.",
-      "subheadline": "Foto hochladen, Stil wählen, plattformfertige Bilder in Sekunden. Für 14 Marktplätze.",
+      "subheadline": "Laden Sie ein Produktfoto hoch, wählen Sie einen Stil und laden Sie die Bilder in Sekunden herunter. Verbinden Sie Shopify, wenn Sie veröffentlichen möchten.",
       "cta": "Kostenlos starten",
       "ctaSub": "10 Freikredite im Monat. Keine Karte."
     },
@@ -343,11 +343,11 @@
       "footnote": "Dieselbe Uhr. Handyfoto → Flashant-Ausgabe."
     },
     "trustCloud": {
-      "title": "14 Marktplätze. Ein Knopf.",
-      "subtitle": "Jedes Bild passt sich automatisch an Größe, Hintergrund und Ränder der Plattform an.",
-      "badge": "Veröffentlichung mit einem Klick",
+      "title": "Zuerst herunterladen. Auf Shopify veröffentlichen, wenn Sie bereit sind.",
+      "subtitle": "Downloads behalten das Originalbild. Größen- und Dateinamenhinweise für Amazon, TikTok Shop und andere Plattformen dienen nur als Referenz — sie ändern weder Größe noch Format und machen ein Listing nicht regelkonform.",
+      "badge": "Zuerst herunterladen",
       "more": "+10 weitere",
-      "modalTitle": "14 unterstützte Plattformen"
+      "modalTitle": "Plattformen"
     },
     "styleShowcase": {
       "title": "Drei Looks. Echte Ergebnisse.",
@@ -394,11 +394,11 @@
       },
       "step2": {
         "title": "Stil wählen",
-        "desc": "Look und Plattform wählen. Die Engine übernimmt Maß und Hintergrund."
+        "desc": "Wählen Sie einen Look. Sie können eine Zielplattform für Größen- und Dateinamenhinweise angeben."
       },
       "step3": {
-        "title": "Laden oder veröffentlichen",
-        "desc": "Das ganze Set als .zip holen oder direkt auf Shopify oder TikTok Shop veröffentlichen."
+        "title": "Herunterladen",
+        "desc": "Holen Sie das gesamte Set als .zip. Ist Ihr Shopify-Shop verbunden, können Sie dort auch veröffentlichen."
       }
     },
     "roi": {
@@ -423,9 +423,9 @@
           "new": "Geht vom Monatskontingent ab, ohne Aufpreis"
         },
         "compliance": {
-          "label": "Vorgaben",
-          "old": "Manuell je Plattform prüfen",
-          "new": "Beim Export automatisch angepasst"
+          "label": "Listing-Regeln",
+          "old": "Sie prüfen jede Plattform",
+          "new": "Größen- und Dateinamenhinweise beim Export; das Listing prüfen Sie weiterhin selbst"
         }
       },
       "winner": "Flashant kostet etwa 0,50–1 USD pro SKU."
@@ -453,7 +453,7 @@
           "desc": "Zum Einstieg",
           "feature1": "10 / Monat",
           "feature2": "5 Szenenvorlagen",
-          "feature3": "Export für 14 Plattformen",
+          "feature3": "Größen- und Dateinamenhinweise für große Plattformen",
           "feature4": "KI-Hilfe für Prompts"
         },
         "pro": {

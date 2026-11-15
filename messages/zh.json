@@ -342,16 +342,16 @@
     "hero": {
       "headline": "产品图，",
       "headlineHighlight": "拍完就用。",
-      "subheadline": "上传原图，选个风格，几秒钟拿到合规电商图。支持 Amazon、Shopify、TikTok Shop 等 14 个平台。",
+      "subheadline": "上传一张商品图，选好风格，几秒就能下载成片。需要发布时，再连接 Shopify。",
       "cta": "免费开始创作",
       "ctaSub": "每月 10 次免费额度，无需信用卡"
     },
     "trustCloud": {
-      "title": "14 个平台。一键出图。",
-      "subtitle": "每个平台的主图尺寸、背景色、留白比例自动对齐，出图即合规。",
-      "badge": "一键发布",
+      "title": "先下载。连上 Shopify 后再发布。",
+      "subtitle": "下载保留原图。Amazon、TikTok Shop 等平台的尺寸和文件名说明仅供参考，不会自动改尺寸、转格式，也不等于商品已合规。",
+      "badge": "先下载",
       "more": "+10 个",
-      "modalTitle": "14 个支持的平台"
+      "modalTitle": "平台"
     },
     "styleShowcase": {
       "title": "三种成片，都是实拍。",
@@ -398,11 +398,11 @@
       },
       "step2": {
         "title": "选风格和平台",
-        "desc": "挑一个风格，指定目标平台。AI 自动匹配尺寸和背景要求。"
+        "desc": "选好你想要的效果。如果指定了目标平台，会附上尺寸和文件名说明。"
       },
       "step3": {
-        "title": "下载或发布",
-        "desc": "生成完成后一键下载全套素材，或直接发布到 Shopify、TikTok Shop。"
+        "title": "下载",
+        "desc": "打包成 zip 下载。若已连接 Shopify，也可以发布到店铺。"
       }
     },
     "roi": {
@@ -427,9 +427,9 @@
           "new": "计入本月额度，不另收费"
         },
         "compliance": {
-          "label": "合规检查",
-          "old": "人工逐张比对规则",
-          "new": "出图即合规"
+          "label": "上架规范",
+          "old": "需自行核对各平台规则",
+          "new": "导出时附尺寸和文件名说明，仍需自行核对"
         }
       },
       "winner": "闪象每个 SKU 大约 ¥3.50–7。"
@@ -457,7 +457,7 @@
           "desc": "试用体验",
           "feature1": "10 次 AI 生图 / 月",
           "feature2": "5 种场景模板",
-          "feature3": "14 平台下载",
+          "feature3": "主流平台尺寸与文件名参考",
           "feature4": "AI 提示词辅助"
         },
         "pro": {
