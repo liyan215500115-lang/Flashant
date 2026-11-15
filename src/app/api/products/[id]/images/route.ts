@@ -22,6 +22,11 @@ export async function DELETE(
   // Support deleting both product images and generated images
   const isProductImage = await db.productImage.findFirst({ where: { id: imageId, imageProjectId: projectId } });
   if (isProductImage) {
+    // Generated rows stay in the database (quota counts every row) but leave the gallery.
+    await db.generatedImage.updateMany({
+      where: { productImageId: imageId, imageProjectId: projectId },
+      data: { status: "DELETED" },
+    });
     await db.productImage.delete({ where: { id: imageId } });
     return NextResponse.json({ success: true });
   }
