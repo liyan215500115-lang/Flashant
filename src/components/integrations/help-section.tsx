@@ -31,21 +31,6 @@ export function HelpSection() {
         },
       ],
     },
-    TIKTOK_SHOP: {
-      name: "TikTok Shop",
-      links: [
-        {
-          label: t("integrations.helpNoTiktok"),
-          description: t("integrations.helpNoTiktokDesc"),
-          url: "https://seller.tiktokglobalshop.com",
-        },
-        {
-          label: t("integrations.helpTiktokGuide"),
-          description: t("integrations.helpTiktokGuideDesc"),
-          url: "https://seller.tiktokglobalshop.com/guide",
-        },
-      ],
-    },
   };
 
   return (

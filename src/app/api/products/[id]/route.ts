@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { releaseGeneratingProject } from "@/lib/project-status";
 import { getSignedGetUrl } from "@/lib/s3";
 
 export async function GET(
@@ -38,6 +39,29 @@ export async function GET(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
+  // Heal a project left on GENERATING after a task already failed or produced
+  // nothing. Do not touch a project that still has an in-flight task, and do
+  // not touch detail-batch runs that never create tasks.
+  let status = project.status;
+  let errorMessage = project.errorMessage;
+  if (status === "GENERATING") {
+    const inFlight = project.tasks.some(
+      (task) => task.status === "PENDING" || task.status === "PROCESSING"
+    );
+    const failed = project.tasks.find((task) => task.status === "FAILED");
+    if (!inFlight && failed) {
+      await releaseGeneratingProject(id, failed.errorMessage || errorMessage);
+      const fresh = await db.imageProject.findUnique({
+        where: { id },
+        select: { status: true, errorMessage: true },
+      });
+      if (fresh) {
+        status = fresh.status;
+        errorMessage = fresh.errorMessage;
+      }
+    }
+  }
+
   // Resolve presigned GET URLs for private R2 objects
   function isR2Key(key: string | null): boolean {
     return !!(key && (key.startsWith("products/") || key.startsWith("generated/")));
@@ -64,6 +88,8 @@ export async function GET(
   return NextResponse.json({
     project: {
       ...project,
+      status,
+      errorMessage,
       productImages: resolvedProductImages,
       generatedImages: resolvedGeneratedImages,
     },

@@ -1,5 +1,4 @@
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { isPublicCrawlerPath, isPublicLegalPath, normalizePathname } from "@/lib/legal/paths";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -17,8 +16,6 @@ const API_AUTH_PATTERNS = [
   "/api/assets",
   "/api/listings",
 ];
-const QUOTA_GATED_PATTERNS = ["/api/generate"];
-
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -59,36 +56,14 @@ export async function proxy(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ── Layer 2: Quota awareness for AI generation routes ──
-    if (QUOTA_GATED_PATTERNS.some((p) => pathname.startsWith(p))) {
-      const sub = await db.subscription.findUnique({
-        where: { userId: session.user.id },
-        select: { planTier: true, currentPeriodStart: true },
-      });
-
-      const tier = sub?.planTier ?? "FREE";
-
-      if (tier === "FREE") {
-        const used = await db.generatedImage.count({
-          where: {
-            project: { userId: session.user.id },
-            createdAt: { gte: sub?.currentPeriodStart ?? new Date(0) },
-          },
-        });
-
-        if (used >= 10) {
-          return NextResponse.json(
-            {
-              error: "quota_exceeded",
-              message:
-                "Monthly quota exhausted (10/10). Please upgrade to continue.",
-              tier: "FREE",
-            },
-            { status: 402 }
-          );
-        }
-      }
-    }
+    // Quota enforcement is intentionally off. /api/quota and checkGenerationQuota
+    // currently allow every request through (allowed: true, limit: -1) so the UI
+    // can say unlimited. This gateway must match that allow-through policy and
+    // must not return 402 for /api/generate while real quotas stay disabled.
+    //
+    // When quotas are restored later, this gateway and checkGenerationQuota must
+    // use the same policy, exclude aiProvider "manual", and handle soft-deleted
+    // rows according to the product decision at that time.
 
     const res = NextResponse.next();
     res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 31536000 });

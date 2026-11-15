@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { validateImage } from "@/lib/ai/validator";
 import { uploadBuffer, saveBufferLocally, hasS3Config } from "@/lib/s3";
+import { releaseGeneratingProject } from "@/lib/project-status";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -33,19 +34,7 @@ export async function POST(req: Request) {
     const outputs: string[] = body.output as string[];
 
     if (!outputs || outputs.length === 0) {
-      await db.generatedImage.update({
-        where: { id: genImage.id },
-        data: {
-          status: "FAILED",
-          errorMessage: "No outputs from Replicate",
-        },
-      });
-      if (task) {
-        await db.task.update({
-          where: { id: task.id },
-          data: { status: "FAILED", errorMessage: "No outputs from Replicate" },
-        });
-      }
+      await failGeneration(genImage.imageProjectId, genImage.id, task?.id, "No outputs from Replicate");
       return NextResponse.json({ received: true });
     }
 
@@ -63,14 +52,13 @@ export async function POST(req: Request) {
       });
 
       if (!validation.valid) {
-        // Don't deduct quota for invalid results
-        await db.generatedImage.update({
-          where: { id: genImage.id },
-          data: {
-            status: "FAILED",
-            errorMessage: `Validation failed: ${validation.reason}`,
-          },
-        });
+        // Don't deduct quota for invalid results. A rejected image is no output.
+        await failGeneration(
+          genImage.imageProjectId,
+          genImage.id,
+          task?.id,
+          `Validation failed: ${validation.reason}`
+        );
         return NextResponse.json({ received: true });
       }
     } catch {
@@ -131,14 +119,31 @@ export async function POST(req: Request) {
       });
     }
   } else if (status === "failed") {
-    await db.generatedImage.update({
-      where: { id: genImage.id },
-      data: {
-        status: "FAILED",
-        errorMessage: body.error ?? "Replicate prediction failed",
-      },
-    });
+    await failGeneration(
+      genImage.imageProjectId,
+      genImage.id,
+      task?.id,
+      body.error ?? "Replicate prediction failed"
+    );
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function failGeneration(
+  imageProjectId: string,
+  generatedImageId: string,
+  taskId: string | undefined,
+  errorMessage: string
+) {
+  await db.generatedImage.update({
+    where: { id: generatedImageId },
+    data: { status: "FAILED", errorMessage },
+  });
+  if (!taskId) return;
+  await db.task.update({
+    where: { id: taskId },
+    data: { status: "FAILED", errorMessage },
+  });
+  await releaseGeneratingProject(imageProjectId, errorMessage);
 }

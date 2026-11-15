@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import { downloadBlob, downloadUrls } from "@/lib/download-image";
 import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
 import { saveGeneratedImage } from "@/lib/persist-project-image";
+import { projectGenerationError } from "@/lib/project-fetch-error";
+import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
 
 interface ProductImage {
@@ -97,12 +99,18 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const { t, locale } = useT();
 
+  function copy(key: string, fallback: string) {
+    const value = t(key);
+    return value && value !== key ? value : fallback;
+  }
+
   const fetchProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/products/${params.id}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setProject(data.project);
+      setError(projectGenerationError(data.project, t("error.generateFailed")));
       setLoading(false);
     } catch {
       setError(t("error.loadFailed"));
@@ -153,6 +161,14 @@ export default function ProductDetailPage() {
         const data = await res.json();
 
         if (data.task.status === "SUCCEEDED" || data.task.status === "FAILED") {
+          if (data.task.status === "FAILED") {
+            const detail = typeof data.task.errorMessage === "string" ? data.task.errorMessage.trim() : "";
+            const message = detail
+              ? `${t("error.generateFailed")}: ${detail}`
+              : t("error.generateFailed");
+            setError(message);
+            toast.error(message);
+          }
           setGeneratingIds((prev) => {
             const next = new Set(prev);
             next.delete(productImageId);
@@ -207,7 +223,7 @@ export default function ProductDetailPage() {
           startPolling(data.taskId, productImageId);
           return;
         } else {
-          throw new Error(data.error || t("error.generateFailed"));
+          throw new Error(data.message || data.error || t("error.generateFailed"));
         }
       } else {
         const data = await res.json();
@@ -216,6 +232,7 @@ export default function ProductDetailPage() {
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("error.generateFailed"));
+      fetchProject();
     }
   }
 
@@ -704,6 +721,19 @@ export default function ProductDetailPage() {
                 <h3 className="text-lg font-semibold">{t("detail.noImages")}</h3>
                 <p className="text-sm text-muted-foreground mt-1">{t("detail.noImagesDesc")}</p>
               </div>
+              <div className="w-full max-w-[280px] text-left">
+                <ImageUploadZone
+                  projectId={project.id}
+                  currentImage={null}
+                  onImageChange={() => { void fetchProject(); }}
+                />
+              </div>
+              <Link href={`/studio?projectId=${project.id}`}>
+                <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
+                  <Sparkles size={14} />
+                  {copy("detail.backToStudio", "Back to studio")}
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         )}

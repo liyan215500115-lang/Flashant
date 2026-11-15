@@ -67,53 +67,19 @@ describe("getQuota", () => {
 });
 
 // ── checkGenerationQuota ─────────────────────────────────────────────────
+// Real quotas are disabled. These cases lock the allow-through policy the
+// gateway must match. Do not assert a FREE cap of 10 until that policy returns.
 describe("checkGenerationQuota", () => {
-  it("allows when usage is below limit", async () => {
-    dbMock.subscription.findUnique.mockResolvedValue({
-      planTier: "PRO",
-      currentPeriodStart: new Date("2026-05-01"),
-    });
-    dbMock.generatedImage.count.mockResolvedValue(15);
+  it("allows through with an unlimited limit while quotas are disabled", async () => {
+    dbMock.subscription.findUnique.mockResolvedValue(null);
+    dbMock.generatedImage.count.mockResolvedValue(11);
 
-    const result = await checkGenerationQuota("user_1");
-    expect(result.allowed).toBe(true);
-    expect(result.used).toBe(15);
-  });
-
-  it("blocks when usage has reached limit", async () => {
-    dbMock.subscription.findUnique.mockResolvedValue({
-      planTier: "FREE",
-      currentPeriodStart: new Date("2026-05-01"),
-    });
-    dbMock.generatedImage.count.mockResolvedValue(10);
-
-    const result = await checkGenerationQuota("user_2");
-    expect(result.allowed).toBe(false);
-    expect(result.used).toBe(10);
-    expect(result.limit).toBe(10);
-    expect(result.tier).toBe("FREE");
-  });
-
-  it("always allows ENTERPRISE (unlimited)", async () => {
-    dbMock.subscription.findUnique.mockResolvedValue({
-      planTier: "ENTERPRISE",
-      currentPeriodStart: new Date("2026-05-01"),
-    });
-
-    const result = await checkGenerationQuota("user_3");
+    const result = await checkGenerationQuota("user_free");
     expect(result.allowed).toBe(true);
     expect(result.used).toBe(0);
     expect(result.limit).toBe(-1);
-  });
-
-  it("defaults to FREE tier when no subscription exists", async () => {
-    dbMock.subscription.findUnique.mockResolvedValue(null);
-    dbMock.generatedImage.count.mockResolvedValue(0);
-
-    const result = await checkGenerationQuota("user_4");
-    expect(result.tier).toBe("FREE");
-    expect(result.limit).toBe(10);
-    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe("ENTERPRISE");
+    expect(dbMock.generatedImage.count).not.toHaveBeenCalled();
   });
 });
 

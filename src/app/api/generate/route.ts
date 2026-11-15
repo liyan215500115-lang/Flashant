@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
 import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
+import { releaseGeneratingProject } from "@/lib/project-status";
 
 export const maxDuration = 60; // seconds — Vercel Pro max
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
@@ -545,12 +546,18 @@ export async function POST(req: Request) {
       } catch { /* skip failed prediction */ }
     }
 
-    // Mark project as generated
+    // A batch that produced nothing must not stay GENERATING, and must not be
+    // marked GENERATED. Leave GENERATING only while some other task is in flight.
     const pendingCount = await db.task.count({
       where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
     });
     if (pendingCount === 0) {
-      await db.imageProject.update({ where: { id: imageProjectId }, data: { status: "GENERATED" } });
+      await db.imageProject.update({
+        where: { id: imageProjectId },
+        data: generated.length > 0
+          ? { status: "GENERATED", errorMessage: null }
+          : { status: "FAILED", errorMessage: "All predictions failed" },
+      });
     }
 
     if (generated.length === 0) {
@@ -781,19 +788,17 @@ export async function POST(req: Request) {
         url: imageUrl,
       });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
       await db.task.update({
         where: { id: task.id },
         data: {
           status: "FAILED",
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
+          errorMessage: message,
         },
       });
-      await db.imageProject.update({
-        where: { id: imageProjectId },
-        data: { status: "FAILED" },
-      });
+      await releaseGeneratingProject(imageProjectId, message);
       return NextResponse.json(
-        { error: "generation_failed", message: error instanceof Error ? error.message : "Unknown error" },
+        { error: "generation_failed", message },
         { status: 500 }
       );
     }
@@ -912,18 +917,24 @@ export async function POST(req: Request) {
         });
       }
 
-      await db.task.update({ where: { id: task.id }, data: { status: "FAILED" } });
+      await db.task.update({
+        where: { id: task.id },
+        data: { status: "FAILED", errorMessage: "No output from provider" },
+      });
+      await releaseGeneratingProject(imageProjectId, "No output from provider");
       return NextResponse.json(
-        { error: "generation_failed", message: "All attempts failed" },
+        { error: "generation_failed", message: "No output from provider" },
         { status: 500 }
       );
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
       await db.task.update({
         where: { id: task.id },
-        data: { status: "FAILED", errorMessage: error instanceof Error ? error.message : "Unknown error" },
+        data: { status: "FAILED", errorMessage: message },
       });
+      await releaseGeneratingProject(imageProjectId, message);
       return NextResponse.json(
-        { error: "generation_failed", message: error instanceof Error ? error.message : "Unknown error" },
+        { error: "generation_failed", message },
         { status: 500 }
       );
     }
@@ -1017,19 +1028,25 @@ export async function POST(req: Request) {
       });
     }
 
-    // All generations failed
-    await db.task.update({ where: { id: task.id }, data: { status: "FAILED" } });
+    // All generations failed — do not leave the project in GENERATING.
+    await db.task.update({
+      where: { id: task.id },
+      data: { status: "FAILED", errorMessage: "No output from provider" },
+    });
+    await releaseGeneratingProject(imageProjectId, "No output from provider");
     return NextResponse.json(
-      { error: "generation_failed", message: "All attempts failed" },
+      { error: "generation_failed", message: "No output from provider" },
       { status: 500 }
     );
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     await db.task.update({
       where: { id: task.id },
-      data: { status: "FAILED", errorMessage: error instanceof Error ? error.message : "Unknown error" },
+      data: { status: "FAILED", errorMessage: message },
     });
+    await releaseGeneratingProject(imageProjectId, message);
     return NextResponse.json(
-      { error: "generation_failed", message: error instanceof Error ? error.message : "Unknown error" },
+      { error: "generation_failed", message },
       { status: 500 }
     );
   }
