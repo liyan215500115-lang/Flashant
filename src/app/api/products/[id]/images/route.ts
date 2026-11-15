@@ -22,7 +22,16 @@ export async function DELETE(
   // Support deleting both product images and generated images
   const isProductImage = await db.productImage.findFirst({ where: { id: imageId, imageProjectId: projectId } });
   if (isProductImage) {
-    await db.productImage.delete({ where: { id: imageId } });
+    // GeneratedImage.productImage has no onDelete, so Prisma Restrict rejects
+    // productImage.delete while any row still points at this original.
+    // Clear the FK and hide the derivatives in the same transaction.
+    await db.$transaction(async (tx) => {
+      await tx.generatedImage.updateMany({
+        where: { productImageId: imageId, imageProjectId: projectId },
+        data: { status: "DELETED", productImageId: null },
+      });
+      await tx.productImage.delete({ where: { id: imageId } });
+    });
     return NextResponse.json({ success: true });
   }
 

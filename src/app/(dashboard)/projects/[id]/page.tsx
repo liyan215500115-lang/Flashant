@@ -19,6 +19,7 @@ import {
   Type,
   X,
   Check,
+  Download,
 } from "lucide-react";
 import {
   Dialog,
@@ -30,6 +31,9 @@ import {
 } from "@/components/ui/dialog";
 import { useT } from "@/components/i18n-provider";
 import { toast } from "sonner";
+import { downloadBlob, downloadUrls } from "@/lib/download-image";
+import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
+import { saveGeneratedImage } from "@/lib/persist-project-image";
 
 
 interface ProductImage {
@@ -79,13 +83,17 @@ export default function ProductDetailPage() {
   const pollTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editingImage, setEditingImage] = useState<{url:string; name:string} | null>(null);
+  const [editingImage, setEditingImage] = useState<{ url: string; name: string; productImageId: string } | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState(false);
   const [textEditImg, setTextEditImg] = useState<{url:string; id:string} | null>(null);
   const [textInput, setTextInput] = useState("");
-  const [deleteImagesDialogOpen, setDeleteImagesDialogOpen] = useState(false);
+  const [textSaving, setTextSaving] = useState(false);
+  const [imageDeleteTarget, setImageDeleteTarget] = useState<
+    { kind: "batch" } | { kind: "single"; imageId: string; removesDerivatives: boolean } | null
+  >(null);
+  const [imageDeleting, setImageDeleting] = useState(false);
   const router = useRouter();
   const { t, locale } = useT();
 
@@ -211,15 +219,79 @@ export default function ProductDetailPage() {
     }
   }
 
-  async function handleDeleteImage(imageId: string) {
+  function refreshQuota() {
+    fetch("/api/quota").then(r => r.json()).then(d => {
+      if (d.used !== undefined) setQuota({ used: d.used, limit: d.limit === -1 ? Infinity : d.limit });
+    }).catch(() => {});
+  }
+
+  async function confirmImageDelete() {
+    if (!imageDeleteTarget || imageDeleting) return;
+    const ids = imageDeleteTarget.kind === "batch" ? [...selectedIds] : [imageDeleteTarget.imageId];
+    if (ids.length === 0) return;
+    setImageDeleting(true);
     try {
-      await fetch(`/api/products/${params.id}/images`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageId }) });
+      const results = await Promise.allSettled(
+        ids.map(async (id) => {
+          const res = await fetch(`/api/products/${params.id}/images`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageId: id }),
+          });
+          if (!res.ok) throw new Error("delete failed");
+        })
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) toast.error(`${failed} 张删除失败，请重试`);
+      else toast.success(ids.length > 1 ? `已删除 ${ids.length} 张图片` : "已删除");
+      if (imageDeleteTarget.kind === "batch") setSelectedIds(new Set());
+      setImageDeleteTarget(null);
       fetchProject();
-      // Refresh quota after deletion
-      fetch("/api/quota").then(r => r.json()).then(d => {
-        if (d.used !== undefined) setQuota({ used: d.used, limit: d.limit === -1 ? Infinity : d.limit });
-      }).catch(() => {});
-    } catch {}
+      refreshQuota();
+    } finally {
+      setImageDeleting(false);
+    }
+  }
+
+  async function handleEditorSave(_url: string, blob: Blob) {
+    if (!project || !editingImage) return;
+    const base = editingImage.name.replace(/\.[^.]+$/, "") || "image";
+    try {
+      await saveGeneratedImage(project.id, blob, {
+        fileName: `${base}-edited.png`,
+        productImageId: editingImage.productImageId || project.productImages[0]?.id || null,
+        promptUsed: "manual-edit",
+      });
+      toast.success("已保存到项目");
+      setEditingImage(null);
+      await fetchProject();
+    } catch (error) {
+      toast.error("保存失败，请重试");
+      throw error;
+    }
+  }
+
+  async function handleAddText() {
+    if (!project || !textEditImg || !textInput.trim() || textSaving) return;
+    setTextSaving(true);
+    try {
+      const blob = await renderTextOverlay(textEditImg.url, textInput.trim());
+      const source = project.generatedImages.find((img) => img.id === textEditImg.id);
+      await saveGeneratedImage(project.id, blob, {
+        fileName: "image-text.png",
+        productImageId: source?.productImageId || project.productImages[0]?.id || null,
+        promptUsed: "text-overlay",
+      });
+      downloadBlob(blob, "image-text.png");
+      toast.success("已保存到项目并开始下载");
+      setTextEditImg(null);
+      setTextInput("");
+      await fetchProject();
+    } catch {
+      toast.error("保存失败，请重试");
+    } finally {
+      setTextSaving(false);
+    }
   }
 
   async function handleRegenerateImage(promptUsed: string, productImageId: string) {
@@ -304,6 +376,19 @@ export default function ProductDetailPage() {
   const succeededImages = project.generatedImages.filter(
     (img) => img.status === "SUCCEEDED"
   );
+  const deleteCount = imageDeleteTarget?.kind === "batch" ? selectedIds.size : 1;
+  const removesDerivatives = imageDeleteTarget?.kind === "single"
+    ? imageDeleteTarget.removesDerivatives
+    : imageDeleteTarget?.kind === "batch"
+      ? [...selectedIds].some((id) =>
+          project.productImages.some((pi) => pi.id === id) &&
+          project.generatedImages.some((img) => img.productImageId === id && img.status !== "DELETED")
+        )
+      : false;
+  const deleteCopy = imageDeleteConfirmCopy({
+    count: Math.max(deleteCount, 1),
+    removesDerivatives,
+  });
 
   return (
     <div className="max-w-[960px] mx-auto flex flex-col gap-6">
@@ -334,7 +419,7 @@ export default function ProductDetailPage() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {editMode ? (
             <>
               <span className="text-xs text-muted-foreground">
@@ -344,8 +429,27 @@ export default function ProductDetailPage() {
                 variant="outline" size="sm" className="cursor-pointer gap-1"
                 disabled={selectedIds.size === 0}
                 onClick={() => {
-                  const first = [...selectedIds][0];
-                  const img = succeededImages.find(i => i.id === first);
+                  const items: { url: string; fileName: string }[] = [];
+                  for (const id of selectedIds) {
+                    const img = succeededImages.find((i) => i.id === id);
+                    if (img) {
+                      items.push({ url: img.url, fileName: `flashant-${img.id.slice(0, 8)}.png` });
+                      continue;
+                    }
+                    const pi = project.productImages.find((p) => p.id === id);
+                    if (pi) items.push({ url: pi.originalUrl, fileName: pi.fileName || `flashant-${id.slice(0, 8)}.png` });
+                  }
+                  void downloadUrls(items).then(({ failed }) => {
+                    if (failed > 0) toast.error(`${failed} 张下载失败`);
+                  });
+                }}>
+                <Download size={14} />下载
+              </Button>
+              <Button
+                variant="outline" size="sm" className="cursor-pointer gap-1"
+                disabled={selectedIds.size === 0}
+                onClick={() => {
+                  const img = succeededImages.find((i) => selectedIds.has(i.id));
                   if (img) { setTextEditImg({url: img.url, id: img.id}); setTextInput(""); }
                 }}>
                 <Type size={14} />加文字
@@ -366,7 +470,7 @@ export default function ProductDetailPage() {
               <Button
                 variant="outline" size="sm" className="cursor-pointer gap-1 text-zinc-500 hover:text-red-600 hover:border-red-200"
                 disabled={selectedIds.size === 0}
-                onClick={() => setDeleteImagesDialogOpen(true)}>
+                onClick={() => setImageDeleteTarget({ kind: "batch" })}>
                 <Trash2 size={14} />删除
               </Button>
               <Button variant="default" size="sm" className="cursor-pointer" onClick={() => { setEditMode(false); setSelectedIds(new Set()); }}>
@@ -375,10 +479,30 @@ export default function ProductDetailPage() {
             </>
           ) : (
             <>
-              {project.status === "GENERATED" && (
+              {succeededImages.length > 0 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="cursor-pointer gap-1.5"
+                  onClick={() => {
+                    void downloadUrls(
+                      succeededImages.map((img) => ({
+                        url: img.url,
+                        fileName: `flashant-${img.id.slice(0, 8)}.png`,
+                      }))
+                    ).then(({ failed }) => {
+                      if (failed > 0) toast.error(`${failed} 张下载失败`);
+                    });
+                  }}
+                >
+                  <Download size={14} />
+                  下载
+                </Button>
+              )}
+              {succeededImages.length > 0 && (
                 <Link href={`/projects/${project.id}/publish`}>
-                  <Button variant="default" size="sm" className="cursor-pointer">
-                    {t("detail.publishToPlatform")}
+                  <Button variant="outline" size="sm" className="cursor-pointer">
+                    发布到 Shopify
                   </Button>
                 </Link>
               )}
@@ -426,7 +550,7 @@ export default function ProductDetailPage() {
                   editMode && selectedIds.has(pi.id) ? "border-brand-500 ring-2 ring-brand-500" : "border-zinc-200"
                 } cursor-pointer`}
                   draggable={!editMode}
-                  onDragStart={(e) => { if (editMode) return; e.dataTransfer.setData("source", "product"); e.dataTransfer.setData("url", pi.originalUrl); e.dataTransfer.setData("name", pi.fileName); }}
+                  onDragStart={(e) => { if (editMode) return; e.dataTransfer.setData("source", "product"); e.dataTransfer.setData("url", pi.originalUrl); e.dataTransfer.setData("name", pi.fileName); e.dataTransfer.setData("productImageId", pi.id); }}
                   onClick={() => {
                     if (editMode) {
                       setSelectedIds(prev => {
@@ -459,13 +583,20 @@ export default function ProductDetailPage() {
                 )}
                 {/* Hover delete icon */}
                 {!editMode && (
-                  <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm("删除这张产品图？相关的生成图也会被删除。")) handleDeleteImage(pi.id); }}
+                  <button type="button" onClick={(e) => {
+                    e.stopPropagation();
+                    setImageDeleteTarget({
+                      kind: "single",
+                      imageId: pi.id,
+                      removesDerivatives: project.generatedImages.some((img) => img.productImageId === pi.id && img.status !== "DELETED"),
+                    });
+                  }}
                     className="absolute top-2 left-2 p-1 rounded-md bg-white/80 hover:bg-red-50 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm">
                     <Trash2 size={12} />
                   </button>
                 )}
                 {!editMode && (
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: pi.originalUrl, name: pi.fileName }); }}
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: pi.originalUrl, name: pi.fileName, productImageId: pi.id }); }}
                     className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 hover:text-zinc-800 transition-all flex items-center gap-1">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                     编辑
@@ -496,7 +627,11 @@ export default function ProductDetailPage() {
                             handleReorder(e.dataTransfer.getData("id"), img.id);
                           }
                           if (src === "product") {
-                            setEditingImage({ url: e.dataTransfer.getData("url"), name: e.dataTransfer.getData("name") });
+                            setEditingImage({
+                              url: e.dataTransfer.getData("url"),
+                              name: e.dataTransfer.getData("name"),
+                              productImageId: e.dataTransfer.getData("productImageId"),
+                            });
                           }
                         }}
                         className={`relative group w-[160px] h-[160px] rounded-lg overflow-hidden bg-muted border-2 border-zinc-200 ${
@@ -527,9 +662,20 @@ export default function ProductDetailPage() {
                   }} />
                         {/* Hover delete icon */}
                         {!editMode && (
-                          <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm("删除这张图片？")) handleDeleteImage(img.id); }}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setImageDeleteTarget({ kind: "single", imageId: img.id, removesDerivatives: false }); }}
                             className="absolute top-2 left-2 p-1 rounded-md bg-white/80 hover:bg-red-50 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10">
                             <Trash2 size={12} />
+                          </button>
+                        )}
+                        {!editMode && (
+                          <button type="button" title="下载" aria-label="下载" onClick={(e) => {
+                            e.stopPropagation();
+                            void downloadUrls([{ url: img.url, fileName: `flashant-${img.id.slice(0, 8)}.png` }]).then(({ failed }) => {
+                              if (failed > 0) toast.error("下载失败");
+                            });
+                          }}
+                            className="absolute top-2 right-2 p-1 rounded-md bg-white/80 hover:bg-white text-zinc-500 hover:text-zinc-900 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10">
+                            <Download size={12} />
                           </button>
                         )}
                         {editMode && (
@@ -573,13 +719,32 @@ export default function ProductDetailPage() {
 
       {/* Lightbox */}
       {lightboxUrl && !textEditImg && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center cursor-pointer" onClick={() => setLightboxUrl(null)}>
-          <img src={lightboxUrl} alt="" className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl"
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-4 cursor-pointer" onClick={() => setLightboxUrl(null)}>
+          <img src={lightboxUrl} alt="" className="max-w-[90vw] max-h-[80vh] rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
             onError={(e) => {
               const t = e.currentTarget;
               t.onerror = null;
               t.style.display = "none";
             }} />
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-lg cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              const generated = project.generatedImages.find((img) => img.url === lightboxUrl);
+              const original = project.productImages.find((img) => img.originalUrl === lightboxUrl);
+              const fileName = generated
+                ? `flashant-${generated.id.slice(0, 8)}.png`
+                : original?.fileName || "flashant-image.png";
+              void downloadUrls([{ url: lightboxUrl, fileName }]).then(({ failed }) => {
+                if (failed > 0) toast.error("下载失败");
+              });
+            }}
+          >
+            <Download size={16} />
+            下载
+          </button>
         </div>
       )}
 
@@ -592,46 +757,15 @@ export default function ProductDetailPage() {
             <input type="text" value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  const i = document.createElement("img"); i.crossOrigin = "anonymous";
-                  i.onload = () => {
-                    const canvas = document.createElement("canvas");
-                    canvas.width = i.width; canvas.height = i.height;
-                    const ctx = canvas.getContext("2d")!;
-                    ctx.drawImage(i, 0, 0);
-                    const fs = Math.max(24, Math.floor(i.width / 20));
-                    ctx.font = `700 ${fs}px Inter, sans-serif`;
-                    ctx.fillStyle = "#1a1a1a";
-                    ctx.textAlign = "center";
-                    ctx.fillText(textInput, i.width / 2, i.height / 2 + fs * 0.3);
-                    canvas.toBlob((b) => { if (b) { const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = "image-text.png"; a.click(); } }, "image/png");
-                  };
-                  i.onerror = () => {};
-                  i.src = textEditImg.url;
-                }
+                if (e.key === "Enter") void handleAddText();
               }}
-              placeholder="输入文字后按回车下载..."
+              placeholder="输入文字，保存到项目并下载"
+              disabled={textSaving}
               className="w-64 h-9 rounded-lg border border-zinc-200 px-3 text-sm focus:border-brand-500 focus:outline-none" />
             <Button size="sm" className="cursor-pointer bg-brand-900 hover:bg-brand-800"
-              onClick={async () => {
-                if (!textInput) return;
-                const i = document.createElement("img"); i.crossOrigin = "anonymous";
-                i.onload = () => {
-                  const canvas = document.createElement("canvas");
-                  canvas.width = i.width; canvas.height = i.height;
-                  const ctx = canvas.getContext("2d")!;
-                  ctx.drawImage(i, 0, 0);
-                  const fs = Math.max(24, Math.floor(i.width / 20));
-                  ctx.font = `700 ${fs}px Inter, sans-serif`;
-                  ctx.fillStyle = "#1a1a1a";
-                  ctx.textAlign = "center";
-                  ctx.fillText(textInput, i.width / 2, i.height / 2 + fs * 0.3);
-                  canvas.toBlob((b) => { if (b) { const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = "image-text.png"; a.click(); } }, "image/png");
-                };
-                i.onerror = () => {};
-                i.src = textEditImg.url;
-              }}>
-              下载
+              disabled={!textInput.trim() || textSaving}
+              onClick={() => { void handleAddText(); }}>
+              {textSaving ? "保存中..." : "保存并下载"}
             </Button>
             <button onClick={() => setTextEditImg(null)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800">
               <X size={18} />
@@ -640,42 +774,25 @@ export default function ProductDetailPage() {
         </div>
       )}
 
-      {/* Batch delete confirmation dialog */}
-      <Dialog open={deleteImagesDialogOpen} onOpenChange={setDeleteImagesDialogOpen}>
+      {/* Single and batch image delete confirmation */}
+      <Dialog open={imageDeleteTarget !== null} onOpenChange={(open) => { if (!open && !imageDeleting) setImageDeleteTarget(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>删除选中图片</DialogTitle>
+            <DialogTitle>{deleteCopy.title}</DialogTitle>
             <DialogDescription>
-              确定要删除选中的 {selectedIds.size} 张图片吗？此操作不可撤销。
+              {deleteCopy.description}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDeleteImagesDialogOpen(false)} className="cursor-pointer">
+            <Button variant="outline" size="sm" onClick={() => setImageDeleteTarget(null)} disabled={imageDeleting} className="cursor-pointer">
               取消
             </Button>
             <Button
               variant="destructive" size="sm"
-              onClick={async () => {
-                const results = await Promise.allSettled(
-                  [...selectedIds].map(id =>
-                    fetch(`/api/products/${params.id}/images`, {
-                      method: "DELETE", headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ imageId: id })
-                    })
-                  )
-                );
-                const failed = results.filter(r => r.status === "rejected").length;
-                if (failed > 0) toast.error(`${failed} 张删除失败，请重试`);
-                else toast.success(`已删除 ${selectedIds.size} 张图片`);
-                setSelectedIds(new Set());
-                setDeleteImagesDialogOpen(false);
-                fetchProject();
-                fetch("/api/quota").then(r => r.json()).then(d => {
-                  if (d.used !== undefined) setQuota({ used: d.used, limit: d.limit === -1 ? Infinity : d.limit });
-                }).catch(() => {});
-              }}
+              onClick={() => { void confirmImageDelete(); }}
+              disabled={imageDeleting}
               className="cursor-pointer">
-              删除 {selectedIds.size} 张
+              {imageDeleting ? "删除中..." : deleteCopy.confirmLabel}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -686,7 +803,7 @@ export default function ProductDetailPage() {
         <ImageEditor
           imageUrl={editingImage.url}
           fileName={editingImage.name}
-          onSave={(newUrl) => { setEditingImage(null); }}
+          onSave={handleEditorSave}
           onClose={() => setEditingImage(null)}
         />
       )}
@@ -724,6 +841,35 @@ export default function ProductDetailPage() {
       </Dialog>
     </div>
   );
+}
+
+function renderTextOverlay(imageUrl: string, text: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("canvas"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      const fontSize = Math.max(24, Math.floor(img.width / 20));
+      ctx.font = `700 ${fontSize}px Inter, sans-serif`;
+      ctx.fillStyle = "#1a1a1a";
+      ctx.textAlign = "center";
+      ctx.fillText(text, img.width / 2, img.height / 2 + fontSize * 0.3);
+      canvas.toBlob((blob) => {
+        if (!blob) reject(new Error("blob"));
+        else resolve(blob);
+      }, "image/png");
+    };
+    img.onerror = () => reject(new Error("image"));
+    img.src = imageUrl;
+  });
 }
 
 function StatusBadge({ status }: { status: string }) {

@@ -277,8 +277,9 @@
     "detailImages": "Detail Images",
     "detailImagesDesc": "Generate 14 types of product listing detail images",
     "sectionProductImage": "Product Image",
-    "sectionPublishSettings": "Publish Settings",
-    "sectionGenerateSettings": "Generate Settings"
+    "sectionPublishSettings": "Export specs",
+    "sectionGenerateSettings": "Generate Settings",
+    "exportSpecsHint": "Images are generated to the selected platform's size and background rules. Nothing is published to a store."
   },
   "onboarding": {
     "welcome": "Welcome to Flashant",
@@ -507,7 +508,7 @@
     "enhancing": "AI analyzing...",
     "uploadHint": "PNG / JPG / WebP",
     "noProject": "Create a project first",
-    "publishGroup": "Publish Settings",
+    "publishGroup": "Export specs",
     "generateGroup": "Generation Settings",
     "exportLabel": "Export",
     "enhancePrompt": "Enhance",
@@ -522,8 +523,8 @@
     "engineOpenai": "GPT (DALL·E 3)",
     "engineSdxl": "SDXL",
     "enginePlayground": "Playground v2.5",
-    "platformLabel": "Target Platform",
-    "platformNone": "No platform (generate only)",
+    "platformLabel": "Generate to platform specs",
+    "platformNone": "No spec (generate only)",
     "brandLabel": "Brand Preset",
     "brandNone": "No brand preset",
     "imageSpec": "{name} Image Specs",

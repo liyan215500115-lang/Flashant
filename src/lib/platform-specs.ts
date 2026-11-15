@@ -59,7 +59,8 @@ export const PLATFORM_SPECS: Record<string, PlatformImageSpec> = {
   TIKTOK_SHOP: {
     platform: "TIKTOK_SHOP",
     name: "TikTok Shop",
-    publishable: true,
+    // Spec export only. Shopify is the sole one-click publish path.
+    publishable: false,
     dimensions: "1080 × 1080 px",
     width: 1080,
     height: 1080,

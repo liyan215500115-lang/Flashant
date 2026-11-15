@@ -61,7 +61,7 @@ export function StudioControlPanel({
         )}
       </div>
 
-      {/* ── 发布设置 ── */}
+      {/* ── 导出规格 ── */}
       <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-700/70 shadow-sm p-4 flex flex-col gap-3.5">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center">
@@ -69,6 +69,7 @@ export function StudioControlPanel({
           </div>
           <span className="text-xs font-semibold text-zinc-700">{t("studio.sectionPublishSettings")}</span>
         </div>
+        <p className="text-[11px] leading-relaxed text-zinc-500">{t("studio.exportSpecsHint")}</p>
         <PublishDestination value={targetPlatform} onChange={onPlatformChange} language={targetLanguage} onLanguageChange={onLanguageChange} />
         <BrandPresetSelector value={brandPresetId} onChange={onBrandPresetChange} />
       </div>

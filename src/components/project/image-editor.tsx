@@ -1,43 +1,64 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { RotateCw, Sun, Contrast, Download, X, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 
 interface ImageEditorProps {
   imageUrl: string;
   fileName: string;
-  onSave: (newUrl: string, blob: Blob) => void;
+  onSave: (newUrl: string, blob: Blob) => void | Promise<void>;
   onClose: () => void;
 }
 
-export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditorProps) {
+export function ImageEditor({ imageUrl, onSave, onClose }: ImageEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [tool, setTool] = useState<"crop" | "rotate" | "brightness" | "contrast" | "text" | null>(null);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const [rotation, setRotation] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [loadId, setLoadId] = useState(0);
   const [textInput, setTextInput] = useState("");
   const [textColor, setTextColor] = useState("#ffffff");
   const [textSize, setTextSize] = useState(32);
+  const [saving, setSaving] = useState(false);
+  const ready = loadedUrl === imageUrl;
+  const failed = failedUrl === imageUrl;
 
   useEffect(() => {
+    let cancelled = false;
     const img = new window.Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => { imgRef.current = img; setLoading(false); redraw(); };
-    img.onerror = (e) => { console.error("Image load failed", e); setLoading(false); };
+    img.onload = () => {
+      if (cancelled) return;
+      imgRef.current = img;
+      setFailedUrl(null);
+      setLoadedUrl(imageUrl);
+      setLoadId((n) => n + 1);
+    };
+    img.onerror = (e) => {
+      if (cancelled) return;
+      console.error("Image load failed", e);
+      imgRef.current = null;
+      setLoadedUrl(null);
+      setFailedUrl(imageUrl);
+    };
     // Add timestamp to bypass cache/CORS issues
     img.src = imageUrl.startsWith("http") ? imageUrl : imageUrl + (imageUrl.includes("?") ? "&" : "?") + "_t=" + Date.now();
+    return () => { cancelled = true; };
   }, [imageUrl]);
 
-  const redraw = useCallback(() => {
+  useEffect(() => {
     const img = imgRef.current;
     const canvas = canvasRef.current;
     if (!img || !canvas) return;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     canvas.width = img.width;
     canvas.height = img.height;
     ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
@@ -59,20 +80,32 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
       ctx.fillText(textInput, img.width / 2, img.height * 0.85);
       ctx.textAlign = "left";
     }
-  }, [brightness, contrast, rotation, textInput, textColor, textSize]);
+  }, [loadId, brightness, contrast, rotation, textInput, textColor, textSize]);
 
   function handleSave() {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.toBlob((blob) => {
-      if (!blob) return;
+    if (!canvas || saving) return;
+    setSaving(true);
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        toast.error("无法导出图片，请重试");
+        setSaving(false);
+        return;
+      }
       const url = URL.createObjectURL(blob);
-      onSave(url, blob);
-    }, "image/png", 1.0);
+      try {
+        await onSave(url, blob);
+      } catch {
+        // Caller surfaces the error and keeps the editor open.
+      } finally {
+        URL.revokeObjectURL(url);
+        setSaving(false);
+      }
+    }, "image/png");
   }
 
-  if (loading) return <div className="text-center py-12 text-zinc-400">加载中...</div>;
-  if (!imgRef.current) return <div className="text-center py-12 text-zinc-400">图片加载失败，请重试</div>;
+  if (!ready && !failed) return <div className="text-center py-12 text-zinc-400">加载中...</div>;
+  if (failed) return <div className="text-center py-12 text-zinc-400">图片加载失败，请重试</div>;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
@@ -81,8 +114,8 @@ export function ImageEditor({ imageUrl, fileName, onSave, onClose }: ImageEditor
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
           <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">编辑图片</h3>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onClose} className="gap-1 cursor-pointer"><X size={14} /> 取消</Button>
-            <Button size="sm" onClick={handleSave} className="gap-1 cursor-pointer bg-brand-900 hover:bg-brand-800 text-white"><Download size={14} /> 保存</Button>
+            <Button size="sm" variant="outline" onClick={onClose} disabled={saving} className="gap-1 cursor-pointer"><X size={14} /> 取消</Button>
+            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1 cursor-pointer bg-brand-900 hover:bg-brand-800 text-white"><Download size={14} /> {saving ? "保存中..." : "保存"}</Button>
           </div>
         </div>
 
