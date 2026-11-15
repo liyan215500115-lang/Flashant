@@ -331,7 +331,7 @@
     "hero": {
       "headline": "Des photos produit en un éclair.",
       "headlineHighlight": "Pas de studio. Pas d'attente.",
-      "subheadline": "Déposez une photo, choisissez un style et obtenez des visuels prêts pour chaque plateforme en quelques secondes. 14 marketplaces.",
+      "subheadline": "Importez une photo produit, choisissez un style et téléchargez les images en quelques secondes. Connectez Shopify quand vous voulez publier.",
       "cta": "Commencer gratuitement",
       "ctaSub": "10 crédits offerts par mois. Sans carte."
     },
@@ -343,11 +343,11 @@
       "footnote": "La même montre. Photo du téléphone → rendu Flashant."
     },
     "trustCloud": {
-      "title": "14 marketplaces. Un bouton.",
-      "subtitle": "Chaque image suit automatiquement le format, le fond et les marges de la plateforme.",
-      "badge": "Publication en un clic",
+      "title": "Téléchargez d'abord. Publiez sur Shopify quand vous êtes prêt.",
+      "subtitle": "Les téléchargements conservent l'image d'origine. Les notes de taille et de nom de fichier pour Amazon, TikTok Shop et les autres plateformes sont indicatives : elles ne redimensionnent pas, ne convertissent pas et ne rendent pas une fiche conforme.",
+      "badge": "Téléchargement d'abord",
       "more": "+10 de plus",
-      "modalTitle": "14 plateformes prises en charge"
+      "modalTitle": "Plateformes"
     },
     "styleShowcase": {
       "title": "Trois looks. De vrais rendus.",
@@ -394,11 +394,11 @@
       },
       "step2": {
         "title": "Choisissez un style",
-        "desc": "Choisissez le look et la plateforme. Le moteur gère le format et le fond."
+        "desc": "Choisissez un rendu. Vous pouvez ajouter une plateforme cible pour des notes de taille et de nom de fichier."
       },
       "step3": {
-        "title": "Téléchargez ou publiez",
-        "desc": "Récupérez l'ensemble en .zip, ou publiez directement sur Shopify ou TikTok Shop."
+        "title": "Télécharger",
+        "desc": "Récupérez l'ensemble en .zip. Si votre boutique Shopify est connectée, vous pouvez aussi y publier."
       }
     },
     "roi": {
@@ -423,9 +423,9 @@
           "new": "Décompté du quota du mois, sans frais en plus"
         },
         "compliance": {
-          "label": "Conformité",
-          "old": "Contrôle manuel par plateforme",
-          "new": "Ajustement automatique à l'export"
+          "label": "Règles de fiche",
+          "old": "Vous vérifiez chaque plateforme",
+          "new": "Notes de taille et de nom de fichier à l'export ; vous vérifiez encore la fiche"
         }
       },
       "winner": "Flashant coûte environ 0,50–1 USD par SKU."
@@ -453,7 +453,7 @@
           "desc": "Pour commencer",
           "feature1": "10 / mois",
           "feature2": "5 modèles de scène",
-          "feature3": "Export vers 14 plateformes",
+          "feature3": "Notes de taille et de nom de fichier pour les principales plateformes",
           "feature4": "Aide au prompt par IA"
         },
         "pro": {

@@ -331,7 +331,7 @@
     "hero": {
       "headline": "Foto prodotto in un attimo.",
       "headlineHighlight": "Niente studio. Niente attesa.",
-      "subheadline": "Carica una foto, scegli uno stile e ottieni immagini pronte per ogni piattaforma in pochi secondi. 14 marketplace.",
+      "subheadline": "Carica una foto prodotto, scegli uno stile e scarica le immagini in pochi secondi. Collega Shopify quando vuoi pubblicare.",
       "cta": "Inizia gratis",
       "ctaSub": "10 crediti gratis al mese. Senza carta."
     },
@@ -343,11 +343,11 @@
       "footnote": "Lo stesso orologio. Foto del telefono → output Flashant."
     },
     "trustCloud": {
-      "title": "14 marketplace. Un pulsante.",
-      "subtitle": "Ogni immagine si adatta da sola a formato, sfondo e margini della piattaforma.",
-      "badge": "Pubblicazione in un clic",
+      "title": "Prima il download. Pubblica su Shopify quando sei pronto.",
+      "subtitle": "I download conservano l'immagine originale. Le note su dimensioni e nome file per Amazon, TikTok Shop e le altre piattaforme sono solo un riferimento: non ridimensionano, non convertono e non rendono una scheda conforme.",
+      "badge": "Prima il download",
       "more": "+10 altri",
-      "modalTitle": "14 piattaforme supportate"
+      "modalTitle": "Piattaforme"
     },
     "styleShowcase": {
       "title": "Tre look. Output veri.",
@@ -394,11 +394,11 @@
       },
       "step2": {
         "title": "Scegli uno stile",
-        "desc": "Scegli look e piattaforma. Il motore gestisce formato e sfondo."
+        "desc": "Scegli un look. Puoi aggiungere una piattaforma di destinazione per note su dimensioni e nome file."
       },
       "step3": {
-        "title": "Scarica o pubblica",
-        "desc": "Scarica il set in .zip oppure pubblica su Shopify o TikTok Shop."
+        "title": "Scarica",
+        "desc": "Scarica il set completo in .zip. Se il tuo negozio Shopify è collegato, puoi anche pubblicare lì."
       }
     },
     "roi": {
@@ -423,9 +423,9 @@
           "new": "Scalano la quota del mese, senza costi extra"
         },
         "compliance": {
-          "label": "Conformità",
-          "old": "Controllo manuale per piattaforma",
-          "new": "Adattamento automatico in export"
+          "label": "Regole della scheda",
+          "old": "Controlli tu ogni piattaforma",
+          "new": "Note su dimensioni e nome file in export; la scheda la controlli ancora tu"
         }
       },
       "winner": "Flashant costa circa 0,50–1 USD per SKU."
@@ -453,7 +453,7 @@
           "desc": "Per iniziare",
           "feature1": "10 / mese",
           "feature2": "5 modelli di scena",
-          "feature3": "Export su 14 piattaforme",
+          "feature3": "Note su dimensioni e nome file per le principali piattaforme",
           "feature4": "Aiuto prompt con IA"
         },
         "pro": {

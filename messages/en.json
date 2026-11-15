@@ -342,16 +342,16 @@
     "hero": {
       "headline": "Product photos done in a flash.",
       "headlineHighlight": "No studio. No wait.",
-      "subheadline": "Upload a product photo, pick a style, get platform-ready images in seconds. Works across 14 marketplaces.",
+      "subheadline": "Upload a product photo, pick a style, and get images you can download in seconds. Connect Shopify when you want to publish.",
       "cta": "Start Free",
       "ctaSub": "10 free credits monthly. No credit card."
     },
     "trustCloud": {
-      "title": "14 marketplaces. One button.",
-      "subtitle": "Every image auto-matched to each platform's size, background, and margin rules.",
-      "badge": "One-Click Publishing",
+      "title": "Download first. Publish to Shopify when ready.",
+      "subtitle": "Downloads keep the original image. Size and filename notes for Amazon, TikTok Shop, and other platforms are for reference—they do not resize, convert, or make a listing compliant.",
+      "badge": "Download first",
       "more": "+10 more",
-      "modalTitle": "14 supported platforms"
+      "modalTitle": "Platforms"
     },
     "styleShowcase": {
       "title": "Three looks. Real outputs.",
@@ -398,11 +398,11 @@
       },
       "step2": {
         "title": "Pick a style",
-        "desc": "Choose a look and your target platform. The engine handles sizing and background specs."
+        "desc": "Choose a look. You can add a target platform for size and filename notes."
       },
       "step3": {
-        "title": "Download or publish",
-        "desc": "Grab the full set as a .zip, or publish directly to Shopify or TikTok Shop."
+        "title": "Download",
+        "desc": "Grab the full set as a .zip. If your Shopify store is connected, you can also publish there."
       }
     },
     "roi": {
@@ -427,9 +427,9 @@
           "new": "Counts toward this month's quota, no extra fee"
         },
         "compliance": {
-          "label": "Compliance",
-          "old": "Manual check per platform",
-          "new": "Auto-matched on export"
+          "label": "Listing rules",
+          "old": "You review each platform",
+          "new": "Size and filename notes on export; you still review the listing"
         }
       },
       "winner": "Flashant runs about $0.50–1 per SKU."
@@ -457,7 +457,7 @@
           "desc": "Getting started",
           "feature1": "10 / month",
           "feature2": "5 scene templates",
-          "feature3": "14 platform exports",
+          "feature3": "Size and filename notes for major platforms",
           "feature4": "AI prompt assist"
         },
         "pro": {
