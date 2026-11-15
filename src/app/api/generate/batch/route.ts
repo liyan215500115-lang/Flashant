@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
 import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
+import { releaseGeneratingProject } from "@/lib/project-status";
 import { serverT } from "@/lib/server-t";
 import { getSignedGetUrl } from "@/lib/s3";
 import { moderationHttpResponse, promptsForModeration, screenGenerationPrompts } from "@/lib/creem/moderation";
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
       })
       .catch(async () => {
         await db.task.update({ where: { id: task.id }, data: { status: "FAILED", errorMessage: "Prediction failed" } });
+        await releaseGeneratingProject(imageProjectId, "Prediction failed");
       });
 
     results.push({ productImageId: pid, taskId: task.id, status: "pending" });

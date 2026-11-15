@@ -58,7 +58,13 @@ export async function checkGenerationQuota(userId: string): Promise<{
   limit: number;
   tier: PlanTier;
 }> {
-  // Admin bypass — unlimited generations
+  // Real quotas are off. Always allow through so /api/quota reports unlimited
+  // (allowed: true, limit: -1). The /api/generate gateway in src/proxy.ts must
+  // stay on this same allow-through policy.
+  //
+  // When quotas are restored later, this function and the gateway must use the
+  // same policy, exclude aiProvider "manual", and handle soft-deleted rows
+  // according to the product decision at that time.
   return { allowed: true, used: 0, limit: -1, tier: "ENTERPRISE" as PlanTier };
 }
 

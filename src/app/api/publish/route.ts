@@ -5,6 +5,23 @@ import { publishToShopify } from "@/lib/platform/shopify";
 import { publishToTikTokShop } from "@/lib/platform/tiktok";
 import type { Platform } from "@prisma/client";
 
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const connection = await db.platformConnection.findUnique({
+    where: { userId_platform: { userId: session.user.id, platform: "SHOPIFY" } },
+    select: { isActive: true, platformStoreName: true },
+  });
+
+  return NextResponse.json({
+    shopifyConnected: !!(connection?.isActive && connection.platformStoreName),
+    shopName: connection?.platformStoreName ?? null,
+  });
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {

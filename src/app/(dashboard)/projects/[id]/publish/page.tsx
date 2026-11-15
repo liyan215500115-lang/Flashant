@@ -10,7 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowLeft,
   Check,
-  ShoppingBag,
   AlertCircle,
   ExternalLink,
   Store,
@@ -19,10 +18,9 @@ import {
   FileImage,
   Send,
 } from "lucide-react";
-import { PLATFORM_SPECS, PLATFORM_LIST } from "@/lib/platform-specs";
+import { PLATFORM_LIST } from "@/lib/platform-specs";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { useT } from "@/components/i18n-provider";
-import { usePlatformSpec } from "@/lib/use-platform-specs";
 
 interface GeneratedImage {
   id: string;
@@ -54,7 +52,13 @@ export default function PublishPage() {
   const [results, setResults] = useState<
     { platform: string; status: string; postUrl?: string; error?: string }[]
   >([]);
+  const [shopifyConnected, setShopifyConnected] = useState<boolean | null>(null);
   const downloadRef = useRef<HTMLAnchorElement>(null);
+
+  function label(key: string, fallback: string) {
+    const value = t(key);
+    return value && value !== key ? value : fallback;
+  }
 
   const fetchProject = useCallback(async () => {
     try {
@@ -72,6 +76,13 @@ export default function PublishPage() {
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  useEffect(() => {
+    fetch("/api/publish")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setShopifyConnected(!!data?.shopifyConnected))
+      .catch(() => setShopifyConnected(false));
+  }, []);
 
   function toggleImage(id: string) {
     setSelectedImages((prev) => {
@@ -118,9 +129,6 @@ export default function PublishPage() {
 
   const publishableSelected = PLATFORM_LIST.filter(
     (p) => p.publishable && selectedPlatforms.has(p.platform)
-  );
-  const downloadOnlySelected = PLATFORM_LIST.filter(
-    (p) => !p.publishable && selectedPlatforms.has(p.platform)
   );
 
   async function handleDownload() {
@@ -228,7 +236,7 @@ export default function PublishPage() {
       {/* Header */}
       <div>
         <Breadcrumb items={[
-          { label: t("products.title"), href: "/products" },
+          { label: t("products.title"), href: "/projects" },
           { label: project.title || t("assets.unnamed"), href: `/projects/${project.id}` },
           { label: t("publish.publishAndDownload") },
         ]} />
@@ -298,9 +306,25 @@ export default function PublishPage() {
           {/* Select Platforms */}
           <Card>
             <CardContent className="p-5">
-              <h2 className="text-sm font-semibold mb-3">{t("publish.selectPlatform")}</h2>
-              <div className="flex flex-col gap-3">
-                {PLATFORM_LIST.map((spec) => {
+              <h2 className="text-sm font-semibold mb-1">{t("publish.selectPlatform")}</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                {label(
+                  "publish.downloadUnchanged",
+                  "Download saves the original PNG. It does not resize or convert the file to the selected platform's specs."
+                )}
+              </p>
+
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+                {label("publish.publishableGroup", "One-click publish")}
+              </h3>
+              <p className="text-xs text-muted-foreground mb-2">
+                {label(
+                  "publish.publishableHint",
+                  "Shopify can send the selected images to your store. Nothing else on this page can."
+                )}
+              </p>
+              <div className="flex flex-col gap-3 mb-5">
+                {PLATFORM_LIST.filter((spec) => spec.publishable).map((spec) => {
                   const isSelected = selectedPlatforms.has(spec.platform);
                   return (
                     <div key={spec.platform}>
@@ -310,22 +334,58 @@ export default function PublishPage() {
                         className="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer w-full"
                         style={{
                           borderColor: isSelected ? "#2563EB" : "var(--border)",
-                          background: isSelected
-                            ? "var(--accent)"
-                            : "var(--card)",
+                          background: isSelected ? "var(--accent)" : "var(--card)",
                         }}
                       >
                         <div className="flex items-center gap-3">
                           <Store size={18} className="text-muted-foreground" />
                           <div className="text-left">
-                            <span className="text-sm font-medium">
-                              {getLocalizedName(spec)}
-                            </span>
+                            <span className="text-sm font-medium">{getLocalizedName(spec)}</span>
+                            <Badge variant="secondary" className="ml-2 text-[10px]">
+                              {label("publish.badgePublish", "Publishable")}
+                            </Badge>
                           </div>
                         </div>
-                        {isSelected && (
-                          <Check size={16} style={{ color: "#2563EB" }} />
-                        )}
+                        {isSelected && <Check size={16} style={{ color: "#2563EB" }} />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+                {label("publish.specOnlyGroup", "Spec and filename only")}
+              </h3>
+              <p className="text-xs text-muted-foreground mb-2">
+                {label(
+                  "publish.specOnlyHint",
+                  "Amazon, TikTok Shop, and the other platforms here are not one-click publish. Choosing one does not create a compliant image. Download keeps the original file and only adds the platform name to the filename."
+                )}
+              </p>
+              <div className="flex flex-col gap-3">
+                {PLATFORM_LIST.filter((spec) => !spec.publishable).map((spec) => {
+                  const isSelected = selectedPlatforms.has(spec.platform);
+                  return (
+                    <div key={spec.platform}>
+                      <button
+                        type="button"
+                        onClick={() => togglePlatform(spec.platform)}
+                        className="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer w-full"
+                        style={{
+                          borderColor: isSelected ? "#2563EB" : "var(--border)",
+                          background: isSelected ? "var(--accent)" : "var(--card)",
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Store size={18} className="text-muted-foreground" />
+                          <div className="text-left">
+                            <span className="text-sm font-medium">{getLocalizedName(spec)}</span>
+                            <Badge variant="outline" className="ml-2 text-[10px]">
+                              {label("publish.badgeFilename", "Filename only")}
+                            </Badge>
+                          </div>
+                        </div>
+                        {isSelected && <Check size={16} style={{ color: "#2563EB" }} />}
                       </button>
                       {isSelected && (
                         <div className="mt-2 ml-10 flex flex-wrap gap-1.5 text-[10px] text-zinc-500">
@@ -338,6 +398,10 @@ export default function PublishPage() {
                             {spec.formats.join(" / ")}
                           </span>
                           <span className="text-zinc-400 dark:text-zinc-500">
+                            {label(
+                              "publish.specReference",
+                              "Reference only — download does not apply this spec."
+                            )}{" "}
                             {t("platforms.maxImagesLabel").replace("{max}", String(spec.maxImages)).replace("{background}", getLocalizedBackground(spec))}
                           </span>
                         </div>
@@ -349,11 +413,10 @@ export default function PublishPage() {
             </CardContent>
           </Card>
 
-          {/* Actions */}
+          {/* Actions — download is primary, publish is secondary */}
           <div className="flex flex-col gap-3">
-            {/* Download — always available */}
             <Button
-              variant="outline"
+              variant="default"
               size="lg"
               className="w-full gap-2"
               onClick={handleDownload}
@@ -365,22 +428,36 @@ export default function PublishPage() {
                 : t("publish.downloadImages").replace("{count}", String(selectedImages.size))}
             </Button>
 
-            {/* Publish — only for publishable platforms */}
-            {publishableSelected.length > 0 && (
+            {publishableSelected.length > 0 && shopifyConnected && (
               <Button
-                variant="default"
+                variant="outline"
                 size="lg"
                 className="w-full gap-2"
                 onClick={handlePublish}
-                disabled={
-                  publishing || selectedImages.size === 0
-                }
+                disabled={publishing || selectedImages.size === 0}
               >
                 <Send size={16} />
                 {publishing
                   ? t("publish.publishing")
                   : t("publish.publishToPlatforms").replace("{platforms}", publishableSelected.map((p) => p.name).join(" + "))}
               </Button>
+            )}
+
+            {publishableSelected.length > 0 && shopifyConnected === false && (
+              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {label(
+                    "publish.connectFirst",
+                    "Connect a Shopify store before publishing. Download does not need a store."
+                  )}
+                </p>
+                <Link href="/integrations">
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <Store size={14} />
+                    {label("publish.connectShopify", "Connect Shopify")}
+                  </Button>
+                </Link>
+              </div>
             )}
           </div>
         </>

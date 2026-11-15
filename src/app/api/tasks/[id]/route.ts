@@ -5,6 +5,7 @@ import { getProvider } from "@/lib/ai/registry";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { fetchImageBuffer } from "@/lib/overlay-logo";
 import { ASYNC_ENGINES } from "@/lib/ai/constants";
+import { releaseGeneratingProject } from "@/lib/project-status";
 
 // Simple in-memory lock to avoid duplicate Gemini calls per task
 const processingLocks = new Set<string>();
@@ -127,6 +128,12 @@ export async function GET(
 
   if (!updatedTask) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
+
+  // A failed task (including "no output") must not leave the project GENERATING.
+  // Polling this route is what the project page does, so settle here.
+  if (updatedTask.status === "FAILED") {
+    await releaseGeneratingProject(task.imageProjectId, updatedTask.errorMessage);
   }
 
   // Find generated image result
