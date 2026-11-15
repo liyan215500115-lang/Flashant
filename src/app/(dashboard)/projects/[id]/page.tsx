@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { downloadBlob, downloadUrls } from "@/lib/download-image";
 import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
 import { saveGeneratedImage } from "@/lib/persist-project-image";
+import { projectGenerationError } from "@/lib/project-fetch-error";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
 
@@ -109,13 +110,7 @@ export default function ProductDetailPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setProject(data.project);
-      if (data.project?.status === "FAILED") {
-        const failedTask = (data.project.tasks ?? []).find(
-          (task: Task) => task.status === "FAILED" && task.errorMessage
-        );
-        const detail = data.project.errorMessage || failedTask?.errorMessage || "";
-        setError(detail ? `${t("error.generateFailed")}: ${detail}` : t("error.generateFailed"));
-      }
+      setError(projectGenerationError(data.project, t("error.generateFailed")));
       setLoading(false);
     } catch {
       setError(t("error.loadFailed"));
