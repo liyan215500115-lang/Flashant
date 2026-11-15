@@ -351,31 +351,33 @@
     },
     "styleShowcase": {
       "title": "Tres looks. Resultados reales.",
-      "subtitle": "Reloj, altavoz y perfume. Cada pestaña es el mismo producto, antes y después.",
-      "outputCaption": "Resultado de Flashant",
-      "sourceCaption": "Foto de origen",
+      "subtitle": "Cuatro imágenes finales en cada pestaña.",
       "tabs": {
         "material": "Material",
         "lifestyle": "Estilo de vida",
         "scene": "Escena"
       },
       "tooltips": {
-        "material": "El mismo reloj. Caja y brazalete de acero cepillado, de cerca.",
-        "lifestyle": "El mismo altavoz. Malla metálica y cordón de piel, sobre una mesa cálida.",
-        "scene": "La misma botella. Un ambiente oscuro con un arco de luz."
+        "material": "Piezas finales de material: bolso cubo de cuero curtido vegetal, cuenco Shino, gafas de esquí y zapatillas de running.",
+        "lifestyle": "Piezas finales de hogar: vela aromática, lámpara de mesa, auriculares y cafetera espresso.",
+        "scene": "Piezas finales de exterior: bicicleta de carretera, esquís, monopatín y mochila de senderismo."
       },
       "captions": {
-        "material": "Caja y brazalete de acero",
-        "lifestyle": "Malla y cordón de piel",
-        "scene": "Ambiente del frasco"
+        "material-1-leather-bucket": "Bolso cubo de cuero curtido vegetal",
+        "material-2-shino-bowl": "Cuenco Shino",
+        "material-3-ski-goggles": "Gafas de esquí",
+        "material-4-running-shoes": "Zapatillas de running",
+        "lifestyle-1-candle": "Vela aromática",
+        "lifestyle-2-lamp": "Lámpara de mesa",
+        "lifestyle-3-headphones": "Auriculares",
+        "lifestyle-4-espresso": "Cafetera espresso",
+        "scene-1-road-bike": "Bicicleta de carretera",
+        "scene-2-skis": "Esquís",
+        "scene-3-skateboard": "Monopatín",
+        "scene-4-hiking-pack": "Mochila de senderismo"
       },
       "alts": {
-        "material": "Encuadre cercano de Flashant de la misma caja y brazalete de acero",
-        "lifestyle": "Encuadre de estilo de vida de Flashant del mismo altavoz oliva, malla metálica y cordón de piel sobre madera",
-        "scene": "Resultado de escena de Flashant: botella Bleu de Chanel frente a un arco de luz oscuro",
-        "skuA": "Foto de origen de una botella Bleu de Chanel",
         "skuB": "Foto de origen de un Omega Speedmaster sobre tela blanca",
-        "skuC": "Foto de origen de un altavoz Bang & Olufsen",
         "heroAfter": "Encuadre de Flashant del mismo cronógrafo de acero y brazalete sobre fondo oscuro"
       }
     },

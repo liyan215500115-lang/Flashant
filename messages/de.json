@@ -351,31 +351,33 @@
     },
     "styleShowcase": {
       "title": "Drei Looks. Echte Ergebnisse.",
-      "subtitle": "Uhr, Lautsprecher und Parfum. Jeder Tab ist dasselbe Produkt, vorher und nachher.",
-      "outputCaption": "Flashant-Ausgabe",
-      "sourceCaption": "Ausgangsfoto",
+      "subtitle": "Vier fertige Bilder in jedem Tab.",
       "tabs": {
         "material": "Material",
         "lifestyle": "Lifestyle",
         "scene": "Szene"
       },
       "tooltips": {
-        "material": "Dieselbe Uhr. Gebürstetes Stahlgehäuse und Stahlband, aus der Nähe.",
-        "lifestyle": "Derselbe Lautsprecher. Metallgitter und Lederkordel, auf einem warmen Holztisch.",
-        "scene": "Dieselbe Flasche. Dunkle Stimmung mit einem Lichtbogen."
+        "material": "Fertige Materialbilder: pflanzlich gegerbte Beuteltasche, Shino-Schale, Skibrille und Laufschuhe.",
+        "lifestyle": "Fertige Wohnbilder: Duftkerze, Tischlampe, Kopfhörer und Espressomaschine.",
+        "scene": "Fertige Outdoorbilder: Rennrad, Ski, Skateboard und Wanderrucksack."
       },
       "captions": {
-        "material": "Stahlgehäuse und Stahlband",
-        "lifestyle": "Metallgitter und Lederkordel",
-        "scene": "Flakon-Stimmung"
+        "material-1-leather-bucket": "Pflanzlich gegerbte Beuteltasche",
+        "material-2-shino-bowl": "Shino-Schale",
+        "material-3-ski-goggles": "Skibrille",
+        "material-4-running-shoes": "Laufschuhe",
+        "lifestyle-1-candle": "Duftkerze",
+        "lifestyle-2-lamp": "Tischlampe",
+        "lifestyle-3-headphones": "Kopfhörer",
+        "lifestyle-4-espresso": "Espressomaschine",
+        "scene-1-road-bike": "Rennrad",
+        "scene-2-skis": "Ski",
+        "scene-3-skateboard": "Skateboard",
+        "scene-4-hiking-pack": "Wanderrucksack"
       },
       "alts": {
-        "material": "Nahe Flashant-Aufnahme desselben Stahlgehäuses und Stahlbands",
-        "lifestyle": "Flashant-Lifestyle desselben olivfarbenen Lautsprechers mit Metallgitter und Lederkordel auf Holz",
-        "scene": "Flashant-Szenenausgabe einer Bleu-de-Chanel-Flasche vor einem dunklen Lichtbogen",
-        "skuA": "Ausgangsfoto einer Bleu-de-Chanel-Flasche",
         "skuB": "Ausgangsfoto einer Omega Speedmaster auf weißem Stoff",
-        "skuC": "Ausgangsfoto eines Bang-&-Olufsen-Lautsprechers",
         "heroAfter": "Flashant-Aufnahme desselben Stahlchronographen und Stahlbands auf dunklem Grund"
       }
     },

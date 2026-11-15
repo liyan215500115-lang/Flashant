@@ -351,31 +351,33 @@
     },
     "styleShowcase": {
       "title": "세 가지 룩. 실제 결과.",
-      "subtitle": "시계, 스피커, 향수. 각 탭은 같은 제품의 전후입니다.",
-      "outputCaption": "Flashant 결과",
-      "sourceCaption": "원본 사진",
+      "subtitle": "각 탭에 완성 이미지 4장.",
       "tabs": {
         "material": "재질",
         "lifestyle": "라이프스타일",
         "scene": "장면"
       },
       "tooltips": {
-        "material": "같은 손목시계입니다. 브러시드 스틸 케이스와 브레이슬릿을 가까이에서.",
-        "lifestyle": "같은 스피커입니다. 메탈 메시와 가죽 끈, 따뜻한 나무 테이블 위.",
-        "scene": "같은 병입니다. 어두운 무드와 한 줄의 빛."
+        "material": "질감 완성본: 식물성 무두질 버킷백, 시노 볼, 스키 고글, 러닝화.",
+        "lifestyle": "홈 완성본: 향초, 테이블 램프, 헤드폰, 에스프레소 머신.",
+        "scene": "아웃도어 완성본: 로드 바이크, 스키, 스케이트보드, 하이킹 배낭."
       },
       "captions": {
-        "material": "스틸 케이스와 브레이슬릿",
-        "lifestyle": "메탈 메시와 가죽 끈",
-        "scene": "병의 무드"
+        "material-1-leather-bucket": "식물성 무두질 버킷백",
+        "material-2-shino-bowl": "시노 볼",
+        "material-3-ski-goggles": "스키 고글",
+        "material-4-running-shoes": "러닝화",
+        "lifestyle-1-candle": "향초",
+        "lifestyle-2-lamp": "테이블 램프",
+        "lifestyle-3-headphones": "헤드폰",
+        "lifestyle-4-espresso": "에스프레소 머신",
+        "scene-1-road-bike": "로드 바이크",
+        "scene-2-skis": "스키",
+        "scene-3-skateboard": "스케이트보드",
+        "scene-4-hiking-pack": "하이킹 배낭"
       },
       "alts": {
-        "material": "같은 스틸 크로노그래프 케이스와 브레이슬릿의 Flashant 근접 컷",
-        "lifestyle": "같은 올리브색 스피커, 메탈 메시와 가죽 끈, 나무 테이블의 Flashant 라이프스타일 컷",
-        "scene": "Flashant 장면 결과. 어두운 호 빛 앞의 Bleu de Chanel 병",
-        "skuA": "Bleu de Chanel 병 원본 사진",
         "skuB": "흰 천 위의 Omega Speedmaster 원본 사진",
-        "skuC": "Bang & Olufsen 스피커 원본 사진",
         "heroAfter": "어두운 배경의 같은 스틸 크로노그래프와 브레이슬릿 Flashant 컷"
       }
     },

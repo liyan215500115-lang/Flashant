@@ -355,31 +355,33 @@
     },
     "styleShowcase": {
       "title": "Three looks. Real outputs.",
-      "subtitle": "Watch, speaker, and perfume. Each tab is the same product, before and after.",
-      "outputCaption": "Flashant output",
-      "sourceCaption": "Source photo",
+      "subtitle": "Four finished frames in each tab.",
       "tabs": {
         "material": "Material",
         "lifestyle": "Lifestyle",
         "scene": "Scene"
       },
       "tooltips": {
-        "material": "Same watch. Brushed steel case and bracelet, read up close.",
-        "lifestyle": "Same speaker. Metal mesh and a leather cord, on a warm wood table.",
-        "scene": "Same bottle. A dark mood with one arc of light."
+        "material": "Finished material frames: a vegetable-tanned bucket bag, a Shino bowl, ski goggles, and running shoes.",
+        "lifestyle": "Finished home frames: a scented candle, a table lamp, headphones, and an espresso machine.",
+        "scene": "Finished outdoor frames: a road bike, skis, a skateboard, and a hiking pack."
       },
       "captions": {
-        "material": "Steel case and bracelet",
-        "lifestyle": "Mesh and leather cord",
-        "scene": "Bottle mood"
+        "material-1-leather-bucket": "Vegetable-tanned bucket bag",
+        "material-2-shino-bowl": "Shino bowl",
+        "material-3-ski-goggles": "Ski goggles",
+        "material-4-running-shoes": "Running shoes",
+        "lifestyle-1-candle": "Scented candle",
+        "lifestyle-2-lamp": "Table lamp",
+        "lifestyle-3-headphones": "Headphones",
+        "lifestyle-4-espresso": "Espresso machine",
+        "scene-1-road-bike": "Road bike",
+        "scene-2-skis": "Skis",
+        "scene-3-skateboard": "Skateboard",
+        "scene-4-hiking-pack": "Hiking pack"
       },
       "alts": {
-        "material": "Flashant close frame of the same steel chronograph case and bracelet",
-        "lifestyle": "Flashant lifestyle frame of the same olive speaker, mesh grille, and leather cord on a wood table",
-        "scene": "Flashant scene output of a Bleu de Chanel bottle against a dark arc of light",
-        "skuA": "Source product photo of a Bleu de Chanel bottle",
         "skuB": "Source product photo of an Omega Speedmaster on white fabric",
-        "skuC": "Source product photo of a Bang & Olufsen speaker",
         "heroAfter": "Flashant frame of the same steel chronograph and bracelet on a dark ground"
       }
     },
