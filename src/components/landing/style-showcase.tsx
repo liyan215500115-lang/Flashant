@@ -61,7 +61,7 @@ export function StyleShowcase({ title, subtitle, styles }: StyleShowcaseProps) {
           {current.tooltip}
         </p>
 
-        {/* Same-SKU pair: source, then Flashant frame */}
+        {/* Finished frames, four per tab */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
           {current.images.map((image) => (
             <div

@@ -1,12 +1,12 @@
 /**
- * Homepage before/after slots. Every comparison pair is one physical SKU.
+ * Homepage image slots.
+ *
+ * Hero and the comparison slider stay one-SKU before/after pairs.
  * The Chanel slider pair is exclusive to the slider: Hero and StyleShowcase
  * must not reference those two paths.
  *
- * Tech debt: the material-tab before should be
- * `/marketing/v6/sku-b-before-closeup.webp` (bracelet/dial crop, distinct from
- * the hero full watch). That file is not in the tree, so this slot temporarily
- * reuses the hero watch source. Do not copy that reuse onto any other slot.
+ * StyleShowcase (#styles) is twelve finished frames, four per tab, in
+ * reading order. It is not a before/after comparison.
  */
 
 export type HomepageSku = "watch" | "speaker" | "perfume";
@@ -17,10 +17,17 @@ export interface HomepagePair {
   after: string;
 }
 
-export interface HomepageStyleFrame extends HomepagePair {
-  key: "material" | "lifestyle" | "scene";
-  beforeAltKey: string;
-  afterAltKey: string;
+export type HomepageStyleKey = "material" | "lifestyle" | "scene";
+
+export interface HomepageStyleImage {
+  id: string;
+  src: string;
+  captionKey: string;
+}
+
+export interface HomepageStyleTab {
+  key: HomepageStyleKey;
+  images: readonly HomepageStyleImage[];
 }
 
 export const HOMEPAGE_HERO: HomepagePair = {
@@ -34,33 +41,39 @@ export const HOMEPAGE_HERO_ALT = {
   after: "landing.styleShowcase.alts.heroAfter",
 } as const;
 
-/** True while material before borrows the hero watch file. */
-export const MATERIAL_BEFORE_REUSES_HERO = true;
+const styleImage = (id: string): HomepageStyleImage => ({
+  id,
+  src: `/marketing/styles/${id}.webp`,
+  captionKey: `landing.styleShowcase.captions.${id}`,
+});
 
-export const HOMEPAGE_STYLE_FRAMES: readonly HomepageStyleFrame[] = [
+export const HOMEPAGE_STYLE_FRAMES: readonly HomepageStyleTab[] = [
   {
     key: "material",
-    sku: "watch",
-    before: "/marketing/v6/sku-b-omega-watch.webp",
-    after: "/marketing/v6/sku-b-after-material.webp",
-    beforeAltKey: "landing.styleShowcase.alts.skuB",
-    afterAltKey: "landing.styleShowcase.alts.material",
+    images: [
+      styleImage("material-1-leather-bucket"),
+      styleImage("material-2-shino-bowl"),
+      styleImage("material-3-ski-goggles"),
+      styleImage("material-4-running-shoes"),
+    ],
   },
   {
     key: "lifestyle",
-    sku: "speaker",
-    before: "/marketing/v6/sku-c-bo-speaker.webp",
-    after: "/marketing/v6/sku-c-after-lifestyle.webp",
-    beforeAltKey: "landing.styleShowcase.alts.skuC",
-    afterAltKey: "landing.styleShowcase.alts.lifestyle",
+    images: [
+      styleImage("lifestyle-1-candle"),
+      styleImage("lifestyle-2-lamp"),
+      styleImage("lifestyle-3-headphones"),
+      styleImage("lifestyle-4-espresso"),
+    ],
   },
   {
     key: "scene",
-    sku: "perfume",
-    before: "/marketing/v6/sku-a-showcase.webp",
-    after: "/marketing/v6/after-scene.webp",
-    beforeAltKey: "landing.styleShowcase.alts.skuA",
-    afterAltKey: "landing.styleShowcase.alts.scene",
+    images: [
+      styleImage("scene-1-road-bike"),
+      styleImage("scene-2-skis"),
+      styleImage("scene-3-skateboard"),
+      styleImage("scene-4-hiking-pack"),
+    ],
   },
 ];
 

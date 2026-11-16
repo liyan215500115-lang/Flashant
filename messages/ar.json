@@ -351,31 +351,33 @@
     },
     "styleShowcase": {
       "title": "ثلاث لقطات. مخرجات حقيقية.",
-      "subtitle": "ساعة ومكبر صوت وعطر. كل تبويب هو المنتج نفسه، قبل وبعد.",
-      "outputCaption": "مخرجات Flashant",
-      "sourceCaption": "صورة المصدر",
+      "subtitle": "أربع صور جاهزة في كل تبويب.",
       "tabs": {
         "material": "الخامة",
         "lifestyle": "أسلوب الحياة",
         "scene": "المشهد"
       },
       "tooltips": {
-        "material": "الساعة نفسها. علبة وسوار من الفولاذ المصقول، عن قرب.",
-        "lifestyle": "السماعة نفسها. شبكة معدنية وحبل جلد، على طاولة دافئة.",
-        "scene": "الزجاجة نفسها. مزاج داكن بقوس ضوء واحد."
+        "material": "لقطات خامة جاهزة: حقيبة دلو من جلد مدبوغ نباتيًا، وعاء شينو، نظارات تزلج، وحذاء جري.",
+        "lifestyle": "لقطات منزل جاهزة: شمعة عطرية، مصباح طاولة، سماعات رأس، وآلة إسبريسو.",
+        "scene": "لقطات خارجية جاهزة: دراجة طريق، زلاجات، لوح تزلج، وحقيبة تنزه."
       },
       "captions": {
-        "material": "علبة وسوار فولاذي",
-        "lifestyle": "شبكة وحبل جلد",
-        "scene": "مزاج الزجاجة"
+        "material-1-leather-bucket": "حقيبة دلو من جلد مدبوغ نباتيًا",
+        "material-2-shino-bowl": "وعاء شينو",
+        "material-3-ski-goggles": "نظارات تزلج",
+        "material-4-running-shoes": "حذاء جري",
+        "lifestyle-1-candle": "شمعة عطرية",
+        "lifestyle-2-lamp": "مصباح طاولة",
+        "lifestyle-3-headphones": "سماعات رأس",
+        "lifestyle-4-espresso": "آلة إسبريسو",
+        "scene-1-road-bike": "دراجة طريق",
+        "scene-2-skis": "زلاجات",
+        "scene-3-skateboard": "لوح تزلج",
+        "scene-4-hiking-pack": "حقيبة تنزه"
       },
       "alts": {
-        "material": "لقطة قريبة من Flashant لنفس العلبة والسوار الفولاذي",
-        "lifestyle": "لقطة أسلوب حياة من Flashant لنفس السماعة الزيتونية والشبكة المعدنية وحبل الجلد على خشب",
-        "scene": "مخرجات مشهد من Flashant لزجاجة Bleu de Chanel أمام قوس ضوء داكن",
-        "skuA": "صورة مصدر لزجاجة Bleu de Chanel",
         "skuB": "صورة مصدر لساعة Omega Speedmaster على قماش أبيض",
-        "skuC": "صورة مصدر لمكبر صوت Bang & Olufsen",
         "heroAfter": "لقطة Flashant لنفس الكرونوغراف الفولاذي والسوار على خلفية داكنة"
       }
     },

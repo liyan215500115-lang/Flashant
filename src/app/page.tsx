@@ -35,28 +35,19 @@ export default async function LandingPage() {
     });
   }
 
-  const outputCaption = t("landing.styleShowcase.outputCaption");
-  const sourceCaption = t("landing.styleShowcase.sourceCaption");
-  const styleData = HOMEPAGE_STYLE_FRAMES.map((frame) => {
-    const productCaption = t(`landing.styleShowcase.captions.${frame.key}`);
-    return {
-      key: frame.key,
-      label: t(`landing.styleShowcase.tabs.${frame.key}`),
-      tooltip: t(`landing.styleShowcase.tooltips.${frame.key}`),
-      images: [
-        {
-          src: frame.before,
-          alt: t(frame.beforeAltKey),
-          caption: `${productCaption} · ${sourceCaption}`,
-        },
-        {
-          src: frame.after,
-          alt: t(frame.afterAltKey),
-          caption: `${productCaption} · ${outputCaption}`,
-        },
-      ],
-    };
-  });
+  const styleData = HOMEPAGE_STYLE_FRAMES.map((tab) => ({
+    key: tab.key,
+    label: t(`landing.styleShowcase.tabs.${tab.key}`),
+    tooltip: t(`landing.styleShowcase.tooltips.${tab.key}`),
+    images: tab.images.map((image) => {
+      const name = t(image.captionKey);
+      return {
+        src: image.src,
+        alt: name,
+        caption: name,
+      };
+    }),
+  }));
 
   return (
     <div className="bg-white relative">

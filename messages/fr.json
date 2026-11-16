@@ -351,31 +351,33 @@
     },
     "styleShowcase": {
       "title": "Trois looks. De vrais rendus.",
-      "subtitle": "Montre, enceinte et parfum. Chaque onglet est le même produit, avant et après.",
-      "outputCaption": "Rendu Flashant",
-      "sourceCaption": "Photo source",
+      "subtitle": "Quatre images finales dans chaque onglet.",
       "tabs": {
         "material": "Matière",
         "lifestyle": "Lifestyle",
         "scene": "Scène"
       },
       "tooltips": {
-        "material": "La même montre. Boîtier et bracelet en acier brossé, vus de près.",
-        "lifestyle": "La même enceinte. Grille métal et cordon de cuir, sur une table chaude.",
-        "scene": "Le même flacon. Une ambiance sombre avec un arc de lumière."
+        "material": "Rendus finis de matière : sac seau en cuir tanné végétal, bol Shino, masque de ski et chaussures de course.",
+        "lifestyle": "Rendus finis pour la maison : bougie parfumée, lampe de table, casque audio et machine à espresso.",
+        "scene": "Rendus finis d'extérieur : vélo de route, skis, skateboard et sac à dos de randonnée."
       },
       "captions": {
-        "material": "Boîtier et bracelet acier",
-        "lifestyle": "Grille métal et cordon cuir",
-        "scene": "Ambiance du flacon"
+        "material-1-leather-bucket": "Sac seau en cuir tanné végétal",
+        "material-2-shino-bowl": "Bol Shino",
+        "material-3-ski-goggles": "Masque de ski",
+        "material-4-running-shoes": "Chaussures de course",
+        "lifestyle-1-candle": "Bougie parfumée",
+        "lifestyle-2-lamp": "Lampe de table",
+        "lifestyle-3-headphones": "Casque audio",
+        "lifestyle-4-espresso": "Machine à espresso",
+        "scene-1-road-bike": "Vélo de route",
+        "scene-2-skis": "Skis",
+        "scene-3-skateboard": "Skateboard",
+        "scene-4-hiking-pack": "Sac à dos de randonnée"
       },
       "alts": {
-        "material": "Cadre rapproché Flashant du même boîtier et bracelet en acier",
-        "lifestyle": "Cadre lifestyle Flashant de la même enceinte olive, grille métal et cordon cuir sur une table en bois",
-        "scene": "Rendu de scène Flashant d'un flacon Bleu de Chanel devant un arc de lumière sombre",
-        "skuA": "Photo source d'un flacon Bleu de Chanel",
         "skuB": "Photo source d'une Omega Speedmaster sur tissu blanc",
-        "skuC": "Photo source d'une enceinte Bang & Olufsen",
         "heroAfter": "Rendu Flashant du même chronographe en acier et bracelet sur fond sombre"
       }
     },
