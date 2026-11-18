@@ -743,19 +743,21 @@ export async function POST(req: Request) {
   // Gemini-based providers — always async: create task, return taskId, let /api/tasks/[id] do the heavy lifting
   if (ASYNC_ENGINES.has(engineType) && actualEngine !== "flux") {
     // Store generation params on task so /api/tasks/[id] can pick them up
+    const debit = debitSnapshot(hold);
     await db.task.update({
       where: { id: task.id },
       data: {
         status: "PENDING",
-        // Store params as JSON in errorMessage temporarily (will be cleared on success)
+        // Prompt payload only. The debit handle is generationMeta, which the
+        // task poll must not clear when it nulls errorMessage.
         errorMessage: JSON.stringify({
           engineType: actualEngine,
           prompt,
           sharedImageUrl,
           genWidth,
           genHeight,
-          creemDebit: debitSnapshot(hold),
         }),
+        ...(debit ? { generationMeta: { creemDebit: debit } } : {}),
       },
     });
 

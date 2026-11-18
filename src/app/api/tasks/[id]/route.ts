@@ -6,7 +6,7 @@ import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { fetchImageBuffer } from "@/lib/overlay-logo";
 import { ASYNC_ENGINES } from "@/lib/ai/constants";
 import { releaseGeneratingProject } from "@/lib/project-status";
-import { refundGenerationDebit } from "@/lib/creem/credits-runtime";
+import { reverseStoredTaskDebit } from "@/lib/creem/task-debit";
 
 // Simple in-memory lock to avoid duplicate Gemini calls per task
 const processingLocks = new Set<string>();
@@ -42,18 +42,17 @@ export async function GET(
   ) {
     processingLocks.add(id);
 
-    let handoffDebit: { accountId?: string; transactionId?: string } | null = null;
     try {
       const params = JSON.parse(task.errorMessage || "{}") as {
         prompt?: string;
         sharedImageUrl?: string;
         genWidth?: number;
         genHeight?: number;
-        creemDebit?: { accountId?: string; transactionId?: string } | null;
       };
-      handoffDebit = params.creemDebit ?? null;
       const provider = getProvider(task.engineType);
 
+      // Clear the temporary prompt payload. The debit handle lives on
+      // generationMeta and must stay after this update.
       await db.task.update({
         where: { id },
         data: { status: "PROCESSING", errorMessage: null },
@@ -111,24 +110,14 @@ export async function GET(
           data: { status: "GENERATED" },
         });
       } else {
-        if (handoffDebit?.accountId && handoffDebit.transactionId) {
-          await refundGenerationDebit({
-            accountId: handoffDebit.accountId,
-            transactionId: handoffDebit.transactionId,
-          });
-        }
+        await reverseStoredTaskDebit(id);
         await db.task.update({
           where: { id },
           data: { status: "FAILED", errorMessage: "No output from provider" },
         });
       }
     } catch (err) {
-      if (handoffDebit?.accountId && handoffDebit.transactionId) {
-        await refundGenerationDebit({
-          accountId: handoffDebit.accountId,
-          transactionId: handoffDebit.transactionId,
-        });
-      }
+      await reverseStoredTaskDebit(id);
       await db.task.update({
         where: { id },
         data: { status: "FAILED", errorMessage: err instanceof Error ? err.message : "Unknown error" },

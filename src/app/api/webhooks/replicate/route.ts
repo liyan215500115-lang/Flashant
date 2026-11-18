@@ -4,7 +4,7 @@ import { validateImage } from "@/lib/ai/validator";
 import { uploadBuffer, saveBufferLocally, hasS3Config } from "@/lib/s3";
 import { releaseGeneratingProject } from "@/lib/project-status";
 import { refundGenerationDebit } from "@/lib/creem/credits-runtime";
-import { shouldReverseSharedDebit } from "@/lib/creem/credits";
+import { readCreemDebit, shouldReverseSharedDebit } from "@/lib/creem/credits";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
 
     if (!outputs || outputs.length === 0) {
       await failGeneration(genImage.imageProjectId, genImage.id, task?.id, "No outputs from Replicate");
+      await refundIfDebitGroupFailed(genImage.imageProjectId, genImage.id);
       return NextResponse.json({ received: true });
     }
 
@@ -134,22 +135,15 @@ export async function POST(req: Request) {
   return NextResponse.json({ received: true });
 }
 
-function readDebit(meta: unknown): { accountId: string; transactionId: string } | null {
-  if (!meta || typeof meta !== "object") return null;
-  const debit = (meta as { creemDebit?: { accountId?: unknown; transactionId?: unknown } }).creemDebit;
-  if (typeof debit?.accountId !== "string" || typeof debit.transactionId !== "string") return null;
-  return { accountId: debit.accountId, transactionId: debit.transactionId };
-}
-
 async function refundIfDebitGroupFailed(imageProjectId: string, generatedImageId: string) {
   const images = await db.generatedImage.findMany({
     where: { imageProjectId },
     select: { id: true, status: true, generationMeta: true },
   });
   const current = images.find((image) => image.id === generatedImageId);
-  const debit = readDebit(current?.generationMeta);
+  const debit = readCreemDebit(current?.generationMeta);
   if (!debit) return;
-  const group = images.filter((image) => readDebit(image.generationMeta)?.transactionId === debit.transactionId);
+  const group = images.filter((image) => readCreemDebit(image.generationMeta)?.transactionId === debit.transactionId);
   const statuses = group.map((image) => (image.id === generatedImageId ? "FAILED" : image.status));
   if (!shouldReverseSharedDebit(statuses)) return;
   await refundGenerationDebit(debit);

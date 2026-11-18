@@ -214,6 +214,15 @@ export function shouldReverseSharedDebit(statuses: readonly string[]): boolean {
   return statuses.length > 0 && statuses.every((status) => status === "FAILED");
 }
 
+/** Debit hold stored on task or image metadata. Ignores user-facing error strings. */
+export function readCreemDebit(meta: unknown): { accountId: string; transactionId: string } | null {
+  if (!meta || typeof meta !== "object") return null;
+  const debit = (meta as { creemDebit?: { accountId?: unknown; transactionId?: unknown } }).creemDebit;
+  if (typeof debit?.accountId !== "string" || typeof debit.transactionId !== "string") return null;
+  if (!debit.accountId || !debit.transactionId) return null;
+  return { accountId: debit.accountId, transactionId: debit.transactionId };
+}
+
 function failure(tier: GenerationTier, error: "credits_unavailable" | "moderation_rejected"): ChargeFailure {
   return {
     ok: false,
@@ -294,11 +303,12 @@ export async function ensureMonthlyGrant(
   accountId: string,
   user: CreditUser,
   now = new Date(),
+  paidTierMonthlyGrant = LEMON_PAID_TIER_MONTHLY_GRANT,
 ): Promise<{ granted: boolean; reason: string; amount: string }> {
   if (user.tier === "ENTERPRISE") {
     return { granted: false, reason: "enterprise_allotment_unconfigured", amount: "0" };
   }
-  if ((user.tier === "PRO" || user.tier === "BUSINESS") && !LEMON_PAID_TIER_MONTHLY_GRANT) {
+  if ((user.tier === "PRO" || user.tier === "BUSINESS") && !paidTierMonthlyGrant) {
     return { granted: false, reason: "paid_grant_disabled", amount: "0" };
   }
 

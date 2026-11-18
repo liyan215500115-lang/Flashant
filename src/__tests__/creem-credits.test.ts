@@ -132,6 +132,35 @@ describe("monthly generation grant", () => {
     expect(monthlyGrantKey(pro, new Date(NOW))).toBe("grant:user_1:PRO:period:2026-11-01T00:00:00.000Z");
   });
 
+  it("does not grant Pro or Business when the paid-tier flag is off, and still grants Free", async () => {
+    const pro = apiFixture({ balance: "0" });
+    const proResult = await ensureMonthlyGrant(
+      pro.credits,
+      accountId,
+      user({ tier: "PRO", periodStart: new Date("2026-11-01T00:00:00.000Z") }),
+      new Date(NOW),
+      false,
+    );
+    expect(proResult.reason).toBe("paid_grant_disabled");
+    expect(pro.credit).not.toHaveBeenCalled();
+
+    const business = apiFixture({ balance: "20" });
+    const businessResult = await ensureMonthlyGrant(
+      business.credits,
+      accountId,
+      user({ tier: "BUSINESS", periodStart: new Date("2026-11-01T00:00:00.000Z") }),
+      new Date(NOW),
+      false,
+    );
+    expect(businessResult.reason).toBe("paid_grant_disabled");
+    expect(business.credit).not.toHaveBeenCalled();
+
+    const free = apiFixture({ balance: "0" });
+    const freeResult = await ensureMonthlyGrant(free.credits, accountId, user({ tier: "FREE" }), new Date(NOW), false);
+    expect(freeResult).toMatchObject({ granted: true, amount: "10" });
+    expect(free.credit).toHaveBeenCalledTimes(1);
+  });
+
   it("does not invent an enterprise allotment", async () => {
     const { credits, credit } = apiFixture({ balance: "0" });
     const result = await ensureMonthlyGrant(credits, accountId, user({ tier: "ENTERPRISE" }), new Date(NOW));
