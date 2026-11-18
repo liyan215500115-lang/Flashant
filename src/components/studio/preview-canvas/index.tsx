@@ -130,9 +130,12 @@ export function StudioPreviewCanvas({
                 const toast = (await import("sonner")).toast;
                 toast.promise(
                   fetch("/api/upscale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: latestImage.url }) })
-                    .then(r => r.json())
-                    .then(d => { if (d.url && onHistorySelect) { onHistorySelect({ ...latestImage, url: d.url }); } }),
-                  { loading: t("generate.upscaleLoading"), success: t("generate.upscaleSuccess"), error: t("generate.upscaleError") }
+                    .then(async (r) => {
+                      const d = await r.json();
+                      if (!r.ok || !d.url) throw new Error(d.message || d.error || t("generate.upscaleError"));
+                      if (onHistorySelect) onHistorySelect({ ...latestImage, url: d.url });
+                    }),
+                  { loading: t("generate.upscaleLoading"), success: t("generate.upscaleSuccess"), error: (err) => err instanceof Error ? err.message : t("generate.upscaleError") }
                 );
               }}
               className="text-xs text-zinc-400 hover:text-brand-600 cursor-pointer transition-colors">

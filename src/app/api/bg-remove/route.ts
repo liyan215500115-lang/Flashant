@@ -1,6 +1,14 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { chargeScreenedGeneration, refundGenerationDebit, type DebitHold } from "@/lib/creem/credits-runtime";
+import { spendErrorResponse, withRefundFlag } from "@/lib/creem/http";
+import {
+  creemModerationMode,
+  moderationHttpResponse,
+  SCREEN_PLACEHOLDERS,
+  screenGenerationPrompts,
+} from "@/lib/creem/moderation";
 import { getSignedGetUrl, uploadBuffer, hasS3Config } from "@/lib/s3";
 
 export async function POST(req: Request) {
@@ -8,6 +16,7 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const userId = session.user.id;
 
   const { imageUrl: inputUrl, imageS3Key } = await req.json();
   const apiKey = process.env.REPLICATE_API_KEY;
@@ -15,7 +24,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "REPLICATE_API_KEY not set" }, { status: 500 });
   }
 
-  // Use provided URL or resolve presigned URL from s3Key
   let imageUrl = inputUrl as string;
   if (!imageUrl && imageS3Key) {
     imageUrl = await getSignedGetUrl(imageS3Key, 3600).catch(() => `${process.env.S3_PUBLIC_URL}/${imageS3Key}`);
@@ -23,6 +31,33 @@ export async function POST(req: Request) {
   if (!imageUrl) {
     return NextResponse.json({ error: "imageUrl or imageS3Key required" }, { status: 400 });
   }
+
+  const moderation = await screenGenerationPrompts({
+    userId,
+    prompts: [],
+    placeholder: SCREEN_PLACEHOLDERS.backgroundRemoval,
+  });
+  const blocked = moderationHttpResponse(moderation);
+  if (blocked) return blocked;
+
+  const generationId = crypto.randomUUID();
+  let hold: DebitHold | null = null;
+  if (creemModerationMode() !== "off") {
+    const charged = await chargeScreenedGeneration({
+      userId,
+      gate: moderation,
+      imageCount: 1,
+      reference: `gen:${generationId}`,
+      idempotencyKey: `debit:${generationId}`,
+    });
+    if (!charged.ok) return spendErrorResponse(charged);
+    hold = charged.hold;
+  }
+
+  const refund = async (response: NextResponse) => {
+    if (!hold) return response;
+    return withRefundFlag(response, await refundGenerationDebit(hold));
+  };
 
   try {
     // Create prediction
@@ -83,9 +118,12 @@ export async function POST(req: Request) {
     const local = await saveBufferLocally(buffer, "image/png");
     return NextResponse.json({ s3Key: local.s3Key, url: local.publicUrl });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Background removal failed" },
-      { status: 500 }
-    );
+    return refund(NextResponse.json(
+      {
+        error: e instanceof Error ? e.message : "Background removal failed",
+        message: "Background removal failed",
+      },
+      { status: 500 },
+    ));
   }
 }

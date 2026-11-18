@@ -1,5 +1,6 @@
 import "server-only";
 
+import { readGenerationQuota } from "@/lib/creem/credits-runtime";
 import { db } from "@/lib/db";
 import type { PlanTier } from "@prisma/client";
 
@@ -57,15 +58,21 @@ export async function checkGenerationQuota(userId: string): Promise<{
   used: number;
   limit: number;
   tier: PlanTier;
+  balance: number;
+  allotmentConfigured: boolean;
 }> {
-  // Real quotas are off. Always allow through so /api/quota reports unlimited
-  // (allowed: true, limit: -1). The /api/generate gateway in src/proxy.ts must
-  // stay on this same allow-through policy.
-  //
-  // When quotas are restored later, this function and the gateway must use the
-  // same policy, exclude aiProvider "manual", and handle soft-deleted rows
-  // according to the product decision at that time.
-  return { allowed: true, used: 0, limit: -1, tier: "ENTERPRISE" as PlanTier };
+  // Auxiliary UI. The authority is the Creem generation wallet, not a
+  // GeneratedImage count. ENTERPRISE has no monthly allotment, so its limit
+  // is the wallet balance rather than the old unlimited stub.
+  const quota = await readGenerationQuota(userId);
+  return {
+    allowed: quota.allowed,
+    used: quota.used,
+    limit: quota.limit,
+    tier: quota.tier,
+    balance: quota.balance,
+    allotmentConfigured: quota.allotmentConfigured,
+  };
 }
 
 // ── Lemon Squeezy Checkout ───────────────────────────────────────────────

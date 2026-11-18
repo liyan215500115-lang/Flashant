@@ -14,7 +14,25 @@ export type ModerationDecision = "allow" | "flag" | "deny" | "skipped" | "error"
 export interface ModerationGate {
   allowed: boolean;
   decision: ModerationDecision;
+  /**
+   * Moderation result id. Set only for a single `allow` from this call.
+   * Debit on the generation wallet requires this id.
+   */
+  moderationId?: string;
+  /** Every allow id when more than one prompt was screened separately. */
+  moderationIds?: string[];
+  /** When this process received the allow decision. Debit must be within 24 hours. */
+  screenedAt?: number;
 }
+
+/** Screened when a generation has no user-controlled text. Identical text is cacheable. */
+export const SCREEN_PLACEHOLDERS = {
+  generate: "Fixed product-photography template with no additional user text.",
+  upscale: "Upscale the supplied product image by 4x. No user-supplied prompt.",
+  backgroundRemoval: "Remove the background of the supplied product image. No user-supplied prompt.",
+} as const;
+
+const MODERATION_ID_MAX = 64;
 
 type Env = NodeJS.ProcessEnv;
 
@@ -113,6 +131,16 @@ export function promptsForModeration(
 export async function screenGenerationPrompts(input: {
   userId: string;
   prompts: readonly string[];
+  /**
+   * Used when `prompts` is empty. Image generation must still be screened.
+   * Defaults to the fixed product-photography placeholder.
+   */
+  placeholder?: string;
+  /**
+   * Join several user texts into one Moderation call so one allow id can
+   * authorize the one debit for this generation.
+   */
+  combine?: boolean;
   env?: Env;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
@@ -122,9 +150,12 @@ export async function screenGenerationPrompts(input: {
     return { allowed: true, decision: "skipped" };
   }
 
-  const prompts = [...new Set(input.prompts.map((prompt) => prompt.trim()).filter(Boolean))];
+  let prompts = [...new Set(input.prompts.map((prompt) => prompt.trim()).filter(Boolean))];
   if (prompts.length === 0) {
-    return { allowed: true, decision: "skipped" };
+    const placeholder = input.placeholder?.trim() || SCREEN_PLACEHOLDERS.generate;
+    prompts = [placeholder];
+  } else if (input.combine && prompts.length > 1) {
+    prompts = [prompts.join("\n")];
   }
 
   const apiKey = env.CREEM_API_KEY?.trim();
@@ -135,6 +166,8 @@ export async function screenGenerationPrompts(input: {
   const fetchImpl = input.fetchImpl ?? fetch;
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const base = creemApiBaseUrl(env);
+  const moderationIds: string[] = [];
+  let screenedAt = 0;
 
   for (let index = 0; index < prompts.length; index += 1) {
     const result = await screenOne({
@@ -145,10 +178,20 @@ export async function screenGenerationPrompts(input: {
       externalId: `user_${input.userId}:p_${index}`,
       timeoutMs,
     });
-    if (!result.allowed) return result;
+    if (!result.allowed || !result.moderationId || !result.screenedAt) {
+      return { allowed: false, decision: result.decision === "allow" ? "error" : result.decision };
+    }
+    moderationIds.push(result.moderationId);
+    screenedAt = result.screenedAt;
   }
 
-  return { allowed: true, decision: "allow" };
+  return {
+    allowed: true,
+    decision: "allow",
+    moderationId: moderationIds.length === 1 ? moderationIds[0] : undefined,
+    moderationIds,
+    screenedAt,
+  };
 }
 
 async function screenOne(input: {
@@ -173,8 +216,12 @@ async function screenOne(input: {
       signal: AbortSignal.timeout(input.timeoutMs),
     });
     if (!res.ok) return { allowed: false, decision: "error" };
-    const json = (await res.json()) as { decision?: unknown };
-    if (json.decision === "allow") return { allowed: true, decision: "allow" };
+    const json = (await res.json()) as { decision?: unknown; id?: unknown };
+    const id = typeof json.id === "string" ? json.id.trim() : "";
+    if (json.decision === "allow") {
+      if (!id || id.length > MODERATION_ID_MAX) return { allowed: false, decision: "error" };
+      return { allowed: true, decision: "allow", moderationId: id, screenedAt: Date.now() };
+    }
     if (json.decision === "deny" || json.decision === "flag") {
       return { allowed: false, decision: json.decision };
     }

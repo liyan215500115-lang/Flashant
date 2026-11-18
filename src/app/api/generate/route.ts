@@ -2,19 +2,31 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
-import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
 import { releaseGeneratingProject } from "@/lib/project-status";
 
 export const maxDuration = 60; // seconds — Vercel Pro max
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
-import { serverT } from "@/lib/server-t";
 import { getSignedGetUrl } from "@/lib/s3";
 import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { prepareReferenceImage } from "@/lib/reference-image";
 import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES, BEAUTY_DARK_SURFACE_GUARD } from "@/lib/ai/constants";
-import { moderationHttpResponse, promptsForModeration, screenGenerationPrompts } from "@/lib/creem/moderation";
+import { chargeScreenedGeneration, localPlanTier, refundGenerationDebit, type DebitHold } from "@/lib/creem/credits-runtime";
+import { spendErrorResponse, withRefundFlag } from "@/lib/creem/http";
+import {
+  creemModerationMode,
+  moderationHttpResponse,
+  promptsForModeration,
+  SCREEN_PLACEHOLDERS,
+  screenGenerationPrompts,
+} from "@/lib/creem/moderation";
 import { sharedStaticPromptFragments } from "@/lib/creem/static-fragments";
+import type { PlanTier, Prisma } from "@prisma/client";
+
+function debitSnapshot(value: DebitHold | null): { accountId: string; transactionId: string } | null {
+  if (!value) return null;
+  return { accountId: value.accountId, transactionId: value.transactionId };
+}
 
 // Detail types where the model/person should be the FOCUS, not the product.
 const MODEL_CLOSEUP_TYPES = new Set(["detail"]);
@@ -285,7 +297,7 @@ async function pollPrediction(
   return result;
 }
 
-/** Static copy the model sees. Creem screens the user-controlled remainder only. */
+/** Static copy the model sees. Creem screens user text, or a placeholder when none remains. */
 function generationStaticFragments(): string[] {
   const fragments = sharedStaticPromptFragments();
   for (const template of Object.values(TYPE_TEMPLATES)) {
@@ -340,17 +352,60 @@ export async function POST(req: Request) {
     );
   }
 
-  // Screen user-controlled text before any task, queue, or model call.
-  // Static scene templates are stripped and are not sent to Creem.
+  // Screen before any task, queue, debit, or model call. Static templates are
+  // stripped. A request with no user text is still screened via a placeholder.
   const moderation = await screenGenerationPrompts({
     userId,
     prompts: promptsForModeration(
       { prompt: customPrompt, baseStyle, detailTypes },
       generationStaticFragments(),
     ),
+    placeholder: SCREEN_PLACEHOLDERS.generate,
+    combine: true,
   });
   const blocked = moderationHttpResponse(moderation);
   if (blocked) return blocked;
+
+  const generationId = crypto.randomUUID();
+  let hold: DebitHold | null = null;
+  let spendTier: PlanTier = "FREE";
+  let producedCount = 0;
+
+  async function charge(imageCount: number): Promise<NextResponse | null> {
+    if (creemModerationMode() === "off") {
+      spendTier = await localPlanTier(userId);
+      return null;
+    }
+    const result = await chargeScreenedGeneration({
+      userId,
+      gate: moderation,
+      imageCount,
+      reference: `gen:${generationId}`,
+      idempotencyKey: `debit:${generationId}`,
+    });
+    if (!result.ok) return spendErrorResponse(result);
+    hold = result.hold;
+    spendTier = result.tier;
+    return null;
+  }
+
+  async function fail(response: NextResponse): Promise<NextResponse> {
+    const current = hold;
+    // A partial success keeps the debit. One moderation id cannot be reused
+    // to re-debit only the images that succeeded.
+    if (!current || producedCount > 0) return response;
+    const refund = await refundGenerationDebit(current);
+    return withRefundFlag(response, refund);
+  }
+
+  const withDebit = (base: { sourceType: string; detailKey?: string }): Prisma.InputJsonValue => {
+    const current = hold;
+    if (!current) return base;
+    return {
+      ...base,
+      creemDebit: { accountId: current.accountId, transactionId: current.transactionId },
+    };
+  };
 
   // Verify project ownership
   const project = await db.imageProject.findUnique({
@@ -358,19 +413,6 @@ export async function POST(req: Request) {
   });
   if (!project || project.userId !== userId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
-
-  // Quota check
-  const quota = await checkGenerationQuota(userId);
-  if (!quota.allowed) {
-    return NextResponse.json(
-      {
-        error: "quota_exceeded",
-        message: `${await serverT("error.quotaExceeded")} (${quota.used}/${quota.limit})`,
-        tier: quota.tier,
-      },
-      { status: 402 }
-    );
   }
 
   // Double-click guard — skip when using batch detailTypes (multiple types intentionally)
@@ -416,6 +458,10 @@ export async function POST(req: Request) {
       }
     }
 
+    const detailTypesArray = detailTypes as Array<{ key: string; prompt: string }>;
+    const blockedSpend = await charge(detailTypesArray.length);
+    if (blockedSpend) return blockedSpend;
+
     // Update project status
     await db.imageProject.update({
       where: { id: imageProjectId },
@@ -423,7 +469,6 @@ export async function POST(req: Request) {
     });
 
     // Fire predictions in parallel, poll concurrently
-    const detailTypesArray = detailTypes as Array<{ key: string; prompt: string }>;
     const POLL_MS = 2000;
     const MAX_POLLS = 15;
 
@@ -514,7 +559,7 @@ export async function POST(req: Request) {
             s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
             aiProvider: (p as any).engine || "flux",
             status: "SUCCEEDED", completedAt: new Date(),
-            generationMeta: { sourceType: "detail", detailKey: p.key },
+            generationMeta: withDebit({ sourceType: "detail", detailKey: p.key }),
           },
         });
         generated.push({ key: p.key, url: imgUrl, label: p.key });
@@ -538,7 +583,7 @@ export async function POST(req: Request) {
               imageProjectId, productImageId,
               s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
               aiProvider: typeEngine, status: "SUCCEEDED", completedAt: new Date(),
-              generationMeta: { sourceType: "detail", detailKey: p.key },
+              generationMeta: withDebit({ sourceType: "detail", detailKey: p.key }),
             },
           });
           generated.push({ key: p.key, url: imgUrl, label: p.key });
@@ -561,7 +606,7 @@ export async function POST(req: Request) {
     }
 
     if (generated.length === 0) {
-      return NextResponse.json({ error: "generation_failed", message: "All predictions failed" }, { status: 500 });
+      return fail(NextResponse.json({ error: "generation_failed", message: "All predictions failed" }, { status: 500 }));
     }
 
     return NextResponse.json({ generated, count: generated.length });
@@ -671,6 +716,13 @@ export async function POST(req: Request) {
     }
   }
 
+  const onAsyncPath = ASYNC_ENGINES.has(engineType) && actualEngine !== "flux";
+  const imageCount = onAsyncPath
+    ? 1
+    : (typeof numOutputs === "number" && Number.isFinite(numOutputs) ? Math.ceil(numOutputs) : 2);
+  const blockedSpend = await charge(imageCount);
+  if (blockedSpend) return blockedSpend;
+
   // Create task — record actual engine used (may differ from requested on fallback)
   const task = await db.task.create({
     data: {
@@ -702,6 +754,7 @@ export async function POST(req: Request) {
           sharedImageUrl,
           genWidth,
           genHeight,
+          creemDebit: debitSnapshot(hold),
         }),
       },
     });
@@ -761,10 +814,11 @@ export async function POST(req: Request) {
           height: 1024,
           status: "SUCCEEDED",
           completedAt: new Date(),
-          generationMeta: { sourceType: "main" },
+          generationMeta: withDebit({ sourceType: "main" }),
         },
       });
 
+      producedCount += 1;
       await db.task.update({
         where: { id: task.id },
         data: { predictionId: result.predictionId, status: "SUCCEEDED", resultUrl: imageUrl },
@@ -797,10 +851,10 @@ export async function POST(req: Request) {
         },
       });
       await releaseGeneratingProject(imageProjectId, message);
-      return NextResponse.json(
+      return fail(NextResponse.json(
         { error: "generation_failed", message },
         { status: 500 }
-      );
+      ));
     }
   }
 
@@ -828,10 +882,10 @@ export async function POST(req: Request) {
         provider = getProvider("flux");
         actualEngine = "flux";
       } catch {
-        return NextResponse.json(
+        return fail(NextResponse.json(
           { error: "No AI engine available" },
           { status: 400 }
-        );
+        ));
       }
     }
   }
@@ -865,7 +919,7 @@ export async function POST(req: Request) {
             s3Key: "pending", url: "", promptUsed: prompt,
             aiProvider: "bria", status: "PROCESSING",
             webhookId: prediction.predictionId,
-            generationMeta: { sourceType: "main" },
+            generationMeta: withDebit({ sourceType: "main" }),
           },
         });
 
@@ -889,10 +943,15 @@ export async function POST(req: Request) {
             output.mimeType ?? "image/png",
             placeholder.id,
             brandPreset,
-            quota.tier,
+            spendTier,
           );
           generatedIds.push(placeholder.id);
+          producedCount += 1;
         } else {
+          await db.generatedImage.update({
+            where: { id: placeholder.id },
+            data: { status: "FAILED", errorMessage: "No output from provider" },
+          });
           generatedIds.push("");
         }
       }
@@ -922,10 +981,10 @@ export async function POST(req: Request) {
         data: { status: "FAILED", errorMessage: "No output from provider" },
       });
       await releaseGeneratingProject(imageProjectId, "No output from provider");
-      return NextResponse.json(
+      return fail(NextResponse.json(
         { error: "generation_failed", message: "No output from provider" },
         { status: 500 }
-      );
+      ));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       await db.task.update({
@@ -933,10 +992,10 @@ export async function POST(req: Request) {
         data: { status: "FAILED", errorMessage: message },
       });
       await releaseGeneratingProject(imageProjectId, message);
-      return NextResponse.json(
+      return fail(NextResponse.json(
         { error: "generation_failed", message },
         { status: 500 }
-      );
+      ));
     }
   }
 
@@ -967,7 +1026,7 @@ export async function POST(req: Request) {
           s3Key: "pending", url: "", promptUsed: prompt,
           aiProvider: actualEngine, status: "PROCESSING",
           webhookId: prediction.predictionId,
-          generationMeta: { sourceType: "main" },
+          generationMeta: withDebit({ sourceType: "main" }),
         },
       });
 
@@ -1000,10 +1059,15 @@ export async function POST(req: Request) {
           output.mimeType ?? "image/png",
           placeholder.id,
           brandPreset,
-          quota.tier,
+          spendTier,
         );
         generatedIds.push(placeholder.id);
+        producedCount += 1;
       } else {
+        await db.generatedImage.update({
+          where: { id: placeholder.id },
+          data: { status: "FAILED", errorMessage: "No output from provider" },
+        });
         generatedIds.push("");
       }
     }
@@ -1034,10 +1098,10 @@ export async function POST(req: Request) {
       data: { status: "FAILED", errorMessage: "No output from provider" },
     });
     await releaseGeneratingProject(imageProjectId, "No output from provider");
-    return NextResponse.json(
+    return fail(NextResponse.json(
       { error: "generation_failed", message: "No output from provider" },
       { status: 500 }
-    );
+    ));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     await db.task.update({
@@ -1045,9 +1109,9 @@ export async function POST(req: Request) {
       data: { status: "FAILED", errorMessage: message },
     });
     await releaseGeneratingProject(imageProjectId, message);
-    return NextResponse.json(
+    return fail(NextResponse.json(
       { error: "generation_failed", message },
       { status: 500 }
-    );
+    ));
   }
 }

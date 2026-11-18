@@ -1,7 +1,10 @@
 import { stylePromptFragments } from "@/lib/ai/style-prompts";
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 
-/** Fallback prompt used when a request has no user text. It is not sent to Creem. */
+/**
+ * Fallback prompt the model sees when a request has no user text.
+ * That case is still screened, using SCREEN_PLACEHOLDERS rather than this template.
+ */
 export const DEFAULT_GENERATION_PROMPT =
   "Professional product photography, studio lighting, high quality";
 
