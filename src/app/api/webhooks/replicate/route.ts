@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { validateImage } from "@/lib/ai/validator";
 import { uploadBuffer, saveBufferLocally, hasS3Config } from "@/lib/s3";
 import { releaseGeneratingProject } from "@/lib/project-status";
+import { refundGenerationDebit } from "@/lib/creem/credits-runtime";
+import { readCreemDebit, shouldReverseSharedDebit } from "@/lib/creem/credits";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -35,6 +37,7 @@ export async function POST(req: Request) {
 
     if (!outputs || outputs.length === 0) {
       await failGeneration(genImage.imageProjectId, genImage.id, task?.id, "No outputs from Replicate");
+      await refundIfDebitGroupFailed(genImage.imageProjectId, genImage.id);
       return NextResponse.json({ received: true });
     }
 
@@ -59,6 +62,7 @@ export async function POST(req: Request) {
           task?.id,
           `Validation failed: ${validation.reason}`
         );
+        await refundIfDebitGroupFailed(genImage.imageProjectId, genImage.id);
         return NextResponse.json({ received: true });
       }
     } catch {
@@ -125,9 +129,24 @@ export async function POST(req: Request) {
       task?.id,
       body.error ?? "Replicate prediction failed"
     );
+    await refundIfDebitGroupFailed(genImage.imageProjectId, genImage.id);
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function refundIfDebitGroupFailed(imageProjectId: string, generatedImageId: string) {
+  const images = await db.generatedImage.findMany({
+    where: { imageProjectId },
+    select: { id: true, status: true, generationMeta: true },
+  });
+  const current = images.find((image) => image.id === generatedImageId);
+  const debit = readCreemDebit(current?.generationMeta);
+  if (!debit) return;
+  const group = images.filter((image) => readCreemDebit(image.generationMeta)?.transactionId === debit.transactionId);
+  const statuses = group.map((image) => (image.id === generatedImageId ? "FAILED" : image.status));
+  if (!shouldReverseSharedDebit(statuses)) return;
+  await refundGenerationDebit(debit);
 }
 
 async function failGeneration(

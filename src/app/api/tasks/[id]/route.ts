@@ -6,6 +6,7 @@ import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { fetchImageBuffer } from "@/lib/overlay-logo";
 import { ASYNC_ENGINES } from "@/lib/ai/constants";
 import { releaseGeneratingProject } from "@/lib/project-status";
+import { reverseStoredTaskDebit } from "@/lib/creem/task-debit";
 
 // Simple in-memory lock to avoid duplicate Gemini calls per task
 const processingLocks = new Set<string>();
@@ -42,9 +43,16 @@ export async function GET(
     processingLocks.add(id);
 
     try {
-      const params = JSON.parse(task.errorMessage || "{}");
+      const params = JSON.parse(task.errorMessage || "{}") as {
+        prompt?: string;
+        sharedImageUrl?: string;
+        genWidth?: number;
+        genHeight?: number;
+      };
       const provider = getProvider(task.engineType);
 
+      // Clear the temporary prompt payload. The debit handle lives on
+      // generationMeta and must stay after this update.
       await db.task.update({
         where: { id },
         data: { status: "PROCESSING", errorMessage: null },
@@ -102,12 +110,14 @@ export async function GET(
           data: { status: "GENERATED" },
         });
       } else {
+        await reverseStoredTaskDebit(id);
         await db.task.update({
           where: { id },
           data: { status: "FAILED", errorMessage: "No output from provider" },
         });
       }
     } catch (err) {
+      await reverseStoredTaskDebit(id);
       await db.task.update({
         where: { id },
         data: { status: "FAILED", errorMessage: err instanceof Error ? err.message : "Unknown error" },
@@ -163,7 +173,10 @@ export async function GET(
       id: updatedTask.id,
       status: updatedTask.status,
       predictionId: updatedTask.predictionId,
-      errorMessage: updatedTask.errorMessage,
+      errorMessage:
+        updatedTask.status === "FAILED" && !updatedTask.errorMessage?.trim().startsWith("{")
+          ? updatedTask.errorMessage
+          : null,
       promptTemplate: task.promptTemplate
         ? task.promptTemplate.nameZh || task.promptTemplate.name
         : null,

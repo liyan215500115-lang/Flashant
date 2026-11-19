@@ -5,6 +5,7 @@ import {
   creemModerationMode,
   promptsForModeration,
   reduceToUserText,
+  SCREEN_PLACEHOLDERS,
   screenGenerationPrompts,
 } from "@/lib/creem/moderation";
 import { sharedStaticPromptFragments } from "@/lib/creem/static-fragments";
@@ -94,7 +95,27 @@ describe("user-controlled prompt selection", () => {
 describe("screenGenerationPrompts", () => {
   const env = { CREEM_API_KEY: "creem_test_unit", CREEM_MODERATION: "enforce" };
 
-  it("allows only an allow decision", async () => {
+  it("allows only an allow decision and keeps the moderation result id", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ decision: "allow", id: "mod_allow_1" }));
+    const result = await screenGenerationPrompts({
+      userId: "user_1",
+      prompts: ["a red mug"],
+      env,
+      fetchImpl,
+    });
+    expect(result.allowed).toBe(true);
+    expect(result.decision).toBe("allow");
+    expect(result.moderationId).toBe("mod_allow_1");
+    expect(result.moderationIds).toEqual(["mod_allow_1"]);
+    expect(result.screenedAt).toEqual(expect.any(Number));
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://test-api.creem.io/v1/moderation/prompt");
+    expect(JSON.parse(init.body).prompt).toBe("a red mug");
+    expect(init.headers["x-api-key"]).toBe("creem_test_unit");
+  });
+
+  it("fails closed when allow has no result id", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ decision: "allow" }));
     const result = await screenGenerationPrompts({
       userId: "user_1",
@@ -102,12 +123,7 @@ describe("screenGenerationPrompts", () => {
       env,
       fetchImpl,
     });
-    expect(result).toEqual({ allowed: true, decision: "allow" });
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchImpl.mock.calls[0];
-    expect(url).toBe("https://test-api.creem.io/v1/moderation/prompt");
-    expect(JSON.parse(init.body).prompt).toBe("a red mug");
-    expect(init.headers["x-api-key"]).toBe("creem_test_unit");
+    expect(result).toEqual({ allowed: false, decision: "error" });
   });
 
   it("blocks deny and flag", async () => {
@@ -127,7 +143,7 @@ describe("screenGenerationPrompts", () => {
   it("stops on the first blocked prompt and does not continue", async () => {
     const fetchImpl = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ decision: "allow" }))
+      .mockResolvedValueOnce(jsonResponse({ decision: "allow", id: "mod_ok" }))
       .mockResolvedValueOnce(jsonResponse({ decision: "flag" }));
     const result = await screenGenerationPrompts({
       userId: "user_1",
@@ -166,21 +182,42 @@ describe("screenGenerationPrompts", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("skips the API when there is no user text or moderation is off", async () => {
-    const fetchImpl = vi.fn();
-    const empty = await screenGenerationPrompts({
+  it("screens a placeholder when there is no user text", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ decision: "allow", id: "mod_placeholder" }));
+    const result = await screenGenerationPrompts({
       userId: "user_1",
-      prompts: [],
-      env: {},
+      prompts: ["  ", ""],
+      placeholder: SCREEN_PLACEHOLDERS.upscale,
+      env,
       fetchImpl,
     });
+    expect(result.moderationId).toBe("mod_placeholder");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).prompt).toBe(SCREEN_PLACEHOLDERS.upscale);
+  });
+
+  it("joins multiple prompts into one moderation call when combine is set", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ decision: "allow", id: "mod_joined" }));
+    const result = await screenGenerationPrompts({
+      userId: "user_1",
+      prompts: ["red mug", "oak desk"],
+      combine: true,
+      env,
+      fetchImpl,
+    });
+    expect(result.moderationId).toBe("mod_joined");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).prompt).toBe("red mug\noak desk");
+  });
+
+  it("skips the API only when moderation is off", async () => {
+    const fetchImpl = vi.fn();
     const off = await screenGenerationPrompts({
       userId: "user_1",
       prompts: ["a red mug"],
       env: { CREEM_MODERATION: "off" },
       fetchImpl,
     });
-    expect(empty).toEqual({ allowed: true, decision: "skipped" });
     expect(off).toEqual({ allowed: true, decision: "skipped" });
     expect(fetchImpl).not.toHaveBeenCalled();
   });

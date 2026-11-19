@@ -17,7 +17,7 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 import { proxy } from "@/proxy";
 
 describe("generation quota gateway", () => {
-  it("does not 402 /api/generate when the UI policy is unlimited", async () => {
+  it("does not 402 /api/generate in the proxy; the route enforces the wallet", async () => {
     dbMock.subscription.findUnique.mockResolvedValue(null);
     dbMock.generatedImage.count.mockResolvedValue(11);
 

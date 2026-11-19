@@ -67,18 +67,23 @@ describe("getQuota", () => {
 });
 
 // ── checkGenerationQuota ─────────────────────────────────────────────────
-// Real quotas are disabled. These cases lock the allow-through policy the
-// gateway must match. Do not assert a FREE cap of 10 until that policy returns.
+// The Creem generation wallet is the authority. Without an API key the read
+// path must not fall back to the old unlimited ENTERPRISE stub or to a
+// GeneratedImage count.
 describe("checkGenerationQuota", () => {
-  it("allows through with an unlimited limit while quotas are disabled", async () => {
+  it("does not report the unlimited ENTERPRISE stub or count GeneratedImage rows", async () => {
+    delete process.env.CREEM_API_KEY;
+    process.env.CREEM_MODERATION = "enforce";
     dbMock.subscription.findUnique.mockResolvedValue(null);
     dbMock.generatedImage.count.mockResolvedValue(11);
 
     const result = await checkGenerationQuota("user_free");
-    expect(result.allowed).toBe(true);
-    expect(result.used).toBe(0);
-    expect(result.limit).toBe(-1);
-    expect(result.tier).toBe("ENTERPRISE");
+    expect(result.tier).toBe("FREE");
+    expect(result.allowed).toBe(false);
+    expect(result.limit).toBe(0);
+    expect(result.balance).toBe(0);
+    expect(result.tier).not.toBe("ENTERPRISE");
+    expect(result.limit).not.toBe(-1);
     expect(dbMock.generatedImage.count).not.toHaveBeenCalled();
   });
 });

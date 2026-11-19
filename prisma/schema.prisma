@@ -232,6 +232,8 @@ model Task {
   engineType     String           @default("flux")
   status         GenerationStatus @default(PENDING)
   errorMessage   String?
+  /// Debit hold and other generation bookkeeping. Not a user-facing error.
+  generationMeta Json?
   resultUrl      String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt

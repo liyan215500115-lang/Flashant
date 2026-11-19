@@ -56,14 +56,10 @@ export async function proxy(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Quota enforcement is intentionally off. /api/quota and checkGenerationQuota
-    // currently allow every request through (allowed: true, limit: -1) so the UI
-    // can say unlimited. This gateway must match that allow-through policy and
-    // must not return 402 for /api/generate while real quotas stay disabled.
-    //
-    // When quotas are restored later, this gateway and checkGenerationQuota must
-    // use the same policy, exclude aiProvider "manual", and handle soft-deleted
-    // rows according to the product decision at that time.
+    // The Creem generation wallet is enforced inside the image routes
+    // (/api/generate, /api/generate/batch, /api/upscale, /api/bg-remove).
+    // This gateway only checks auth. It does not count GeneratedImage rows
+    // and it does not return 402.
 
     const res = NextResponse.next();
     res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 31536000 });

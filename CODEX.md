@@ -41,7 +41,7 @@ npm run dev    # localhost:3000
 - **Prompt 模板**: `TYPE_TEMPLATES` (五要素：构图/光照/镜头/氛围/技术)
 - **品类匹配**: `CATEGORY_PROFILES` — 6 个品类，每个有默认 style + 推荐类型
 - **引擎路由**: `getEngineForDetailType()` — Info 类型走 GPT Image 2，场景走 FLUX
-- **额度**: `src/lib/lemonsqueezy/billing.ts` — 已设 admin bypass (无限)
+- **额度**: Creem generation wallet（`src/lib/creem/credits.ts`）。Lemon 仍负责结账。ENTERPRISE 没有月度发放额度。
 - **套图面板**: `src/components/studio/detail-panel.tsx` — 品类选择 → 分组类型 → 一键生成
 
 ## .env 关键变量
@@ -52,9 +52,9 @@ DEEPSEEK_API_KEY     — prompt 增强
 DATABASE_URL         — Neon PostgreSQL
 S3_*                 — Cloudflare R2 图片存储
 LEMONSQUEEZY_*       — 支付/订阅（本合规改动不切换 Lemon）
-CREEM_API_KEY        — 仅生图 prompt 审核。creem_test_ 走 test-api，creem_ 走 api.creem.io
-CREEM_TEST_MODE      — 可选，显式选择 sandbox 或 live host
-CREEM_MODERATION     — enforce（默认，无 key 则 503）或 off（仅本地）
+CREEM_API_KEY        — 生图审核 + generation wallet。creem_test_ 走 test-api，creem_ 走 api.creem.io
+CREEM_TEST_MODE      — 可选，显式选择 sandbox 或 live host（审核与 credits SDK 共用）
+CREEM_MODERATION     — enforce（默认，无 key 则 503）或 off（仅本地，同时跳过扣点）
 OPENAI_API_KEY       — GPT Image 2 (暂未接入)
 ```
 

@@ -14,5 +14,7 @@ export async function GET() {
     limit: quota.limit,
     tier: quota.tier,
     allowed: quota.allowed,
+    balance: quota.balance,
+    allotmentConfigured: quota.allotmentConfigured,
   });
 }
