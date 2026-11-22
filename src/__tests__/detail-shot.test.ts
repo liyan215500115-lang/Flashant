@@ -52,4 +52,26 @@ describe("pack detail close-ups", () => {
     expect(productOnly.promptOverride).toBeUndefined();
     expect(productOnly.productImageUrl).toBe(product);
   });
+
+  it("keeps the original product as the subject when style-lock supplies a reference", () => {
+    for (const detailKey of ["in_use", "lifestyle", "scene_atmosphere", "detail"] as const) {
+      const plan = planPackShot({
+        detailKey,
+        category: "fashion",
+        productImageUrl: product,
+        referenceImageUrl: reference,
+        referenceHasPerson: true,
+        contextText: "a model wearing the gold earrings",
+      });
+      expect(plan.productImageUrl, detailKey).toBe(product);
+      expect(plan.productImageUrl, detailKey).not.toBe(reference);
+      if (detailKey === "detail") {
+        expect(plan.referenceImageUrl, detailKey).toBeUndefined();
+        expect(plan.promptOverride, detailKey).toBeUndefined();
+      } else {
+        expect(plan.referenceImageUrl, detailKey).toBe(reference);
+        expect(plan.mode, detailKey).toBe("scene_reference");
+      }
+    }
+  });
 });

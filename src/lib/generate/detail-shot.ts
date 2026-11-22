@@ -1,6 +1,7 @@
 /**
  * How a pack shot is sent to the model.
- * Detail close-ups always keep the original product image as the subject.
+ * Every shot type keeps the original product photo as `productImageUrl`.
+ * A previous generated image or a person is only `referenceImageUrl`.
  * A face / smear-on-skin prompt is only for beauty, and only when the
  * reference actually contains a person.
  */
@@ -27,7 +28,7 @@ export type PackShotMode = "product_macro" | "beauty_person_closeup" | "scene_re
 
 export interface PackShotPlan {
   mode: PackShotMode;
-  /** Img2img subject. Detail shots always use the original product photo. */
+  /** Img2img subject. Always the original product photo, for every shot type. */
   productImageUrl: string;
   referenceImageUrl?: string;
   /** Replaces the assembled detail prompt. Only the beauty person close-up. */
@@ -74,7 +75,7 @@ export function planPackShot(input: {
   if (SCENE_TYPES.has(input.detailKey) && reference) {
     return {
       mode: "scene_reference",
-      productImageUrl: reference,
+      productImageUrl,
       referenceImageUrl: reference,
       omitCategoryHint: false,
     };

@@ -45,7 +45,7 @@ vi.mock("@/lib/overlay-logo", () => ({
 }));
 vi.mock("@/lib/server-t", () => ({ serverT: vi.fn(async (key: string) => key) }));
 
-import { POST as generatePost } from "@/app/api/generate/route";
+import { generateDetailPack, POST as generatePost } from "@/app/api/generate/route";
 import { POST as batchPost } from "@/app/api/generate/batch/route";
 
 const fetchMock = vi.fn();
@@ -317,6 +317,7 @@ describe("POST /api/generate pack shots", () => {
     detailTypes: [
       { key: "in_use", prompt: "gold earrings worn outdoors" },
       { key: "lifestyle", prompt: "gold earrings lifestyle" },
+      { key: "scene_atmosphere", prompt: "gold earrings dramatic atmosphere" },
       { key: "detail", prompt: "gold hoop earring macro" },
       { key: "multi_angle", prompt: "gold earrings angles" },
       { key: "flatlay", prompt: "gold earrings flatlay" },
@@ -364,33 +365,33 @@ describe("POST /api/generate pack shots", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.completed).toBe(1);
-    expect(json.requested).toBe(6);
-    expect(json.failed).toHaveLength(5);
+    expect(json.requested).toBe(7);
+    expect(json.failed).toHaveLength(6);
     expect(json.creditsCharged).toBe(1);
-    expect(json.creditsRefunded).toBe(5);
+    expect(json.creditsRefunded).toBe(6);
 
-    expect(chargeMock).toHaveBeenCalledTimes(6);
+    expect(chargeMock).toHaveBeenCalledTimes(7);
     for (const call of chargeMock.mock.calls) {
       expect(call[0].imageCount).toBe(1);
     }
     const keys = chargeMock.mock.calls.map((call) => call[0].idempotencyKey as string);
-    expect(new Set(keys).size).toBe(6);
+    expect(new Set(keys).size).toBe(7);
     const moderationIds = chargeMock.mock.calls.map((call) => call[0].gate.moderationId as string);
-    expect(new Set(moderationIds).size).toBe(6);
+    expect(new Set(moderationIds).size).toBe(7);
 
     const detailCharge = chargeMock.mock.calls.find((call) => String(call[0].idempotencyKey).endsWith(":detail"));
     const detailTransaction = `cct_${detailCharge?.[0].idempotencyKey}`;
     const refunded = refundMock.mock.calls.map((call) => call[0].transactionId as string);
-    expect(refunded).toHaveLength(5);
+    expect(refunded).toHaveLength(6);
     expect(refunded).not.toContain(detailTransaction);
 
     const rows = dbMock.generatedImage.create.mock.calls.map((call) => call[0].data);
     const failedRows = rows.filter((row: { status: string }) => row.status === "FAILED");
     const succeededRows = rows.filter((row: { status: string }) => row.status === "SUCCEEDED");
-    expect(failedRows).toHaveLength(5);
+    expect(failedRows).toHaveLength(6);
     expect(succeededRows).toHaveLength(1);
     expect(failedRows.every((row: { errorMessage: string }) => row.errorMessage === "provider exploded")).toBe(true);
-    expect(dbMock.task.create.mock.calls.filter((call) => call[0].data.status === "FAILED")).toHaveLength(5);
+    expect(dbMock.task.create.mock.calls.filter((call) => call[0].data.status === "FAILED")).toHaveLength(6);
 
     const detailCall = createPrediction.mock.calls
       .map((call) => call[0] as { prompt: string; productImageUrl: string; referenceImageUrl?: string })
@@ -401,6 +402,113 @@ describe("POST /api/generate pack shots", () => {
     expect(detailCall?.prompt).toContain("clearly recognizable");
     expect(detailCall?.referenceImageUrl).toBeUndefined();
     expect(succeededRows[0].promptUsed).toBe(detailCall?.prompt);
+
+    for (const marker of ["worn outdoors", "gold earrings lifestyle", "dramatic atmosphere"]) {
+      const call = createPrediction.mock.calls
+        .map((item) => item[0] as { prompt: string; productImageUrl: string; referenceImageUrl?: string })
+        .find((item) => item.prompt.includes(marker));
+      expect(call?.productImageUrl).toBe("https://cdn.example/product.jpg");
+      expect(call?.referenceImageUrl).toBe("https://cdn.example/latest-face.png");
+    }
+  });
+
+  it("debits each shot only when that shot starts, and refunds an unsettled hold when time runs out", async () => {
+    const events: string[] = [];
+    let moderation = 0;
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_order_${++moderation}`));
+    chargeMock.mockImplementation(async (input: { idempotencyKey: string; imageCount: number; gate: { moderationId?: string }; reference: string }) => {
+      events.push(`charge:${input.idempotencyKey.split(":").pop()}`);
+      return {
+        ok: true,
+        tier: "PRO",
+        balance: 90,
+        allotmentConfigured: true,
+        hold: {
+          accountId: "cca_1",
+          transactionId: `cct_${input.idempotencyKey}`,
+          amount: input.imageCount,
+          moderationId: input.gate.moderationId,
+          reference: input.reference,
+          idempotencyKey: input.idempotencyKey,
+        },
+      };
+    });
+    createPrediction.mockImplementation(async (input: { prompt: string }) => {
+      const key = input.prompt.includes("outdoors") ? "in_use" : "lifestyle";
+      events.push(`predict:${key}`);
+      if (key === "lifestyle") throw new Error("provider exploded");
+      return { predictionId: "pred_ok", status: "succeeded", outputs: [{ url: "https://cdn.example/ok.png" }] };
+    });
+    refundMock.mockImplementation(async (hold: { transactionId: string }) => {
+      events.push(`refund:${hold.transactionId.includes("lifestyle") ? "lifestyle" : "other"}`);
+      return { reversed: true };
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      referenceImageUrl: "https://cdn.example/latest-face.png",
+      detailTypes: [
+        { key: "in_use", prompt: "gold earrings worn outdoors" },
+        { key: "lifestyle", prompt: "gold earrings lifestyle" },
+      ],
+    }));
+    expect(res.status).toBe(200);
+    expect(events).toEqual([
+      "charge:in_use",
+      "predict:in_use",
+      "charge:lifestyle",
+      "predict:lifestyle",
+      "refund:lifestyle",
+    ]);
+
+    vi.clearAllMocks();
+    authMock.mockResolvedValue({ user: { id: "user_1" } });
+    dbMock.imageProject.findUnique.mockResolvedValue({ id: "proj_1", userId: "user_1" });
+    dbMock.imageProject.update.mockResolvedValue({});
+    dbMock.productImage.findUnique.mockResolvedValue({
+      id: "img_1",
+      s3Key: null,
+      originalUrl: "https://cdn.example/product.jpg",
+    });
+    dbMock.generatedImage.create.mockResolvedValue({ id: "gen_1" });
+    dbMock.task.create.mockResolvedValue({ id: "task_1" });
+    dbMock.task.count.mockResolvedValue(0);
+    refundMock.mockResolvedValue({ reversed: true });
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_timeout"));
+    chargePerImage();
+    createPrediction.mockResolvedValue({ predictionId: "pred_wait", status: "processing", outputs: [] });
+    let clock = 1_000_000;
+    getPrediction.mockImplementation(async () => {
+      clock = 1_000_000 + 60_000;
+      return { status: "processing", outputs: [] };
+    });
+
+    const timed = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      referenceImageUrl: "https://cdn.example/latest-face.png",
+      detailTypes: [
+        { key: "in_use", prompt: "gold earrings worn outdoors" },
+        { key: "lifestyle", prompt: "gold earrings still waiting" },
+        { key: "scene_atmosphere", prompt: "gold earrings atmosphere" },
+      ],
+      now: () => clock,
+    });
+    const timedJson = await timed.json();
+    expect(timed.status).toBe(500);
+    expect(chargeMock).toHaveBeenCalledTimes(1);
+    expect(refundMock).toHaveBeenCalledTimes(1);
+    expect(createPrediction).toHaveBeenCalledTimes(1);
+    const startedCall = createPrediction.mock.calls[0][0] as { productImageUrl: string; referenceImageUrl?: string };
+    expect(startedCall.productImageUrl).toBe("https://cdn.example/product.jpg");
+    expect(startedCall.referenceImageUrl).toBe("https://cdn.example/latest-face.png");
+    expect(timedJson.creditsCharged).toBe(0);
+    expect(timedJson.failed).toHaveLength(3);
+    expect(timedJson.failed.every((shot: { reason: string }) => shot.reason === "prediction_timeout")).toBe(true);
   });
 
   it("uses the product image for apparel detail and the smear prompt only for beauty with a person", async () => {

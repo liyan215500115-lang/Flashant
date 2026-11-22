@@ -376,10 +376,12 @@ function assemblePackPrompt(
 
 /**
  * One moderation id and one 1-credit debit per pack shot.
+ * The debit is taken when that shot starts, not for the whole pack up front.
  * A failed shot is stored as FAILED and only that shot's debit is reversed.
+ * Holds that were taken but not stored are reversed before the handler returns.
  * Identical outputs of one prompt may still share a debit on the single-image path.
  */
-async function generateDetailPack(input: {
+export async function generateDetailPack(input: {
   userId: string;
   imageProjectId: string;
   productImageId: string;
@@ -390,6 +392,8 @@ async function generateDetailPack(input: {
   seed?: number;
   category?: string;
   projectTitle?: string;
+  /** Clock for the pack deadline. Tests advance it; production uses Date.now. */
+  now?: () => number;
 }): Promise<NextResponse> {
   const shots = detailShotList(input.detailTypes);
   if (shots.length === 0) {
@@ -442,34 +446,14 @@ async function generateDetailPack(input: {
   }
 
   const generationId = crypto.randomUUID();
-  const holds: Array<DebitHold | null> = [];
-  if (creemModerationMode() === "off") {
-    for (let index = 0; index < shots.length; index += 1) holds.push(null);
-  } else {
-    for (let index = 0; index < shots.length; index += 1) {
-      const charged = await chargeScreenedGeneration({
-        userId: input.userId,
-        gate: gates[index],
-        imageCount: 1,
-        reference: `gen:${generationId}:${index}:${shots[index].key}`,
-        idempotencyKey: `debit:${generationId}:${index}:${shots[index].key}`,
-      });
-      if (!charged.ok) {
-        for (const hold of holds) {
-          if (hold) await refundGenerationDebit(hold);
-        }
-        return spendErrorResponse(charged);
-      }
-      holds.push(charged.hold);
-    }
-  }
 
   await db.imageProject.update({
     where: { id: input.imageProjectId },
     data: { status: "GENERATING", title: input.projectTitle || undefined },
   });
 
-  const DEADLINE = Date.now() + 50_000;
+  const now = input.now ?? Date.now;
+  const DEADLINE = now() + 50_000;
 
   type Attempt = {
     key: string;
@@ -481,7 +465,22 @@ async function generateDetailPack(input: {
     error?: string;
   };
 
-  const attempts: Attempt[] = await Promise.all(shots.map(async (shot, index) => {
+  const generated: Array<{ key: string; url: string; label: string }> = [];
+  const failed: Array<{ key: string; reason: string; creditsRefunded: boolean }> = [];
+  let creditsRefunded = 0;
+  let creditsCharged = 0;
+  /** Debits taken for a shot that is not stored yet. Cleared on store or refund. */
+  const unsettled = new Map<string, DebitHold>();
+
+  function trackHold(hold: DebitHold | null) {
+    if (hold) unsettled.set(hold.transactionId, hold);
+  }
+
+  function forgetHold(hold: DebitHold | null) {
+    if (hold) unsettled.delete(hold.transactionId);
+  }
+
+  function planShot(shot: { key: string; prompt: string }) {
     const plan = planPackShot({
       detailKey: shot.key,
       category: input.category,
@@ -490,44 +489,13 @@ async function generateDetailPack(input: {
       referenceHasPerson: input.referenceHasPerson,
       contextText: [input.baseStyle, shot.prompt].filter(Boolean).join("\n"),
     });
-    const prompt = assemblePackPrompt(shot, plan, input);
-    const { provider, engine } = getEngineForDetailType(shot.key);
-    try {
-      const prediction = await provider.createPrediction({
-        prompt,
-        productImageUrl: plan.productImageUrl,
-        referenceImageUrl: plan.referenceImageUrl,
-        numOutputs: 1,
-        width: 1024,
-        height: 1024,
-        seed: input.seed || undefined,
-      });
-      return {
-        key: shot.key,
-        prompt,
-        engine,
-        hold: holds[index] ?? null,
-        predictionId: prediction.predictionId,
-        outputs: prediction.outputs,
-      };
-    } catch (error) {
-      return {
-        key: shot.key,
-        prompt,
-        engine,
-        hold: holds[index] ?? null,
-        error: error instanceof Error ? error.message : "prediction_failed",
-      };
-    }
-  }));
-
-  const generated: Array<{ key: string; url: string; label: string }> = [];
-  const failed: Array<{ key: string; reason: string; creditsRefunded: boolean }> = [];
-  let creditsRefunded = 0;
-  let creditsCharged = 0;
+    const { engine } = getEngineForDetailType(shot.key);
+    return { plan, prompt: assemblePackPrompt(shot, plan, input), engine };
+  }
 
   async function settleFailure(attempt: Attempt, reason: string) {
     const refunded = attempt.hold ? (await refundGenerationDebit(attempt.hold)).reversed : false;
+    forgetHold(attempt.hold);
     if (refunded) creditsRefunded += 1;
     const message = reason.slice(0, 500) || "generation_failed";
     try {
@@ -594,6 +562,7 @@ async function generateDetailPack(input: {
         },
       },
     });
+    forgetHold(attempt.hold);
     generated.push({ key: attempt.key, url, label: attempt.key });
     if (attempt.hold) creditsCharged += 1;
     try {
@@ -619,47 +588,138 @@ async function generateDetailPack(input: {
     }
   }
 
-  for (const attempt of attempts) {
-    if (attempt.error || !attempt.predictionId) {
-      await settleFailure(attempt, attempt.error || "prediction_failed");
-      continue;
-    }
+  let chargeBlocked: NextResponse | null = null;
 
-    const syncUrl = attempt.outputs?.[0]?.url;
-    if (syncUrl) {
-      try {
-        await storeSuccess(attempt, syncUrl);
-      } catch (error) {
-        await settleFailure(attempt, error instanceof Error ? error.message : "result_not_stored");
+  try {
+    for (let index = 0; index < shots.length; index += 1) {
+      const shot = shots[index];
+      const planned = planShot(shot);
+      const baseAttempt = {
+        key: shot.key,
+        prompt: planned.prompt,
+        engine: planned.engine,
+      };
+
+      if (now() >= DEADLINE) {
+        await settleFailure({ ...baseAttempt, hold: null }, "prediction_timeout");
+        continue;
       }
-      continue;
-    }
 
-    let result;
-    try {
-      const provider = attempt.engine === "openai" ? getProvider("flux") : getProvider(attempt.engine);
-      result = await provider.getPrediction(attempt.predictionId);
-      while (result.status === "processing" && Date.now() < DEADLINE) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      let hold: DebitHold | null = null;
+      if (creemModerationMode() !== "off") {
+        const charged = await chargeScreenedGeneration({
+          userId: input.userId,
+          gate: gates[index],
+          imageCount: 1,
+          reference: `gen:${generationId}:${index}:${shot.key}`,
+          idempotencyKey: `debit:${generationId}:${index}:${shot.key}`,
+        });
+        if (!charged.ok) {
+          const message = charged.error;
+          for (let rest = index; rest < shots.length; rest += 1) {
+            const restShot = shots[rest];
+            const restPlan = rest === index ? planned : planShot(restShot);
+            await settleFailure({
+              key: restShot.key,
+              prompt: restPlan.prompt,
+              engine: restPlan.engine,
+              hold: null,
+            }, message);
+          }
+          if (generated.length === 0) chargeBlocked = spendErrorResponse(charged);
+          break;
+        }
+        hold = charged.hold;
+        trackHold(hold);
+      }
+
+      let attempt: Attempt;
+      try {
+        const { provider } = getEngineForDetailType(shot.key);
+        const prediction = await provider.createPrediction({
+          prompt: planned.prompt,
+          productImageUrl: planned.plan.productImageUrl,
+          referenceImageUrl: planned.plan.referenceImageUrl,
+          numOutputs: 1,
+          width: 1024,
+          height: 1024,
+          seed: input.seed || undefined,
+        });
+        attempt = {
+          ...baseAttempt,
+          hold,
+          predictionId: prediction.predictionId,
+          outputs: prediction.outputs,
+        };
+      } catch (error) {
+        attempt = {
+          ...baseAttempt,
+          hold,
+          error: error instanceof Error ? error.message : "prediction_failed",
+        };
+      }
+
+      if (attempt.error || !attempt.predictionId) {
+        await settleFailure(attempt, attempt.error || "prediction_failed");
+        continue;
+      }
+
+      const syncUrl = attempt.outputs?.[0]?.url;
+      if (syncUrl) {
+        try {
+          await storeSuccess(attempt, syncUrl);
+        } catch (error) {
+          await settleFailure(attempt, error instanceof Error ? error.message : "result_not_stored");
+        }
+        continue;
+      }
+
+      let result;
+      try {
+        const provider = attempt.engine === "openai" ? getProvider("flux") : getProvider(attempt.engine);
         result = await provider.getPrediction(attempt.predictionId);
-      }
-    } catch (error) {
-      await settleFailure(attempt, error instanceof Error ? error.message : "prediction_failed");
-      continue;
-    }
-
-    const url = result.status === "succeeded" ? result.outputs[0]?.url : "";
-    if (url) {
-      try {
-        await storeSuccess(attempt, url);
+        while (result.status === "processing" && now() < DEADLINE) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          result = await provider.getPrediction(attempt.predictionId);
+        }
       } catch (error) {
-        await settleFailure(attempt, error instanceof Error ? error.message : "result_not_stored");
+        await settleFailure(attempt, error instanceof Error ? error.message : "prediction_failed");
+        continue;
       }
-    } else {
-      const reason = result.error
-        || (result.status === "processing" ? "prediction_timeout" : "no_output");
-      await settleFailure(attempt, reason);
+
+      const url = result.status === "succeeded" ? result.outputs[0]?.url : "";
+      if (url) {
+        try {
+          await storeSuccess(attempt, url);
+        } catch (error) {
+          await settleFailure(attempt, error instanceof Error ? error.message : "result_not_stored");
+        }
+      } else {
+        const reason = result.error
+          || (result.status === "processing" ? "prediction_timeout" : "no_output");
+        await settleFailure(attempt, reason);
+      }
     }
+  } finally {
+    for (const hold of unsettled.values()) {
+      const refunded = (await refundGenerationDebit(hold)).reversed;
+      if (refunded) creditsRefunded += 1;
+    }
+    unsettled.clear();
+  }
+
+  if (chargeBlocked && generated.length === 0) {
+    const spend = await chargeBlocked.json() as Record<string, unknown>;
+    return NextResponse.json({
+      ...spend,
+      generated,
+      failed,
+      requested: shots.length,
+      completed: 0,
+      count: 0,
+      creditsCharged,
+      creditsRefunded,
+    }, { status: chargeBlocked.status });
   }
 
   const pendingCount = await db.task.count({
