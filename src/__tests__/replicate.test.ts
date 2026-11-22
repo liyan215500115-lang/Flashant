@@ -51,6 +51,42 @@ describe("replicate provider", () => {
       ).rejects.toThrow("Replicate API error: 500");
     });
 
+    it("includes retry_after when the API returns 429", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        text: async () => JSON.stringify({
+          detail: "Request was throttled. Credit balance is under $5. Rate limit 6/min burst 1.",
+          retry_after: 2,
+        }),
+        headers: { get: (name: string) => (name.toLowerCase() === "retry-after" ? "2" : null) },
+      }));
+
+      const provider = createReplicateProvider({ apiKey: "test-key" });
+      await expect(provider.createPrediction({
+        prompt: "test",
+        productImageUrl: "https://example.com/img.png",
+      })).rejects.toThrow(/Replicate API error: 429/);
+      await expect(provider.createPrediction({
+        prompt: "test",
+        productImageUrl: "https://example.com/img.png",
+      })).rejects.toThrow(/retry_after/);
+    });
+
+    it("copies a numeric Retry-After header when the body omits retry_after", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        text: async () => "rate limited",
+        headers: { get: () => "3" },
+      }));
+      const provider = createReplicateProvider({ apiKey: "test-key" });
+      await expect(provider.createPrediction({
+        prompt: "test",
+        productImageUrl: "https://example.com/img.png",
+      })).rejects.toThrow("retry_after=3");
+    });
+
     it("throws on API error (401)", async () => {
       vi.stubGlobal("fetch", mockFetch(401, { error: "Invalid token" }));
 

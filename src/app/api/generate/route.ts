@@ -26,6 +26,7 @@ import { sharedStaticPromptFragments } from "@/lib/creem/static-fragments";
 import {
   applyPackPromptGuards,
   BEAUTY_PERSON_CLOSEUP_PROMPT,
+  IN_USE_CATALOG_GUARD,
   MULTI_ANGLE_DISTINCT_VIEWS,
   NO_SOURCE_WATERMARK,
   packStyleLocked,
@@ -38,7 +39,10 @@ import {
   MIN_START_MS,
   NOT_STARTED_REASON,
   PACK_BUDGET_MS,
+  PREDICTION_CREATE_GAP_MS,
 } from "@/lib/generate/pack-timing";
+import { packSleep } from "@/lib/generate/pack-wait";
+import { replicateRetryDelayMs } from "@/lib/generate/replicate-rate-limit";
 import type { PlanTier, Prisma } from "@prisma/client";
 
 function debitSnapshot(value: DebitHold | null): { accountId: string; transactionId: string } | null {
@@ -74,19 +78,19 @@ const TYPE_TEMPLATES: Record<string, {
     technical: "4K, photorealistic, maximum quality, cinematic color grading",
   },
   in_use: {
-    composition: "Product being actively used or worn by a person, candid mid-action moment, focus on product and interaction area",
-    lighting: "Soft diffused daylight 5500K, natural ambient light, no studio feel",
-    camera: "50mm lens, f/2.0, shallow depth of field, product in sharp focus, editorial lifestyle quality",
-    mood: "Candid and natural, captured moment feel, Everlane/Uniqlo lookbook style, warm genuine atmosphere",
-    technical: "4K, photorealistic, editorial lifestyle photography",
+    composition: "The product is worn or used in an everyday fashion catalog. Ordinary standing or walking pose, everyday clothing, and the product stays sharp as the subject",
+    lighting: "Soft diffused daylight 5500K, natural ambient light, catalog illumination",
+    camera: "50mm lens, f/2.0, shallow depth of field, product in sharp focus, editorial catalog framing",
+    mood: "Modest lookbook atmosphere, warm and ordinary, the garment or accessory is the hero",
+    technical: "4K, photorealistic, editorial catalog photography",
   },
   // ── Product detail types ──
   detail: {
-    composition: "Extreme close-up filling 90% of frame, focus on texture and material quality, no product packaging visible",
-    lighting: "Soft diffused ring light, subtle directional accent at 30° to reveal surface texture, controlled highlights",
-    camera: "100mm macro lens, f/2.8, very shallow depth of field, crisp micro-texture detail",
-    mood: "Premium craftsmanship reveal, tactile and luxurious feel",
-    technical: "8K, maximum sharpness, photorealistic macro photography",
+    composition: "Commercial catalog macro of this exact product, filling the frame with its material, hardware, and construction. The product alone is in frame",
+    lighting: "Soft diffused catalog light, a gentle side accent that shows surface texture",
+    camera: "100mm macro lens, f/2.8, very shallow depth of field, crisp material detail",
+    mood: "Premium craftsmanship, tactile catalog photograph of the product",
+    technical: "8K, maximum sharpness, photorealistic product macro",
   },
   multi_angle: {
     composition: MULTI_ANGLE_DISTINCT_VIEWS,
@@ -323,6 +327,8 @@ function generationStaticFragments(): string[] {
     "Keep any person visually identical to the reference image — same face, same body, same clothing.",
     BEAUTY_PERSON_CLOSEUP_PROMPT,
     PRODUCT_MACRO_LOCK,
+    IN_USE_CATALOG_GUARD,
+    "Keep the person consistent with the reference image and the same clothing, in an ordinary catalog pose.",
     STYLE_LOCK_SAME_PRODUCT,
     MULTI_ANGLE_DISTINCT_VIEWS,
     NO_SOURCE_WATERMARK,
@@ -367,7 +373,9 @@ function assemblePackPrompt(
     ? ` Keep the same overall style, material, and color: ${input.baseStyle}.`
     : "";
   const identityLock = input.referenceImageUrl && !wantsTextOnImage && plan.mode !== "product_macro" && dt.key !== "multi_angle"
-    ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
+    ? dt.key === "in_use"
+      ? " Keep the person consistent with the reference image and the same clothing, in an ordinary catalog pose."
+      : " Keep any person visually identical to the reference image — same face, same body, same clothing."
     : "";
   const noTextGuard = wantsTextOnImage
     ? ""
@@ -397,6 +405,7 @@ function assemblePackPrompt(
  * The debit is taken when that shot starts, not for the whole pack up front.
  * A failed shot is stored as FAILED and only that shot's debit is reversed.
  * A shot that has not started is not labeled prediction_timeout and is not debited.
+ * A 429 retries the same shot until the pack budget, and does not refund on the first 429.
  * A started shot keeps polling until the pack budget, not a shorter per-shot cap.
  * If the provider returns an image after that budget, that image is stored
  * and its debit is kept.
@@ -494,6 +503,9 @@ export async function generateDetailPack(input: {
   let creditsCharged = 0;
   /** Debits taken for a shot that is not stored yet. Cleared on store or refund. */
   const unsettled = new Map<string, DebitHold>();
+  const packRows: Array<{ id: string; generationMeta: Record<string, unknown> }> = [];
+  /** Timestamp of the previous prediction create, so the next create can leave a burst gap. */
+  let lastCreateAt = 0;
 
   function trackHold(hold: DebitHold | null) {
     if (hold) unsettled.set(hold.transactionId, hold);
@@ -516,14 +528,48 @@ export async function generateDetailPack(input: {
     return { plan, prompt: assemblePackPrompt(shot, plan, input), engine };
   }
 
+  function shotMeta(attempt: Attempt, extra?: Record<string, unknown>): Record<string, unknown> {
+    return {
+      sourceType: "detail",
+      detailKey: attempt.key,
+      packId: generationId,
+      ...(attempt.hold
+        ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
+        : {}),
+      ...extra,
+    };
+  }
+
+  function rememberPackRow(created: { id?: string } | null | undefined, generationMeta: Record<string, unknown>) {
+    if (created?.id) packRows.push({ id: created.id, generationMeta });
+  }
+
+  /**
+   * A 429 is retried on the same shot. A frozen test clock may retry twice;
+   * production time moves during packSleep, so the pack deadline is the real stop.
+   */
+  async function retryAfterRateLimit(error: unknown, stalls: { n: number }): Promise<boolean> {
+    const waitMs = replicateRetryDelayMs(error);
+    if (waitMs == null) return false;
+    if (now() + waitMs >= packDeadline) return false;
+    const before = now();
+    await packSleep(waitMs);
+    if (now() <= before) {
+      stalls.n += 1;
+      if (stalls.n > 2) return false;
+    }
+    return true;
+  }
+
   async function settleFailure(attempt: Attempt, reason: string) {
     const charged = Boolean(attempt.hold);
     const refunded = attempt.hold ? (await refundGenerationDebit(attempt.hold)).reversed : false;
     forgetHold(attempt.hold);
     if (refunded) creditsRefunded += 1;
     const message = reason.slice(0, 500) || "generation_failed";
+    const meta = shotMeta(attempt, refunded ? { creditsRefunded: true } : {});
     try {
-      await db.generatedImage.create({
+      const created = await db.generatedImage.create({
         data: {
           imageProjectId: input.imageProjectId,
           productImageId: input.productImageId,
@@ -534,16 +580,10 @@ export async function generateDetailPack(input: {
           status: "FAILED",
           errorMessage: message,
           completedAt: new Date(),
-          generationMeta: {
-            sourceType: "detail",
-            detailKey: attempt.key,
-            ...(attempt.hold
-              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
-              : {}),
-            ...(refunded ? { creditsRefunded: true } : {}),
-          },
+          generationMeta: meta as Prisma.InputJsonValue,
         },
       });
+      rememberPackRow(created, meta);
       await db.task.create({
         data: {
           imageProjectId: input.imageProjectId,
@@ -551,13 +591,7 @@ export async function generateDetailPack(input: {
           engineType: attempt.engine,
           status: "FAILED",
           errorMessage: message,
-          generationMeta: {
-            sourceType: "detail",
-            detailKey: attempt.key,
-            ...(attempt.hold
-              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
-              : {}),
-          },
+          generationMeta: meta as Prisma.InputJsonValue,
         },
       });
     } catch (error) {
@@ -567,7 +601,8 @@ export async function generateDetailPack(input: {
   }
 
   async function storeSuccess(attempt: Attempt, url: string) {
-    await db.generatedImage.create({
+    const meta = shotMeta(attempt);
+    const created = await db.generatedImage.create({
       data: {
         imageProjectId: input.imageProjectId,
         productImageId: input.productImageId,
@@ -577,15 +612,10 @@ export async function generateDetailPack(input: {
         aiProvider: attempt.engine,
         status: "SUCCEEDED",
         completedAt: new Date(),
-        generationMeta: {
-          sourceType: "detail",
-          detailKey: attempt.key,
-          ...(attempt.hold
-            ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
-            : {}),
-        },
+        generationMeta: meta as Prisma.InputJsonValue,
       },
     });
+    rememberPackRow(created, meta);
     forgetHold(attempt.hold);
     generated.push({ key: attempt.key, url, label: attempt.key });
     if (attempt.hold) creditsCharged += 1;
@@ -598,13 +628,7 @@ export async function generateDetailPack(input: {
           status: "SUCCEEDED",
           resultUrl: url,
           predictionId: attempt.predictionId,
-          generationMeta: {
-            sourceType: "detail",
-            detailKey: attempt.key,
-            ...(attempt.hold
-              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
-              : {}),
-          },
+          generationMeta: meta as Prisma.InputJsonValue,
         },
       });
     } catch (error) {
@@ -624,10 +648,14 @@ export async function generateDetailPack(input: {
         engine: planned.engine,
       };
 
-      if (packDeadline - now() < MIN_START_MS) {
+      const gapMs = lastCreateAt > 0
+        ? Math.max(0, PREDICTION_CREATE_GAP_MS - (now() - lastCreateAt))
+        : 0;
+      if (packDeadline - now() < MIN_START_MS + gapMs) {
         await settleFailure({ ...baseAttempt, hold: null }, NOT_STARTED_REASON);
         continue;
       }
+      if (gapMs > 0) await packSleep(gapMs);
 
       let hold: DebitHold | null = null;
       if (creemModerationMode() !== "off") {
@@ -658,30 +686,37 @@ export async function generateDetailPack(input: {
       }
 
       let attempt: Attempt;
-      try {
-        const { provider } = getEngineForDetailType(shot.key);
-        const prediction = await provider.createPrediction({
-          prompt: planned.prompt,
-          productImageUrl: planned.plan.productImageUrl,
-          referenceImageUrl: planned.plan.referenceImageUrl,
-          numOutputs: 1,
-          width: 1024,
-          height: 1024,
-          seed: input.seed || undefined,
-        });
-        attempt = {
-          ...baseAttempt,
-          hold,
-          predictionId: prediction.predictionId,
-          outputs: prediction.outputs,
-        };
-      } catch (error) {
-        attempt = {
-          ...baseAttempt,
-          hold,
-          error: error instanceof Error ? error.message : "prediction_failed",
-        };
+      const stalls = { n: 0 };
+      let prediction: { predictionId: string; outputs?: Array<{ url: string }> } | null = null;
+      let createError: string | null = null;
+      while (true) {
+        lastCreateAt = now();
+        try {
+          const { provider } = getEngineForDetailType(shot.key);
+          prediction = await provider.createPrediction({
+            prompt: planned.prompt,
+            productImageUrl: planned.plan.productImageUrl,
+            referenceImageUrl: planned.plan.referenceImageUrl,
+            numOutputs: 1,
+            width: 1024,
+            height: 1024,
+            seed: input.seed || undefined,
+          });
+          createError = null;
+          break;
+        } catch (error) {
+          if (await retryAfterRateLimit(error, stalls)) continue;
+          createError = error instanceof Error ? error.message : "prediction_failed";
+          break;
+        }
       }
+      attempt = {
+        ...baseAttempt,
+        hold,
+        predictionId: prediction?.predictionId,
+        outputs: prediction?.outputs,
+        ...(createError ? { error: createError } : {}),
+      };
 
       if (attempt.error || !attempt.predictionId) {
         await settleFailure(attempt, attempt.error || "prediction_failed");
@@ -704,15 +739,25 @@ export async function generateDetailPack(input: {
         // An already-debited shot uses the whole pack budget. PER_SHOT_WAIT_MS only
         // decides whether the next shot is worth starting.
         const shotDeadline = packDeadline;
-        result = await provider.getPrediction(attempt.predictionId);
+        const readPrediction = async () => {
+          while (true) {
+            try {
+              return await provider.getPrediction(attempt.predictionId!);
+            } catch (error) {
+              if (await retryAfterRateLimit(error, stalls)) continue;
+              throw error;
+            }
+          }
+        };
+        result = await readPrediction();
         while (result.status === "processing" && now() < shotDeadline) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          result = await provider.getPrediction(attempt.predictionId);
+          await packSleep(2_000);
+          result = await readPrediction();
         }
         // One read after the pack budget. Store a late image before any refund.
         if (result.status === "processing" && !result.outputs?.[0]?.url) {
           try {
-            const late = await provider.getPrediction(attempt.predictionId);
+            const late = await provider.getPrediction(attempt.predictionId!);
             if (late.outputs?.[0]?.url || late.status === "failed" || late.error) {
               result = late;
             }
@@ -746,6 +791,30 @@ export async function generateDetailPack(input: {
     unsettled.clear();
   }
 
+  const creditsNotCharged = failed.filter((shot) => !shot.charged).length;
+  const packCredit = {
+    id: generationId,
+    finishedAt: new Date().toISOString(),
+    requested: shots.length,
+    completed: generated.length,
+    creditsCharged,
+    creditsRefunded,
+    creditsNotCharged,
+    failed,
+  };
+  for (const row of packRows) {
+    try {
+      await db.generatedImage.update({
+        where: { id: row.id },
+        data: {
+          generationMeta: { ...row.generationMeta, packCredit } as Prisma.InputJsonValue,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to persist pack credit summary", error);
+    }
+  }
+
   // Same close-out for a blocked first debit and for a pack that produced nothing.
   // Otherwise the early 402 leaves the project on GENERATING.
   const pendingCount = await db.task.count({
@@ -771,7 +840,7 @@ export async function generateDetailPack(input: {
       count: 0,
       creditsCharged,
       creditsRefunded,
-      creditsNotCharged: failed.filter((shot) => !shot.charged).length,
+      creditsNotCharged,
     }, { status: chargeBlocked.status });
   }
 
@@ -783,7 +852,7 @@ export async function generateDetailPack(input: {
     count: generated.length,
     creditsCharged,
     creditsRefunded,
-    creditsNotCharged: failed.filter((shot) => !shot.charged).length,
+    creditsNotCharged,
   };
   if (generated.length === 0) {
     return NextResponse.json(

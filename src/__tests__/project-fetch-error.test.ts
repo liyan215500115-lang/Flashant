@@ -58,4 +58,30 @@ describe("projectGenerationError", () => {
       )
     ).not.toContain("not_started");
   });
+
+  it("hides raw 429, E005, and prediction_timeout text on the project banner", () => {
+    const banner = projectGenerationError(
+      {
+        status: "FAILED",
+        errorMessage: 'Replicate API error: 429 {"retry_after":1}',
+        tasks: [{ status: "FAILED", errorMessage: "The input or output was flagged as sensitive. (E005) (abc)" }],
+      },
+      "生成失败",
+      "zh",
+    );
+    expect(banner).not.toContain("429");
+    expect(banner).not.toContain("{");
+    expect(banner).toContain("繁忙");
+
+    const timeout = projectGenerationError(
+      {
+        status: "FAILED",
+        errorMessage: "prediction_timeout",
+      },
+      "Generation failed",
+      "en",
+    );
+    expect(timeout).not.toContain("prediction_timeout");
+    expect(timeout.toLowerCase()).toContain("timed out");
+  });
 });

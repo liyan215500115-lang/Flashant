@@ -6,6 +6,7 @@ import {
   NO_SOURCE_WATERMARK,
   packStyleLocked,
   planPackShot,
+  IN_USE_CATALOG_GUARD,
   PRODUCT_MACRO_LOCK,
   STYLE_LOCK_SAME_PRODUCT,
 } from "@/lib/generate/detail-shot";
@@ -30,6 +31,10 @@ describe("pack detail close-ups", () => {
     expect(plan.promptOverride).toBeUndefined();
     expect(plan.omitCategoryHint).toBe(true);
     expect(PRODUCT_MACRO_LOCK).not.toContain("visible in use (on skin");
+    expect(PRODUCT_MACRO_LOCK).not.toContain("cream on skin");
+    expect(PRODUCT_MACRO_LOCK.toLowerCase()).not.toContain("face");
+    expect(PRODUCT_MACRO_LOCK).toContain("same shape");
+    expect(PRODUCT_MACRO_LOCK).toContain("only this product");
     expect(BEAUTY_PERSON_CLOSEUP_PROMPT).toContain("on skin");
   });
 
@@ -119,5 +124,17 @@ describe("pack detail close-ups", () => {
     expect(MULTI_ANGLE_DISTINCT_VIEWS.toLowerCase()).not.toContain("equal spacing");
     expect(prompt).toContain(STYLE_LOCK_SAME_PRODUCT);
     expect(prompt).toContain(NO_SOURCE_WATERMARK);
+  });
+
+  it("keeps in-use as a worn product and frames it as an everyday catalog pose", () => {
+    const prompt = applyPackPromptGuards("gold earrings worn outdoors", {
+      detailKey: "in_use",
+      styleLocked: true,
+    });
+    expect(prompt).toContain(IN_USE_CATALOG_GUARD);
+    expect(prompt).toContain("worn or used");
+    expect(prompt.toLowerCase()).not.toContain("nudity");
+    expect(prompt.toLowerCase()).not.toContain("cream on skin");
+    expect(IN_USE_CATALOG_GUARD).toContain("ordinary clothing");
   });
 });
