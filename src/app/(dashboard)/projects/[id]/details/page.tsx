@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/components/i18n-provider";
+import { formatPackCreditSummaryFromPayload } from "@/lib/generate/pack-summary";
 
 const DETAIL_TYPES = [
   // ═══ 信息类型：白底图 ═══
@@ -99,7 +100,8 @@ export default function DetailsPage() {
         key: shot.key || "unknown",
         reason: shot.reason || data.message || "生成失败",
       })));
-      setBatchSummary(isZh ? `已完成 ${completed}/${requested}` : `${completed}/${requested} completed`);
+      const summary = formatPackCreditSummaryFromPayload(data, { requested, completed }, locale);
+      setBatchSummary(summary);
       if (generated && generated.length > 0) {
         const newResults: typeof results = generated.map(
           (g) => ({
@@ -111,9 +113,9 @@ export default function DetailsPage() {
       if (!res.ok && (!generated || generated.length === 0)) {
         toast.error(failedShots[0]?.reason || data.message || data.error || "Generation failed");
       } else if (failedShots.length > 0) {
-        toast.error(`已完成 ${completed}/${requested}`);
+        toast.error(summary);
       } else if (generated && generated.length > 0) {
-        toast.success(`已完成 ${completed}/${requested}`);
+        toast.success(summary);
       }
     } catch {
       toast.error("Network failed");

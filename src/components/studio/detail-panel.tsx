@@ -10,6 +10,7 @@ import {
   readPackDraft,
   writePackDraft,
 } from "@/lib/studio-pack-session";
+import { formatPackCreditSummaryFromPayload } from "@/lib/generate/pack-summary";
 
 const TYPE_GROUPS = [
   {
@@ -115,7 +116,7 @@ async function overlayTextOnImage(imageUrl: string, text: string): Promise<strin
 }
 
 export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures }: StudioDetailPanelProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [open, setOpen] = useState(!!initialResults?.length);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(GENERAL_PACK));
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
@@ -275,14 +276,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         : [];
       const requested = typeof data.requested === "number" ? data.requested : types.length;
       const completed = typeof data.completed === "number" ? data.completed : (generated?.length ?? 0);
-      const refunded = typeof data.creditsRefunded === "number" ? data.creditsRefunded : 0;
       setFailures(failedShots.map((shot) => ({
         key: shot.key || "unknown",
         reason: shot.reason || data.message || "生成失败",
       })));
-      setBatchSummary(
-        `已完成 ${completed}/${requested}` + (refunded > 0 ? `，已退回 ${refunded} 点额度` : ""),
-      );
+      setBatchSummary(formatPackCreditSummaryFromPayload(data, { requested, completed }, locale));
 
       if (!res.ok && (!generated || generated.length === 0)) {
         const reason = failedShots[0]?.reason || data.message || data.error || res.status;

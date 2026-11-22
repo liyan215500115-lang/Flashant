@@ -45,8 +45,16 @@ vi.mock("@/lib/overlay-logo", () => ({
 }));
 vi.mock("@/lib/server-t", () => ({ serverT: vi.fn(async (key: string) => key) }));
 
-import { generateDetailPack, POST as generatePost } from "@/app/api/generate/route";
+import { generateDetailPack, maxDuration, POST as generatePost } from "@/app/api/generate/route";
 import { POST as batchPost } from "@/app/api/generate/batch/route";
+import {
+  HOBBY_MAX_DURATION_SECONDS,
+  NOT_STARTED_REASON,
+  PACK_BUDGET_MS,
+  PACK_CLOSE_MARGIN_MS,
+  PER_SHOT_WAIT_MS,
+} from "@/lib/generate/pack-timing";
+import { MULTI_ANGLE_DISTINCT_VIEWS, NO_SOURCE_WATERMARK, STYLE_LOCK_SAME_PRODUCT } from "@/lib/generate/detail-shot";
 
 const fetchMock = vi.fn();
 
@@ -481,7 +489,7 @@ describe("POST /api/generate pack shots", () => {
     createPrediction.mockResolvedValue({ predictionId: "pred_wait", status: "processing", outputs: [] });
     let clock = 1_000_000;
     getPrediction.mockImplementation(async () => {
-      clock = 1_000_000 + 60_000;
+      clock = 1_000_000 + PACK_BUDGET_MS + 1_000;
       return { status: "processing", outputs: [] };
     });
 
@@ -507,8 +515,171 @@ describe("POST /api/generate pack shots", () => {
     expect(startedCall.productImageUrl).toBe("https://cdn.example/product.jpg");
     expect(startedCall.referenceImageUrl).toBe("https://cdn.example/latest-face.png");
     expect(timedJson.creditsCharged).toBe(0);
+    expect(timedJson.creditsNotCharged).toBe(2);
     expect(timedJson.failed).toHaveLength(3);
-    expect(timedJson.failed.every((shot: { reason: string }) => shot.reason === "prediction_timeout")).toBe(true);
+    expect(timedJson.failed[0].reason).toBe("prediction_timeout");
+    expect(timedJson.failed[0].charged).toBe(true);
+    expect(timedJson.failed[1].reason).toBe(NOT_STARTED_REASON);
+    expect(timedJson.failed[2].reason).toBe(NOT_STARTED_REASON);
+    expect(timedJson.failed.slice(1).every((shot: { charged: boolean }) => shot.charged === false)).toBe(true);
+  });
+
+  it("keeps six per-shot waits inside the Hobby 300s cap", () => {
+    expect(maxDuration).toBe(300);
+    expect(maxDuration).toBe(HOBBY_MAX_DURATION_SECONDS);
+    expect(maxDuration).toBeLessThanOrEqual(300);
+    expect(PACK_BUDGET_MS + PACK_CLOSE_MARGIN_MS).toBe(maxDuration * 1000);
+    expect(PACK_BUDGET_MS).toBeLessThan(maxDuration * 1000);
+    expect(PER_SHOT_WAIT_MS * 6).toBeLessThanOrEqual(PACK_BUDGET_MS);
+  });
+
+  it("does not label shots that have not started as prediction_timeout when only 50s have elapsed", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_short_deadline"));
+    chargePerImage();
+    let started = 0;
+    createPrediction.mockImplementation(async () => {
+      started += 1;
+      if (started === 1) {
+        return { predictionId: "pred_wait", status: "processing", outputs: [] };
+      }
+      return {
+        predictionId: `pred_${started}`,
+        status: "succeeded",
+        outputs: [{ url: `https://cdn.example/${started}.png` }],
+      };
+    });
+    let clock = 1_000_000;
+    getPrediction.mockImplementation(async () => {
+      clock = 1_000_000 + 50_000;
+      return { status: "processing", outputs: [] };
+    });
+
+    const timed = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      referenceImageUrl: "https://cdn.example/latest-face.png",
+      detailTypes: [
+        { key: "in_use", prompt: "gold earrings worn outdoors" },
+        { key: "lifestyle", prompt: "gold earrings still waiting" },
+        { key: "scene_atmosphere", prompt: "gold earrings atmosphere" },
+      ],
+      now: () => clock,
+    });
+    const json = await timed.json();
+    expect(timed.status).toBe(200);
+    expect(createPrediction).toHaveBeenCalledTimes(3);
+    expect(json.completed).toBe(2);
+    expect(json.creditsCharged).toBe(2);
+    expect(json.creditsRefunded).toBe(1);
+    expect(json.creditsNotCharged).toBe(0);
+    expect(json.failed.map((shot: { key: string; reason: string }) => `${shot.key}:${shot.reason}`)).toEqual([
+      "in_use:prediction_timeout",
+    ]);
+    expect(json.generated.map((shot: { key: string }) => shot.key)).toEqual(["lifestyle", "scene_atmosphere"]);
+  });
+
+  it("stores a late provider image instead of refunding the debit", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_late"));
+    chargePerImage();
+    createPrediction.mockResolvedValue({ predictionId: "pred_late", status: "processing", outputs: [] });
+    let clock = 5_000;
+    let polls = 0;
+    getPrediction.mockImplementation(async () => {
+      polls += 1;
+      if (polls === 1) {
+        clock = 5_000 + PER_SHOT_WAIT_MS;
+        return { status: "processing", outputs: [] };
+      }
+      return { status: "succeeded", outputs: [{ url: "https://cdn.example/late.png" }] };
+    });
+
+    const timed = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      detailTypes: [{ key: "flatlay", prompt: "gold earrings flatlay" }],
+      now: () => clock,
+    });
+    const json = await timed.json();
+    expect(timed.status).toBe(200);
+    expect(json.completed).toBe(1);
+    expect(json.creditsCharged).toBe(1);
+    expect(json.creditsRefunded).toBe(0);
+    expect(json.generated[0].url).toBe("https://cdn.example/late.png");
+    expect(refundMock).not.toHaveBeenCalled();
+    const stored = dbMock.generatedImage.create.mock.calls.map((call) => call[0].data);
+    expect(stored).toHaveLength(1);
+    expect(stored[0].status).toBe("SUCCEEDED");
+    expect(stored[0].url).toBe("https://cdn.example/late.png");
+  });
+
+  it("puts style lock, distinct angles, and no-watermark text on pack prompts", async () => {
+    let moderation = 0;
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_style_${++moderation}`));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_style",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/style.png" }],
+    });
+
+    const locked = await generatePost(post("http://localhost/api/generate", fashionPack));
+    expect(locked.status).toBe(200);
+    const prompts = createPrediction.mock.calls.map((call) => (call[0] as { prompt: string }).prompt);
+    expect(prompts).toHaveLength(fashionPack.detailTypes.length);
+    for (const prompt of prompts) {
+      expect(prompt).toContain(STYLE_LOCK_SAME_PRODUCT);
+      expect(prompt).toContain("same material");
+      expect(prompt).toContain("same color");
+      expect(prompt).toContain("same overall style");
+      expect(prompt).toContain(NO_SOURCE_WATERMARK);
+      expect(prompt).toContain("AI生成");
+      expect(prompt).toContain("即梦AI");
+    }
+    const multi = prompts.find((prompt) => prompt.includes("gold earrings angles"));
+    expect(multi).toContain(MULTI_ANGLE_DISTINCT_VIEWS);
+    expect(multi).toContain("true side near 90 degrees");
+    expect(multi?.toLowerCase()).toContain("nearly symmetrical");
+
+    vi.clearAllMocks();
+    authMock.mockResolvedValue({ user: { id: "user_1" } });
+    dbMock.imageProject.findUnique.mockResolvedValue({ id: "proj_1", userId: "user_1" });
+    dbMock.imageProject.update.mockResolvedValue({});
+    dbMock.productImage.findUnique.mockResolvedValue({
+      id: "img_1",
+      s3Key: null,
+      originalUrl: "https://cdn.example/product.jpg",
+    });
+    dbMock.generatedImage.create.mockResolvedValue({ id: "gen_1" });
+    dbMock.task.create.mockResolvedValue({ id: "task_1" });
+    dbMock.task.count.mockResolvedValue(0);
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_open_style"));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_open",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/open.png" }],
+    });
+    const open = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      detailTypes: [
+        { key: "multi_angle", prompt: "gold earrings angles" },
+        { key: "detail", prompt: "gold hoop earring macro" },
+      ],
+    }));
+    expect(open.status).toBe(200);
+    const openPrompts = createPrediction.mock.calls.map((call) => (call[0] as { prompt: string }).prompt);
+    expect(openPrompts).toHaveLength(2);
+    for (const prompt of openPrompts) {
+      expect(prompt).not.toContain("Style lock:");
+      expect(prompt).toContain(NO_SOURCE_WATERMARK);
+    }
+    expect(openPrompts[0]).toContain(MULTI_ANGLE_DISTINCT_VIEWS);
   });
 
   it("uses the product image for apparel detail and the smear prompt only for beauty with a person", async () => {

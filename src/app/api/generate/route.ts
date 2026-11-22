@@ -4,7 +4,9 @@ import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
 import { releaseGeneratingProject } from "@/lib/project-status";
 
-export const maxDuration = 60; // seconds — Vercel Pro max
+// Hobby Fluid Compute default and maximum are both 300 seconds.
+// Pro can be configured up to 800. This project is on Hobby, so do not exceed 300.
+export const maxDuration = 300;
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { getSignedGetUrl } from "@/lib/s3";
 import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
@@ -22,11 +24,22 @@ import {
 } from "@/lib/creem/moderation";
 import { sharedStaticPromptFragments } from "@/lib/creem/static-fragments";
 import {
+  applyPackPromptGuards,
   BEAUTY_PERSON_CLOSEUP_PROMPT,
+  MULTI_ANGLE_DISTINCT_VIEWS,
+  NO_SOURCE_WATERMARK,
+  packStyleLocked,
   planPackShot,
   PRODUCT_MACRO_LOCK,
+  STYLE_LOCK_SAME_PRODUCT,
   type PackShotPlan,
 } from "@/lib/generate/detail-shot";
+import {
+  MIN_START_MS,
+  NOT_STARTED_REASON,
+  PACK_BUDGET_MS,
+  PER_SHOT_WAIT_MS,
+} from "@/lib/generate/pack-timing";
 import type { PlanTier, Prisma } from "@prisma/client";
 
 function debitSnapshot(value: DebitHold | null): { accountId: string; transactionId: string } | null {
@@ -77,9 +90,9 @@ const TYPE_TEMPLATES: Record<string, {
     technical: "8K, maximum sharpness, photorealistic macro photography",
   },
   multi_angle: {
-    composition: "Multi-angle composite: front view + 45° side + rear + top-down, equal spacing in clean 2×2 grid layout",
-    lighting: "Consistent soft studio lighting across all views, identical exposure and white balance",
-    camera: "f/8 for full product sharpness across all angles, identical scale and focal length per view",
+    composition: MULTI_ANGLE_DISTINCT_VIEWS,
+    lighting: "Consistent soft studio lighting across all views, same exposure and white balance, so only the camera angle changes",
+    camera: "Move the camera between a front view, a side profile near 90 degrees, and a back or opposite-side view. A small turn is not an angle change. Keep the product the same size in each view.",
     mood: "Clean professional catalog presentation, informative and precise",
     technical: "8K, photorealistic, professional product catalog photography",
   },
@@ -311,6 +324,9 @@ function generationStaticFragments(): string[] {
     "Keep any person visually identical to the reference image — same face, same body, same clothing.",
     BEAUTY_PERSON_CLOSEUP_PROMPT,
     PRODUCT_MACRO_LOCK,
+    STYLE_LOCK_SAME_PRODUCT,
+    MULTI_ANGLE_DISTINCT_VIEWS,
+    NO_SOURCE_WATERMARK,
   );
   return fragments;
 }
@@ -337,7 +353,10 @@ function assemblePackPrompt(
   plan: PackShotPlan,
   input: { baseStyle?: string; referenceImageUrl?: string; category?: string },
 ): string {
-  if (plan.promptOverride) return plan.promptOverride;
+  const styleLocked = packStyleLocked(input);
+  if (plan.promptOverride) {
+    return applyPackPromptGuards(plan.promptOverride, { detailKey: dt.key, styleLocked });
+  }
   const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
   const tpl = TYPE_TEMPLATES[dt.key];
   const catProfile = input.category ? CATEGORY_PROFILES[input.category] : null;
@@ -346,9 +365,9 @@ function assemblePackPrompt(
     : "";
   const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
   const styleHint = input.baseStyle && !wantsTextOnImage
-    ? ` Match the overall aesthetic of: ${input.baseStyle}.`
+    ? ` Keep the same overall style, material, and color: ${input.baseStyle}.`
     : "";
-  const identityLock = input.referenceImageUrl && !wantsTextOnImage && plan.mode !== "product_macro"
+  const identityLock = input.referenceImageUrl && !wantsTextOnImage && plan.mode !== "product_macro" && dt.key !== "multi_angle"
     ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
     : "";
   const noTextGuard = wantsTextOnImage
@@ -370,14 +389,17 @@ function assemblePackPrompt(
         beautySurfaceGuard,
       ].filter(Boolean).join(". ").trim()
     : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}${beautySurfaceGuard ? ` ${beautySurfaceGuard}` : ""}`.trim();
-  if (plan.mode === "product_macro") return `${body} ${PRODUCT_MACRO_LOCK}`.trim();
-  return body;
+  const withMacro = plan.mode === "product_macro" ? `${body} ${PRODUCT_MACRO_LOCK}`.trim() : body;
+  return applyPackPromptGuards(withMacro, { detailKey: dt.key, styleLocked });
 }
 
 /**
  * One moderation id and one 1-credit debit per pack shot.
  * The debit is taken when that shot starts, not for the whole pack up front.
  * A failed shot is stored as FAILED and only that shot's debit is reversed.
+ * A shot that has not started is not labeled prediction_timeout and is not debited.
+ * If the provider returns an image after the per-shot wait, that image is stored
+ * and its debit is kept.
  * Holds that were taken but not stored are reversed before the handler returns.
  * Identical outputs of one prompt may still share a debit on the single-image path.
  */
@@ -453,7 +475,8 @@ export async function generateDetailPack(input: {
   });
 
   const now = input.now ?? Date.now;
-  const DEADLINE = now() + 50_000;
+  // Close out before the Hobby 300s kill. Shots that never start are not timeouts.
+  const packDeadline = now() + PACK_BUDGET_MS;
 
   type Attempt = {
     key: string;
@@ -466,7 +489,7 @@ export async function generateDetailPack(input: {
   };
 
   const generated: Array<{ key: string; url: string; label: string }> = [];
-  const failed: Array<{ key: string; reason: string; creditsRefunded: boolean }> = [];
+  const failed: Array<{ key: string; reason: string; creditsRefunded: boolean; charged: boolean }> = [];
   let creditsRefunded = 0;
   let creditsCharged = 0;
   /** Debits taken for a shot that is not stored yet. Cleared on store or refund. */
@@ -494,6 +517,7 @@ export async function generateDetailPack(input: {
   }
 
   async function settleFailure(attempt: Attempt, reason: string) {
+    const charged = Boolean(attempt.hold);
     const refunded = attempt.hold ? (await refundGenerationDebit(attempt.hold)).reversed : false;
     forgetHold(attempt.hold);
     if (refunded) creditsRefunded += 1;
@@ -539,7 +563,7 @@ export async function generateDetailPack(input: {
     } catch (error) {
       console.error("Failed to persist pack failure", error);
     }
-    failed.push({ key: attempt.key, reason: message, creditsRefunded: refunded });
+    failed.push({ key: attempt.key, reason: message, creditsRefunded: refunded, charged });
   }
 
   async function storeSuccess(attempt: Attempt, url: string) {
@@ -600,8 +624,8 @@ export async function generateDetailPack(input: {
         engine: planned.engine,
       };
 
-      if (now() >= DEADLINE) {
-        await settleFailure({ ...baseAttempt, hold: null }, "prediction_timeout");
+      if (packDeadline - now() < MIN_START_MS) {
+        await settleFailure({ ...baseAttempt, hold: null }, NOT_STARTED_REASON);
         continue;
       }
 
@@ -677,17 +701,29 @@ export async function generateDetailPack(input: {
       let result;
       try {
         const provider = attempt.engine === "openai" ? getProvider("flux") : getProvider(attempt.engine);
+        const shotDeadline = Math.min(now() + PER_SHOT_WAIT_MS, packDeadline);
         result = await provider.getPrediction(attempt.predictionId);
-        while (result.status === "processing" && now() < DEADLINE) {
+        while (result.status === "processing" && now() < shotDeadline) {
           await new Promise((resolve) => setTimeout(resolve, 2000));
           result = await provider.getPrediction(attempt.predictionId);
+        }
+        // One read after the wait. Store a late image before any refund.
+        if (result.status === "processing" && !result.outputs?.[0]?.url) {
+          try {
+            const late = await provider.getPrediction(attempt.predictionId);
+            if (late.outputs?.[0]?.url || late.status === "failed" || late.error) {
+              result = late;
+            }
+          } catch (error) {
+            console.error("Pack late prediction read failed", error);
+          }
         }
       } catch (error) {
         await settleFailure(attempt, error instanceof Error ? error.message : "prediction_failed");
         continue;
       }
 
-      const url = result.status === "succeeded" ? result.outputs[0]?.url : "";
+      const url = result.outputs?.[0]?.url || "";
       if (url) {
         try {
           await storeSuccess(attempt, url);
@@ -733,6 +769,7 @@ export async function generateDetailPack(input: {
       count: 0,
       creditsCharged,
       creditsRefunded,
+      creditsNotCharged: failed.filter((shot) => !shot.charged).length,
     }, { status: chargeBlocked.status });
   }
 
@@ -744,6 +781,7 @@ export async function generateDetailPack(input: {
     count: generated.length,
     creditsCharged,
     creditsRefunded,
+    creditsNotCharged: failed.filter((shot) => !shot.charged).length,
   };
   if (generated.length === 0) {
     return NextResponse.json(

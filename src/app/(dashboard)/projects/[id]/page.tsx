@@ -35,7 +35,7 @@ import { downloadBlob, downloadUrls } from "@/lib/download-image";
 import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
 import { saveGeneratedImage } from "@/lib/persist-project-image";
 import { projectGenerationError } from "@/lib/project-fetch-error";
-import { formatQuotaRemaining } from "@/lib/quota-display";
+import { quotaBadgeText } from "@/lib/quota-display";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
 
@@ -415,14 +415,13 @@ export default function ProductDetailPage() {
     (img) => img.status === "SUCCEEDED"
   );
   const failedImages = project.generatedImages.filter((img) => img.status === "FAILED");
-  const quotaLabel = formatQuotaRemaining({
+  const quotaText = quotaBadgeText({
     used: quota.used,
     limit: quota.limit,
     tier: quota.tier,
     allotmentConfigured: quota.allotmentConfigured,
     loading: quota.loading,
-  });
-  const quotaText = quotaLabel === "loading" ? "" : quotaLabel === "unlimited" ? t("generate.unlimited") : quotaLabel;
+  }, t("generate.unlimited"));
   const deleteCount = imageDeleteTarget?.kind === "batch" ? selectedIds.size : 1;
   const removesDerivatives = imageDeleteTarget?.kind === "single"
     ? imageDeleteTarget.removesDerivatives
@@ -454,17 +453,15 @@ export default function ProductDetailPage() {
               </span>
             )}
           </div>
-          {/* Quota badge — only show when limit is known (not -1 loading state) */}
-          {!quota.loading && (
-            <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border mt-2 ${
-              quota.limit > 0 && quota.used >= quota.limit
-                ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400"
-                : "bg-zinc-50 border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700"
-            }`}>
-              <span>本月剩余</span>
-              <span className="font-mono tabular-nums">{quotaText}</span>
-            </div>
-          )}
+          {/* Quota badge. Loading stays 「…」, never blank and never 无限. */}
+          <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border mt-2 ${
+            !quota.loading && quota.limit > 0 && quota.used >= quota.limit
+              ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400"
+              : "bg-zinc-50 border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700"
+          }`}>
+            <span>本月剩余</span>
+            <span className="font-mono tabular-nums">{quotaText}</span>
+          </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {editMode ? (

@@ -5,7 +5,7 @@ import { Sparkles, AlertTriangle, X, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
 import { downloadUrl } from "@/lib/download-image";
-import { formatQuotaRemaining } from "@/lib/quota-display";
+import { quotaBadgeText } from "@/lib/quota-display";
 
 interface PreviewImage {
   id: string;
@@ -44,18 +44,13 @@ export function StudioPreviewCanvas({
 }: StudioPreviewCanvasProps) {
   const { t } = useT();
 
-  const quotaLabel = formatQuotaRemaining({
+  const quotaText = quotaBadgeText({
     used: quotaUsed,
     limit: quotaLimit,
     tier: quotaTier,
     allotmentConfigured,
     loading: quotaLoading,
-  });
-  const quotaText = quotaLabel === "loading"
-    ? "…"
-    : quotaLabel === "unlimited"
-      ? t("generate.unlimited")
-      : quotaLabel;
+  }, t("generate.unlimited"));
 
   return (
     <div className="flex flex-col gap-4">

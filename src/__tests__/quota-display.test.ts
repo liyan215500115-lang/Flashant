@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { formatQuotaRemaining, presentQuota } from "@/lib/quota-display";
+import { formatQuotaRemaining, presentQuota, quotaBadgeText } from "@/lib/quota-display";
 
 describe("quota display", () => {
   it("does not show unlimited for a finite wallet, a zero balance, or a loading sentinel", () => {
@@ -62,6 +62,33 @@ describe("quota display", () => {
     });
     expect(configured.unlimited).toBe(true);
     expect(formatQuotaRemaining({ ...configured, used: 0 })).toBe("unlimited");
+  });
+
+  it("keeps the loading badge as an ellipsis, never blank and never 无限", () => {
+    const loading = {
+      used: 0,
+      limit: -1,
+      tier: "PRO",
+      allotmentConfigured: true,
+      loading: true,
+    };
+    expect(quotaBadgeText(loading, "无限")).toBe("…");
+    expect(quotaBadgeText(loading, "无限")).not.toBe("");
+    expect(quotaBadgeText(loading, "无限")).not.toBe("无限");
+    expect(quotaBadgeText({
+      used: 0,
+      limit: -1,
+      tier: "ENTERPRISE",
+      allotmentConfigured: true,
+      loading: true,
+    }, "无限")).toBe("…");
+    expect(quotaBadgeText({
+      used: 7,
+      limit: 100,
+      tier: "PRO",
+      allotmentConfigured: true,
+      loading: false,
+    }, "无限")).toBe("93/100");
   });
 });
 

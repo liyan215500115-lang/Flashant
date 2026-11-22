@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
 import Link from "next/link";
-import { formatQuotaRemaining } from "@/lib/quota-display";
+import { quotaBadgeText } from "@/lib/quota-display";
 
 interface GeneratedImage {
   id: string;
@@ -42,18 +42,13 @@ export function PreviewCanvas({
 }: PreviewCanvasProps) {
   const { t } = useT();
 
-  const quotaLabel = formatQuotaRemaining({
+  const quotaText = quotaBadgeText({
     used: quotaUsed,
     limit: quotaLimit,
     tier: quotaTier,
     allotmentConfigured,
     loading: quotaLoading,
-  });
-  const quotaText = quotaLabel === "loading"
-    ? "…"
-    : quotaLabel === "unlimited"
-      ? t("generate.unlimited")
-      : quotaLabel;
+  }, t("generate.unlimited"));
 
   // Usage bar: color shifts to warning at 80%+
   const usageRatio = quotaLimit > 0 ? Math.min(quotaUsed / quotaLimit, 1) : 0;
