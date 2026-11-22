@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_VEGA_IMAGE_MODEL,
   DEFAULT_VEGA_LITE_IMAGE_MODEL,
+  configuredVegaImageModel,
   createTencentVegaProvider,
   isCompleteHttpUrl,
   isTencentVegaConfigured,
@@ -98,7 +99,10 @@ describe("Tencent Vega configuration", () => {
     const vega = registerProvider.mock.calls.find((call) => call[0] === "vega")?.[1];
     const lite = registerProvider.mock.calls.find((call) => call[0] === "vega-lite")?.[1];
     expect(vega?.name).toBe("tencent-vega");
+    expect(vega?.model).toBe(IMAGE_MODEL);
     expect(lite?.name).toBe("tencent-vega");
+    expect(configuredVegaImageModel()).toBe(IMAGE_MODEL);
+    expect(configuredVegaImageModel()).not.toContain(API_KEY);
 
     const fetchMock = mockFetch(200, { task_id: "task_pro" });
     vi.stubGlobal("fetch", fetchMock);

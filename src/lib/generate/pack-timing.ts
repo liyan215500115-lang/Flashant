@@ -28,3 +28,11 @@ export const MIN_START_MS = PER_SHOT_WAIT_MS;
 
 /** A shot that never started. Not a provider timeout, and not charged. */
 export const NOT_STARTED_REASON = "not_started";
+
+/**
+ * How long a pack click owns the project lock.
+ * This matches the Hobby function limit. A second request with the same key
+ * joins that run for the whole window, including after the handler has stored
+ * its images, so a dropped POST cannot debit another pack.
+ */
+export const PACK_RUN_LOCK_MS = HOBBY_MAX_DURATION_SECONDS * 1000;

@@ -70,6 +70,10 @@ model ImageProject {
   generatedTitle        String?
   generatedDescription  String?
   errorMessage          String?
+  /// One in-flight pack click. A repeat of this key joins the run instead of debiting again.
+  activePackKey         String?
+  activePackStartedAt   DateTime?
+  activePackSettled     Boolean            @default(false)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 

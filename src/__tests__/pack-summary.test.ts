@@ -85,15 +85,46 @@ describe("pack credit summary", () => {
       labels.add(label);
     }
     expect(labels.size).toBe(LOCALE_OPTIONS.length);
-    expect(packFailureReasonLabel("prediction_timeout", "zh")).toBe("prediction_timeout");
+    expect(packFailureReasonLabel("prediction_timeout", "zh")).not.toContain("prediction_timeout");
     expect(packFailureReasonLabel("provider exploded", "en")).toBe("provider exploded");
   });
 
   it("labels the project page failure list and hides not_started", () => {
     const stored = ["not_started", "prediction_timeout", ""];
     const shown = stored.map((message) => packFailureReasonLabel(message || "生成失败", "zh"));
-    expect(shown).toEqual(["未开始生成", "prediction_timeout", "生成失败"]);
+    expect(shown[0]).toBe("未开始生成");
+    expect(shown[1]).toBe("生成超时，请重试");
+    expect(shown[2]).toBe("生成失败");
     expect(shown.join(" ")).not.toContain("not_started");
+    expect(shown.join(" ")).not.toContain("prediction_timeout");
     expect(packFailureReasonLabel("not_started", "en")).toBe("Not started");
+  });
+
+  it("maps rate limits, safety flags, and timeouts to plain language in every locale", () => {
+    const rateLimit = 'Replicate API error: 429 {"detail":"Request was throttled. Your credit balance is under $5 so the rate limit dropped to 6/min with burst 1.","retry_after":2}';
+    const safety = "The input or output was flagged as sensitive. (E005) (uIJ6l3ruRD)";
+    const timeout = "prediction_timeout";
+    const rawCodes = ["429", "E005", "prediction_timeout", "retry_after", "Replicate", "{"];
+
+    expect(packFailureReasonLabel(rateLimit, "zh")).toBe("图像服务繁忙，请稍后再试");
+    expect(packFailureReasonLabel(safety, "zh")).toBe("内容未通过安全检查");
+    expect(packFailureReasonLabel(timeout, "zh")).toBe("生成超时，请重试");
+    expect(packFailureReasonLabel(packFailureReasonLabel(rateLimit, "zh"), "zh")).toBe("图像服务繁忙，请稍后再试");
+
+    for (const { code } of LOCALE_OPTIONS) {
+      for (const raw of [rateLimit, safety, timeout]) {
+        const label = packFailureReasonLabel(raw, code);
+        expect(label.length).toBeGreaterThan(4);
+        for (const secret of rawCodes) {
+          expect(label).not.toContain(secret);
+        }
+        expect(packFailureReasonLabel(label, code)).toBe(label);
+      }
+    }
+
+    const blob = packFailureReasonLabel('{"error":"upstream exploded","prediction":"abc"}', "en");
+    expect(blob).toBe("Generation failed. Please try again.");
+    expect(blob).not.toContain("{");
+    expect(packFailureReasonLabel("not_started", "zh")).toBe("未开始生成");
   });
 });

@@ -57,6 +57,16 @@ export function tencentVegaEnvKeys(): readonly string[] {
 }
 
 /**
+ * The Vega image model name this process would send.
+ * This is a model id, never the API key.
+ */
+export function configuredVegaImageModel(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  return trimmed(env.TENCENT_MAAS_IMAGE_MODEL) || DEFAULT_VEGA_IMAGE_MODEL;
+}
+
+/**
  * Register `vega` and `vega-lite` when the TokenHub settings are complete.
  * Returns false without registering when any required value is missing.
  */
@@ -178,8 +188,9 @@ export function createTencentVegaProvider(config?: TencentVegaConfig): ImageProv
     }
   }
 
-  return {
+  const provider: ImageProvider & { model: string } = {
     name: "tencent-vega",
+    model,
 
     async createPrediction(input: ImageGenerationInput) {
       const images = vegaReferenceImages(input);
@@ -271,4 +282,5 @@ export function createTencentVegaProvider(config?: TencentVegaConfig): ImageProv
       return result.status === "succeeded";
     },
   };
+  return provider;
 }

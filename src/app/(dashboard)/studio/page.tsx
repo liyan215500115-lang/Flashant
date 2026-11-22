@@ -11,6 +11,10 @@ import { StudioDetailPanel } from "@/components/studio/detail-panel";
 import { useT } from "@/components/i18n-provider";
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { toast } from "sonner";
+import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
+import { workbenchEngineFromShots } from "@/lib/generate/engine-label";
+import { loadProjectWithRetry } from "@/lib/project-load";
+import { loadConfirmedQuota } from "@/lib/quota-display";
 
 interface ProductImage {
   id: string;
@@ -34,7 +38,7 @@ function hashStr(str: string): number {
 }
 
 export default function StudioPage() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const searchParams = useSearchParams();
   const existingId = searchParams.get("projectId");
   const [projectId, setProjectId] = useState<string | null>(existingId);
@@ -47,6 +51,7 @@ export default function StudioPage() {
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [engineType, setEngineType] = useState("flux");
+  const [vegaModelLabel, setVegaModelLabel] = useState("");
   const [targetPlatform, setTargetPlatform] = useState("SHOPIFY");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [brandPresetId, setBrandPresetId] = useState<string | null>(null);
@@ -55,6 +60,8 @@ export default function StudioPage() {
   const [generationError, setGenerationError] = useState("");
   const [loadedDetailResults, setLoadedDetailResults] = useState<Array<{key:string; url:string; label:string; rawUrl:string}>>([]);
   const [loadedDetailFailures, setLoadedDetailFailures] = useState<Array<{ key: string; reason: string }>>([]);
+  const [loadedPackSummary, setLoadedPackSummary] = useState("");
+  const projectVisible = useRef(false);
 
   // Sync product name to project title (debounced)
   function handleProductNameChange(name: string) {
@@ -89,6 +96,18 @@ export default function StudioPage() {
     setQuotaLoading(false);
   }
 
+  const refreshQuota = useCallback(() => {
+    loadConfirmedQuota({
+      fetchQuota: async () => {
+        const response = await fetch("/api/quota");
+        if (!response.ok) throw new Error("quota");
+        return response.json();
+      },
+    }).then((quota) => {
+      if (quota) applyQuota(quota);
+    }).catch(() => {});
+  }, []);
+
   async function createProject() {
     setProjectCreating(true);
     setProjectError("");
@@ -116,58 +135,86 @@ export default function StudioPage() {
   }
 
   useEffect(() => {
-    fetch("/api/quota")
-      .then((r) => r.json())
-      .then((d) => applyQuota(d))
-      .catch(() => setQuotaLoading(false));
+    refreshQuota();
     // If we got a projectId from URL, load project + restore history. Otherwise create a new one.
     if (existingId) {
-      fetch(`/api/products/${existingId}`)
-        .then((r) => r.json())
-        .then((d) => {
-          const imgs = d.project?.productImages ?? [];
-          if (imgs.length > 0) setSelectedImage(imgs[0]);
-          if (d.project?.title && !d.project.title.startsWith("202")) setProductName(d.project.title);
-          const gens = d.project?.generatedImages ?? [];
-          if (gens.length > 0) {
-            const succeeded = gens.filter((g: any) => g.status === "SUCCEEDED");
-            // Split: main images → preview area, detail images → detail panel
-            const mainImages = succeeded.filter((g: any) => {
-              const meta = g.generationMeta as { sourceType?: string; detailKey?: string } | null;
-              return !meta || meta.sourceType !== "detail";
-            });
-            const detailImages = succeeded.filter((g: any) => {
-              const meta = g.generationMeta as { sourceType?: string; detailKey?: string } | null;
-              return meta?.sourceType === "detail";
-            });
-            // Main images to preview
-            const history = mainImages.map((g: any) => ({ id: g.id, url: g.url, promptUsed: g.promptUsed || "" }));
-            if (history.length > 0) {
-              setLatestImage(history[0]);
-              setGenerationHistory(history);
+      loadProjectWithRetry({
+        hasVisibleProject: () => projectVisible.current,
+        fetchProject: async () => {
+          const response = await fetch(`/api/products/${existingId}`);
+          if (!response.ok) throw new Error("Failed to fetch");
+          const body = await response.json();
+          if (!body?.project?.id) return null;
+          return body;
+        },
+      }).then((loaded) => {
+        if (!loaded.ok) {
+          if (!loaded.keepVisible) setProjectError("项目加载失败，请检查链接是否有效");
+          return;
+        }
+        const d = loaded.project;
+        projectVisible.current = true;
+        setProjectError("");
+        return d;
+      }).then((d) => {
+        if (!d) return;
+        const imgs = d.project?.productImages ?? [];
+        if (imgs.length > 0) setSelectedImage(imgs[0]);
+        if (d.project?.title && !d.project.title.startsWith("202")) setProductName(d.project.title);
+        const gens = (d.project?.generatedImages ?? []) as Array<{
+          id?: string;
+          url?: string;
+          status?: string;
+          promptUsed?: string;
+          errorMessage?: string;
+          aiProvider?: string | null;
+          modelVersion?: string | null;
+          generationMeta?: { sourceType?: string; detailKey?: string } | null;
+        }>;
+        const engine = workbenchEngineFromShots(gens);
+        if (engine.engine === "vega") {
+          setEngineType("vega");
+          setVegaModelLabel(engine.label);
+        }
+        if (gens.length > 0) {
+          const succeeded = gens.filter((g) => g.status === "SUCCEEDED");
+          const mainImages = succeeded.filter((g) => {
+            const meta = g.generationMeta;
+            return !meta || meta.sourceType !== "detail";
+          });
+          const detailImages = succeeded.filter((g) => g.generationMeta?.sourceType === "detail");
+          const history = mainImages.map((g) => ({ id: g.id || "", url: g.url || "", promptUsed: g.promptUsed || "" }));
+          if (history.length > 0) {
+            setLatestImage(history[0]);
+            setGenerationHistory(history);
+          }
+          if (detailImages.length > 0) {
+            setLoadedDetailResults(detailImages.map((g) => ({
+              key: g.generationMeta?.detailKey || "detail",
+              url: g.url || "",
+              rawUrl: g.url || "",
+              label: g.generationMeta?.detailKey || "detail",
+            })));
+          }
+          const packView = packRunViewFromImages(gens, locale);
+          if (packView) {
+            setLoadedPackSummary(packView.summary);
+            setLoadedDetailFailures(packView.failures);
+            if (packView.engine.engine === "vega") {
+              setEngineType("vega");
+              setVegaModelLabel(packView.engine.label);
             }
-            // Detail images to detail panel
-            if (detailImages.length > 0) {
-              setLoadedDetailResults(detailImages.map((g: any) => ({
-                key: ((g.generationMeta as any)?.detailKey) || "detail",
-                url: g.url,
-                rawUrl: g.url,
-                label: ((g.generationMeta as any)?.detailKey) || "detail",
-              })));
-            }
-            const failedDetails = gens.filter((g: any) => {
-              const meta = g.generationMeta as { sourceType?: string; detailKey?: string } | null;
-              return g.status === "FAILED" && meta?.sourceType === "detail";
-            });
+          } else {
+            const failedDetails = gens.filter((g) => g.status === "FAILED" && g.generationMeta?.sourceType === "detail");
             if (failedDetails.length > 0) {
-              setLoadedDetailFailures(failedDetails.map((g: any) => ({
-                key: ((g.generationMeta as any)?.detailKey) || "detail",
+              setLoadedDetailFailures(failedDetails.map((g) => ({
+                key: g.generationMeta?.detailKey || "detail",
                 reason: g.errorMessage || "生成失败",
               })));
             }
           }
-        })
-        .catch(() => { setProjectError("项目加载失败，请检查链接是否有效"); });
+        }
+      });
       setProjectCreating(false);
     } else {
       // Auto-create a draft project so upload works
@@ -207,7 +254,7 @@ export default function StudioPage() {
             });
             setIsGenerating(false);
             toast.success(t("generate.success"));
-            fetch("/api/quota").then((r) => r.json()).then((d) => applyQuota(d)).catch(() => {});
+            refreshQuota();
             return;
           }
           if (data.task?.status === "FAILED") {
@@ -274,7 +321,7 @@ export default function StudioPage() {
           });
         }
         toast.success(`Generated ${newPreviews.length} image${newPreviews.length > 1 ? "s" : ""}`);
-        fetch("/api/quota").then((r) => r.json()).then((d) => applyQuota(d)).catch(() => {});
+        refreshQuota();
       } else if (data.taskId) {
         pollTask(data.taskId);
         return; // polling manages its own setIsGenerating(false)
@@ -334,6 +381,7 @@ export default function StudioPage() {
               prompt={prompt}
               productName={productName}
               engineType={engineType}
+              vegaModelLabel={vegaModelLabel}
               targetPlatform={targetPlatform}
               targetLanguage={targetLanguage}
               brandPresetId={brandPresetId}
@@ -392,6 +440,13 @@ export default function StudioPage() {
               targetPlatform={targetPlatform}
               initialResults={loadedDetailResults}
               initialFailures={loadedDetailFailures}
+              initialSummary={loadedPackSummary}
+              onEngineResolved={(selection) => {
+                if (selection.engine === "vega") {
+                  setEngineType("vega");
+                  setVegaModelLabel(selection.label);
+                }
+              }}
             />
           )}
 

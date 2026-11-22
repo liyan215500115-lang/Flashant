@@ -8,6 +8,13 @@ import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/components/i18n-provider";
 import { formatPackCreditSummaryFromPayload, packFailureReasonLabel } from "@/lib/generate/pack-summary";
+import {
+  createPackIdempotencyKey,
+  isPackRequestDisconnect,
+  onPackPostDisconnect,
+  packRunViewFromImages,
+  pollPackUntilSettled,
+} from "@/lib/generate/pack-run-client";
 
 const DETAIL_TYPES = [
   // ═══ 信息类型：白底图 ═══
@@ -67,14 +74,58 @@ export default function DetailsPage() {
   useEffect(() => {
     fetch(`/api/products/${projectId}`)
       .then((r) => r.json())
-      .then((d) => setProductImages(d.project?.productImages ?? []))
+      .then((d) => {
+        setProductImages(d.project?.productImages ?? []);
+        const view = packRunViewFromImages(d.project?.generatedImages ?? [], locale);
+        if (!view) return;
+        setBatchSummary(view.summary);
+        setFailures(view.failures);
+      })
       .catch(() => {});
-  }, [projectId]);
+  }, [projectId, locale]);
 
   async function handleGenerate() {
-    if (selectedPt.size === 0) return;
+    if (selectedPt.size === 0 || generating) return;
+    const startedAt = Date.now();
+    const packIdempotencyKey = createPackIdempotencyKey();
     setGenerating(true);
     const types = DETAIL_TYPES.filter((t) => selectedPt.has(t.key));
+
+    const recoverFromDisconnect = async () => {
+      setBatchSummary(isZh ? "连接已中断，正在确认这组套图的结果…" : "Connection dropped. Checking this pack…");
+      const recovered = await onPackPostDisconnect({
+        error: new TypeError("Failed to fetch"),
+        poll: () => pollPackUntilSettled({
+          startedAt,
+          locale,
+          fetchProject: async () => {
+            const projectRes = await fetch(`/api/products/${projectId}`);
+            if (!projectRes.ok) throw new Error("Project poll failed");
+            const body = await projectRes.json();
+            return {
+              status: body.project?.status,
+              generatedImages: body.project?.generatedImages ?? [],
+            };
+          },
+        }),
+      });
+      if (!recovered.view) {
+        setBatchSummary(isZh
+          ? "连接已中断。请刷新页面查看这组套图的结果。"
+          : "The connection dropped. Refresh this page to see this pack.");
+        return;
+      }
+      setBatchSummary(recovered.view.summary);
+      setFailures(recovered.view.failures);
+      if (recovered.view.successes.length > 0) {
+        setResults((prev) => [...recovered.view!.successes.map((shot) => ({
+          key: shot.key,
+          url: shot.url,
+          label: shot.label,
+        })), ...prev]);
+      }
+      toast(recovered.view.summary);
+    };
 
     try {
       const res = await fetch("/api/generate", {
@@ -87,13 +138,39 @@ export default function DetailsPage() {
           numOutputs: 1,
           referenceImageUrl: styleLock ? styleRefUrl : undefined,
           seed: styleLock ? styleSeed : undefined,
+          packIdempotencyKey,
         }),
       });
-      const data = await res.json();
-      const generated = data.generated as Array<{ key: string; url: string; label: string }> | undefined;
-      const failedShots = Array.isArray(data.failed)
-        ? data.failed as Array<{ key?: string; reason?: string }>
-        : [];
+      let data: {
+        generated?: Array<{ key: string; url: string; label: string }>;
+        failed?: Array<{ key?: string; reason?: string }>;
+        requested?: number;
+        completed?: number;
+        message?: string;
+        error?: string;
+        status?: string;
+        poll?: boolean;
+        creditsCharged?: number;
+        creditsRefunded?: number;
+        creditsNotCharged?: number;
+      };
+      try {
+        data = await res.json();
+      } catch (error) {
+        if (isPackRequestDisconnect(error) || error instanceof SyntaxError) {
+          await recoverFromDisconnect();
+          setGenerating(false);
+          return;
+        }
+        throw error;
+      }
+      if (data.status === "pack_in_progress" || data.poll === true) {
+        await recoverFromDisconnect();
+        setGenerating(false);
+        return;
+      }
+      const generated = data.generated;
+      const failedShots = Array.isArray(data.failed) ? data.failed : [];
       const requested = typeof data.requested === "number" ? data.requested : types.length;
       const completed = typeof data.completed === "number" ? data.completed : (generated?.length ?? 0);
       setFailures(failedShots.map((shot) => ({
@@ -111,7 +188,7 @@ export default function DetailsPage() {
         setResults((prev) => [...newResults, ...prev]);
       }
       if (!res.ok && (!generated || generated.length === 0)) {
-        toast.error(packFailureReasonLabel(
+        toast.error(summary || packFailureReasonLabel(
           String(failedShots[0]?.reason || data.message || data.error || "Generation failed"),
           locale,
         ));
@@ -120,8 +197,12 @@ export default function DetailsPage() {
       } else if (generated && generated.length > 0) {
         toast.success(summary);
       }
-    } catch {
-      toast.error("Network failed");
+    } catch (error) {
+      if (isPackRequestDisconnect(error)) {
+        await recoverFromDisconnect();
+      } else {
+        setBatchSummary(isZh ? "请求没有完成，请刷新页面查看结果。" : "The request did not finish. Refresh to see the result.");
+      }
     }
     setGenerating(false);
   }

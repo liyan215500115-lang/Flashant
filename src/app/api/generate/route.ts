@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
-import { isTencentVegaConfigured } from "@/lib/ai/tencent-vega";
+import { configuredVegaImageModel, isTencentVegaConfigured } from "@/lib/ai/tencent-vega";
 import { releaseGeneratingProject } from "@/lib/project-status";
 
 // Hobby Fluid Compute default and maximum are both 300 seconds.
@@ -40,6 +40,7 @@ import {
   NOT_STARTED_REASON,
   PACK_BUDGET_MS,
 } from "@/lib/generate/pack-timing";
+import { claimProjectPack, normalizePackIdempotencyKey, type PackLockStore } from "@/lib/generate/pack-run";
 import type { PlanTier, Prisma } from "@prisma/client";
 
 function debitSnapshot(value: DebitHold | null): { accountId: string; transactionId: string } | null {
@@ -239,6 +240,17 @@ const ENGINE_MODELS: Record<string, string> = {
   playground: "playgroundai/playground-v2.5-1024px-aesthetic",
 };
 
+/** Model id stored on the image. Vega's value is the model that was called, never a secret. */
+function modelVersionForEngine(engine: string, provider: { model?: string } | undefined): string | undefined {
+  if (engine === "vega") {
+    const fromProvider = typeof provider?.model === "string" ? provider.model.trim() : "";
+    if (fromProvider) return fromProvider;
+    return configuredVegaImageModel();
+  }
+  if (engine === "openai") return "gpt-image-2";
+  return ENGINE_MODELS[engine];
+}
+
 /**
  * Re-upload a generated image to R2 (so it doesn't expire) and optionally apply a
  * brand logo overlay for non-FREE users. Returns the final URL and updates the
@@ -403,8 +415,10 @@ function assemblePackPrompt(
  * A failed shot is stored as FAILED and only that shot's debit is reversed.
  * A shot that has not started is not labeled prediction_timeout and is not debited.
  * A started shot keeps polling until the pack budget, not a shorter per-shot cap.
+ * Later shots are submitted before earlier shots finish, then polled together.
  * If the provider returns an image after that budget, that image is stored
  * and its debit is kept.
+ * The same packIdempotencyKey joins this run instead of debiting a second pack.
  * Holds that were taken but not stored are reversed before the handler returns.
  * Identical outputs of one prompt may still share a debit on the single-image path.
  */
@@ -421,6 +435,10 @@ export async function generateDetailPack(input: {
   projectTitle?: string;
   /** Clock for the pack deadline. Tests advance it; production uses Date.now. */
   now?: () => number;
+  /** One click. A repeat of this key does not debit or persist another pack. */
+  packIdempotencyKey?: string;
+  /** Tests skip the real poll gap. Production waits between parallel reads. */
+  sleep?: (ms: number) => Promise<void>;
 }): Promise<NextResponse> {
   const shots = detailShotList(input.detailTypes);
   if (shots.length === 0) {
@@ -435,6 +453,64 @@ export async function generateDetailPack(input: {
   const productImage = await db.productImage.findUnique({ where: { id: input.productImageId } });
   if (!productImage) {
     return NextResponse.json({ error: "Product image not found" }, { status: 404 });
+  }
+
+  const packKey = normalizePackIdempotencyKey(input.packIdempotencyKey);
+  const releasePackLock = async () => {
+    if (!packKey) return;
+    try {
+      await db.imageProject.update({
+        where: { id: input.imageProjectId },
+        data: { activePackSettled: true },
+      });
+    } catch (error) {
+      console.error("Failed to release pack lock", error);
+    }
+  };
+  if (packKey) {
+    const store: PackLockStore = {
+      findProject: async (imageProjectId) => db.imageProject.findUnique({
+        where: { id: imageProjectId },
+        select: {
+          userId: true,
+          activePackKey: true,
+          activePackStartedAt: true,
+          activePackSettled: true,
+        },
+      }),
+      claim: async (claim) => {
+        const updated = await db.imageProject.updateMany({
+          where: {
+            id: claim.imageProjectId,
+            userId: claim.userId,
+            activePackKey: claim.previousKey,
+            activePackSettled: claim.previousSettled,
+          },
+          data: {
+            activePackKey: claim.idempotencyKey,
+            activePackStartedAt: claim.now,
+            activePackSettled: false,
+          },
+        });
+        return updated.count;
+      },
+    };
+    const claim = await claimProjectPack(store, {
+      imageProjectId: input.imageProjectId,
+      userId: input.userId,
+      idempotencyKey: packKey,
+      now: input.now?.(),
+    });
+    if (claim === "missing") {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    if (claim === "join") {
+      return NextResponse.json({
+        status: "pack_in_progress",
+        packIdempotencyKey: packKey,
+        poll: true,
+      }, { status: 202 });
+    }
   }
 
   const fragments = generationStaticFragments();
@@ -452,7 +528,10 @@ export async function generateDetailPack(input: {
       externalSuffix: `pack-${index}-${shot.key}`,
     });
     const blocked = moderationHttpResponse(gate);
-    if (blocked) return blocked;
+    if (blocked) {
+      await releasePackLock();
+      return blocked;
+    }
     gates.push(gate);
   }
 
@@ -471,12 +550,13 @@ export async function generateDetailPack(input: {
       try {
         getProvider("vega");
       } catch {
+        await releasePackLock();
         return NextResponse.json({ error: "No AI engine available" }, { status: 400 });
       }
     }
   }
 
-  const generationId = crypto.randomUUID();
+  const generationId = packKey ?? crypto.randomUUID();
 
   await db.imageProject.update({
     where: { id: input.imageProjectId },
@@ -484,6 +564,7 @@ export async function generateDetailPack(input: {
   });
 
   const now = input.now ?? Date.now;
+  const sleep = input.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   // Close out before the Hobby 300s kill. Shots that never start are not timeouts.
   const packDeadline = now() + PACK_BUDGET_MS;
 
@@ -491,6 +572,7 @@ export async function generateDetailPack(input: {
     key: string;
     prompt: string;
     engine: string;
+    modelVersion?: string;
     hold: DebitHold | null;
     predictionId?: string;
     outputs?: Array<{ url: string }>;
@@ -503,6 +585,8 @@ export async function generateDetailPack(input: {
   let creditsCharged = 0;
   /** Debits taken for a shot that is not stored yet. Cleared on store or refund. */
   const unsettled = new Map<string, DebitHold>();
+  const packRows: Array<{ id: string; generationMeta: Record<string, unknown> }> = [];
+  let vegaModelVersion: string | undefined;
 
   function trackHold(hold: DebitHold | null) {
     if (hold) unsettled.set(hold.transactionId, hold);
@@ -521,8 +605,32 @@ export async function generateDetailPack(input: {
       referenceHasPerson: input.referenceHasPerson,
       contextText: [input.baseStyle, shot.prompt].filter(Boolean).join("\n"),
     });
-    const { engine } = getEngineForDetailType(shot.key);
-    return { plan, prompt: assemblePackPrompt(shot, plan, input), engine };
+    const picked = getEngineForDetailType(shot.key);
+    const modelVersion = modelVersionForEngine(picked.engine, picked.provider as { model?: string });
+    if (picked.engine === "vega" && modelVersion) vegaModelVersion = modelVersion;
+    return {
+      plan,
+      prompt: assemblePackPrompt(shot, plan, input),
+      engine: picked.engine,
+      modelVersion,
+      provider: picked.provider,
+    };
+  }
+
+  function shotMeta(attempt: Attempt, extra?: Record<string, unknown>): Record<string, unknown> {
+    return {
+      sourceType: "detail",
+      detailKey: attempt.key,
+      packId: generationId,
+      ...(attempt.hold
+        ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
+        : {}),
+      ...extra,
+    };
+  }
+
+  function rememberPackRow(created: { id?: string } | null | undefined, generationMeta: Record<string, unknown>) {
+    if (created?.id) packRows.push({ id: created.id, generationMeta });
   }
 
   async function settleFailure(attempt: Attempt, reason: string) {
@@ -531,8 +639,9 @@ export async function generateDetailPack(input: {
     forgetHold(attempt.hold);
     if (refunded) creditsRefunded += 1;
     const message = reason.slice(0, 500) || "generation_failed";
+    const meta = shotMeta(attempt, refunded ? { creditsRefunded: true } : {});
     try {
-      await db.generatedImage.create({
+      const created = await db.generatedImage.create({
         data: {
           imageProjectId: input.imageProjectId,
           productImageId: input.productImageId,
@@ -540,19 +649,14 @@ export async function generateDetailPack(input: {
           url: "",
           promptUsed: attempt.prompt,
           aiProvider: attempt.engine,
+          ...(attempt.modelVersion ? { modelVersion: attempt.modelVersion } : {}),
           status: "FAILED",
           errorMessage: message,
           completedAt: new Date(),
-          generationMeta: {
-            sourceType: "detail",
-            detailKey: attempt.key,
-            ...(attempt.hold
-              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
-              : {}),
-            ...(refunded ? { creditsRefunded: true } : {}),
-          },
+          generationMeta: meta as Prisma.InputJsonValue,
         },
       });
+      rememberPackRow(created, meta);
       await db.task.create({
         data: {
           imageProjectId: input.imageProjectId,
@@ -560,13 +664,7 @@ export async function generateDetailPack(input: {
           engineType: attempt.engine,
           status: "FAILED",
           errorMessage: message,
-          generationMeta: {
-            sourceType: "detail",
-            detailKey: attempt.key,
-            ...(attempt.hold
-              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
-              : {}),
-          },
+          generationMeta: meta as Prisma.InputJsonValue,
         },
       });
     } catch (error) {
@@ -576,7 +674,8 @@ export async function generateDetailPack(input: {
   }
 
   async function storeSuccess(attempt: Attempt, url: string) {
-    await db.generatedImage.create({
+    const meta = shotMeta(attempt);
+    const created = await db.generatedImage.create({
       data: {
         imageProjectId: input.imageProjectId,
         productImageId: input.productImageId,
@@ -584,17 +683,13 @@ export async function generateDetailPack(input: {
         url,
         promptUsed: attempt.prompt,
         aiProvider: attempt.engine,
+        ...(attempt.modelVersion ? { modelVersion: attempt.modelVersion } : {}),
         status: "SUCCEEDED",
         completedAt: new Date(),
-        generationMeta: {
-          sourceType: "detail",
-          detailKey: attempt.key,
-          ...(attempt.hold
-            ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
-            : {}),
-        },
+        generationMeta: meta as Prisma.InputJsonValue,
       },
     });
+    rememberPackRow(created, meta);
     forgetHold(attempt.hold);
     generated.push({ key: attempt.key, url, label: attempt.key });
     if (attempt.hold) creditsCharged += 1;
@@ -607,13 +702,7 @@ export async function generateDetailPack(input: {
           status: "SUCCEEDED",
           resultUrl: url,
           predictionId: attempt.predictionId,
-          generationMeta: {
-            sourceType: "detail",
-            detailKey: attempt.key,
-            ...(attempt.hold
-              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
-              : {}),
-          },
+          generationMeta: meta as Prisma.InputJsonValue,
         },
       });
     } catch (error) {
@@ -622,6 +711,46 @@ export async function generateDetailPack(input: {
   }
 
   let chargeBlocked: NextResponse | null = null;
+  const inflight: Array<{ attempt: Attempt; provider: ReturnType<typeof getProvider> }> = [];
+
+  async function pollInflight(
+    pending: Array<{ attempt: Attempt; provider: ReturnType<typeof getProvider> }>,
+  ) {
+    const reads = await Promise.all(pending.map(async (item) => {
+      try {
+        const result = await item.provider.getPrediction(item.attempt.predictionId!);
+        return { item, result, error: null as string | null };
+      } catch (error) {
+        return {
+          item,
+          result: null,
+          error: error instanceof Error ? error.message : "prediction_failed",
+        };
+      }
+    }));
+    const still: typeof pending = [];
+    for (const read of reads) {
+      if (read.error || !read.result) {
+        await settleFailure(read.item.attempt, read.error || "prediction_failed");
+        continue;
+      }
+      const url = read.result.outputs?.[0]?.url || "";
+      if (url) {
+        try {
+          await storeSuccess(read.item.attempt, url);
+        } catch (error) {
+          await settleFailure(read.item.attempt, error instanceof Error ? error.message : "result_not_stored");
+        }
+        continue;
+      }
+      if (read.result.status === "failed" || read.result.error) {
+        await settleFailure(read.item.attempt, read.result.error || "no_output");
+        continue;
+      }
+      still.push(read.item);
+    }
+    return still;
+  }
 
   try {
     for (let index = 0; index < shots.length; index += 1) {
@@ -631,6 +760,7 @@ export async function generateDetailPack(input: {
         key: shot.key,
         prompt: planned.prompt,
         engine: planned.engine,
+        modelVersion: planned.modelVersion,
       };
 
       if (packDeadline - now() < MIN_START_MS) {
@@ -656,6 +786,7 @@ export async function generateDetailPack(input: {
               key: restShot.key,
               prompt: restPlan.prompt,
               engine: restPlan.engine,
+              modelVersion: restPlan.modelVersion,
               hold: null,
             }, message);
           }
@@ -668,8 +799,7 @@ export async function generateDetailPack(input: {
 
       let attempt: Attempt;
       try {
-        const { provider } = getEngineForDetailType(shot.key);
-        const prediction = await provider.createPrediction({
+        const prediction = await planned.provider.createPrediction({
           prompt: planned.prompt,
           productImageUrl: planned.plan.productImageUrl,
           referenceImageUrl: planned.plan.referenceImageUrl,
@@ -707,44 +837,43 @@ export async function generateDetailPack(input: {
         continue;
       }
 
-      let result;
-      try {
-        const provider = attempt.engine === "openai" ? getProvider("flux") : getProvider(attempt.engine);
-        // An already-debited shot uses the whole pack budget. PER_SHOT_WAIT_MS only
-        // decides whether the next shot is worth starting.
-        const shotDeadline = packDeadline;
-        result = await provider.getPrediction(attempt.predictionId);
-        while (result.status === "processing" && now() < shotDeadline) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          result = await provider.getPrediction(attempt.predictionId);
-        }
-        // One read after the pack budget. Store a late image before any refund.
-        if (result.status === "processing" && !result.outputs?.[0]?.url) {
+      // Submit the rest of this pack before waiting on this shot.
+      inflight.push({ attempt, provider: planned.provider });
+    }
+
+    let pending = inflight;
+    if (pending.length > 0) {
+      pending = await pollInflight(pending);
+      while (pending.length > 0 && now() < packDeadline) {
+        await sleep(2_000);
+        pending = await pollInflight(pending);
+      }
+      if (pending.length > 0) {
+        const late = await Promise.all(pending.map(async (item) => {
           try {
-            const late = await provider.getPrediction(attempt.predictionId);
-            if (late.outputs?.[0]?.url || late.status === "failed" || late.error) {
-              result = late;
-            }
+            const result = await item.provider.getPrediction(item.attempt.predictionId!);
+            return { item, result };
           } catch (error) {
             console.error("Pack late prediction read failed", error);
+            return { item, result: null };
           }
+        }));
+        for (const read of late) {
+          const url = read.result?.outputs?.[0]?.url || "";
+          if (url) {
+            try {
+              await storeSuccess(read.item.attempt, url);
+            } catch (error) {
+              await settleFailure(read.item.attempt, error instanceof Error ? error.message : "result_not_stored");
+            }
+            continue;
+          }
+          if (read.result && (read.result.status === "failed" || read.result.error)) {
+            await settleFailure(read.item.attempt, read.result.error || "no_output");
+            continue;
+          }
+          await settleFailure(read.item.attempt, "prediction_timeout");
         }
-      } catch (error) {
-        await settleFailure(attempt, error instanceof Error ? error.message : "prediction_failed");
-        continue;
-      }
-
-      const url = result.outputs?.[0]?.url || "";
-      if (url) {
-        try {
-          await storeSuccess(attempt, url);
-        } catch (error) {
-          await settleFailure(attempt, error instanceof Error ? error.message : "result_not_stored");
-        }
-      } else {
-        const reason = result.error
-          || (result.status === "processing" ? "prediction_timeout" : "no_output");
-        await settleFailure(attempt, reason);
       }
     }
   } finally {
@@ -755,19 +884,50 @@ export async function generateDetailPack(input: {
     unsettled.clear();
   }
 
+  const creditsNotCharged = failed.filter((shot) => !shot.charged).length;
+  const packCredit = {
+    id: generationId,
+    finishedAt: new Date().toISOString(),
+    requested: shots.length,
+    completed: generated.length,
+    creditsCharged,
+    creditsRefunded,
+    creditsNotCharged,
+    failed,
+  };
+  for (const row of packRows) {
+    try {
+      await db.generatedImage.update({
+        where: { id: row.id },
+        data: {
+          generationMeta: { ...row.generationMeta, packCredit } as Prisma.InputJsonValue,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to persist pack credit summary", error);
+    }
+  }
+
   // Same close-out for a blocked first debit and for a pack that produced nothing.
   // Otherwise the early 402 leaves the project on GENERATING.
   const pendingCount = await db.task.count({
     where: { imageProjectId: input.imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
   });
+  const lockFlag = packKey ? { activePackSettled: true as const } : {};
   if (pendingCount === 0) {
     await db.imageProject.update({
       where: { id: input.imageProjectId },
       data: generated.length > 0
-        ? { status: "GENERATED", errorMessage: null }
-        : { status: "FAILED", errorMessage: failed[0]?.reason || "All predictions failed" },
+        ? { status: "GENERATED", errorMessage: null, ...lockFlag }
+        : { status: "FAILED", errorMessage: failed[0]?.reason || "All predictions failed", ...lockFlag },
     });
+  } else if (packKey) {
+    await releasePackLock();
   }
+
+  const engineFields = vegaModelVersion
+    ? { engine: "vega" as const, modelVersion: vegaModelVersion }
+    : {};
 
   if (chargeBlocked && generated.length === 0) {
     const spend = await chargeBlocked.json() as Record<string, unknown>;
@@ -780,7 +940,8 @@ export async function generateDetailPack(input: {
       count: 0,
       creditsCharged,
       creditsRefunded,
-      creditsNotCharged: failed.filter((shot) => !shot.charged).length,
+      creditsNotCharged,
+      ...engineFields,
     }, { status: chargeBlocked.status });
   }
 
@@ -792,7 +953,8 @@ export async function generateDetailPack(input: {
     count: generated.length,
     creditsCharged,
     creditsRefunded,
-    creditsNotCharged: failed.filter((shot) => !shot.charged).length,
+    creditsNotCharged,
+    ...engineFields,
   };
   if (generated.length === 0) {
     return NextResponse.json(
@@ -828,6 +990,7 @@ export async function POST(req: Request) {
     referenceHasPerson,
     seed,
     category, // product category for template matching
+    packIdempotencyKey,
   } = await req.json();
 
   if (Array.isArray(detailTypes) && detailTypes.length > 0) {
@@ -848,6 +1011,7 @@ export async function POST(req: Request) {
       seed: typeof seed === "number" ? seed : undefined,
       category: typeof category === "string" ? category : undefined,
       projectTitle,
+      packIdempotencyKey: typeof packIdempotencyKey === "string" ? packIdempotencyKey : undefined,
     });
   }
 

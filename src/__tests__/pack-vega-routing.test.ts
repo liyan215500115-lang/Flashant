@@ -76,7 +76,8 @@ vi.mock("@/lib/overlay-logo", () => ({
 }));
 vi.mock("@/lib/server-t", () => ({ serverT: vi.fn(async (key: string) => key) }));
 
-import { POST as generatePost } from "@/app/api/generate/route";
+import { generateDetailPack, POST as generatePost } from "@/app/api/generate/route";
+import { PACK_BUDGET_MS } from "@/lib/generate/pack-timing";
 import { db } from "@/lib/db";
 import { refundGenerationDebit } from "@/lib/creem/credits-runtime";
 
@@ -167,7 +168,10 @@ describe("recommended pack Vega routing", () => {
 
     const rows = vi.mocked(db.generatedImage.create).mock.calls.map((call) => call[0].data);
     expect(rows).toHaveLength(RECOMMENDED.length);
-    expect(rows.every((row: { aiProvider: string }) => row.aiProvider === "vega")).toBe(true);
+    expect(rows.every((row: { aiProvider: string; modelVersion?: string }) => row.aiProvider === "vega")).toBe(true);
+    expect(rows.every((row: { modelVersion?: string }) => row.modelVersion === "wand-vega-image-1.5-pro")).toBe(true);
+    expect(rows.some((row: { modelVersion?: string }) => String(row.modelVersion).includes("unit-test-placeholder"))).toBe(false);
+    expect(rows.some((row: { modelVersion?: string }) => row.modelVersion === "black-forest-labs/flux-2-pro")).toBe(false);
 
     const inputs = createPrediction.mock.calls.map((call) => call[0] as {
       productImageUrl: string;
@@ -249,8 +253,10 @@ describe("recommended pack Vega routing", () => {
     expect(openaiCreate).toHaveBeenCalledTimes(3);
     expect(fluxCreate).not.toHaveBeenCalled();
     expect(createPrediction).not.toHaveBeenCalled();
-    const rows = vi.mocked(db.generatedImage.create).mock.calls.map((call) => call[0].data.aiProvider);
-    expect(rows).toEqual(["openai", "openai", "openai"]);
+    const rows = vi.mocked(db.generatedImage.create).mock.calls.map((call) => call[0].data);
+    expect(rows.map((row: { aiProvider: string }) => row.aiProvider)).toEqual(["openai", "openai", "openai"]);
+    expect(rows.every((row: { modelVersion?: string }) => row.modelVersion === "gpt-image-2")).toBe(true);
+    expect(rows.some((row: { modelVersion?: string }) => row.modelVersion === "wand-vega-image-1.5-pro")).toBe(false);
   });
 
   it("does not move a single-image request onto Vega", async () => {
@@ -295,8 +301,67 @@ describe("recommended pack Vega routing", () => {
     expect(refundGenerationDebit).toHaveBeenCalledTimes(1);
     expect(vi.mocked(db.generatedImage.create).mock.calls[0][0].data).toMatchObject({
       aiProvider: "vega",
+      modelVersion: "wand-vega-image-1.5-pro",
       status: "FAILED",
       errorMessage: "vega_failed",
     });
+  });
+
+  it("submits all six Vega shots before polling, and finishes them inside one pack budget", async () => {
+    stubVegaEnv();
+    const events: string[] = [];
+    const shotMs = 90_000;
+    let clock = 1_000_000;
+    const seen = new Set<string>();
+    createPrediction.mockImplementation(async () => {
+      const id = `task_${createPrediction.mock.calls.length}`;
+      events.push(`create:${id}`);
+      return { predictionId: id, status: "processing", outputs: [] };
+    });
+    getPrediction.mockImplementation(async (id: string) => {
+      events.push(`poll:${id}`);
+      if (!seen.has(id)) {
+        if (seen.size === 0) clock += shotMs;
+        seen.add(id);
+        return { status: "processing", outputs: [] };
+      }
+      return { status: "succeeded", outputs: [{ url: `https://cdn.example/${id}.png` }] };
+    });
+    getProviderMock.mockImplementation((name?: string) => {
+      if (name === "vega") {
+        return { createPrediction, getPrediction, model: "wand-vega-image-1.5-pro" };
+      }
+      return { createPrediction, getPrediction };
+    });
+
+    const res = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      baseStyle: "gold earrings",
+      referenceImageUrl: STYLE,
+      detailTypes: RECOMMENDED.map((key) => ({ key, prompt: `${key} shot` })),
+      now: () => clock,
+      sleep: async () => {},
+    });
+    const json = await res.json();
+    const firstPoll = events.findIndex((event) => event.startsWith("poll:"));
+    expect(firstPoll).toBe(RECOMMENDED.length);
+    expect(events.slice(0, firstPoll).every((event) => event.startsWith("create:"))).toBe(true);
+    expect(json.completed).toBe(RECOMMENDED.length);
+    expect(json.completed).toBeGreaterThan(3);
+    for (const call of createPrediction.mock.calls) {
+      expect((call[0] as { productImageUrl: string }).productImageUrl).toBe(PRODUCT);
+    }
+    expect(clock - 1_000_000).toBe(shotMs);
+    expect(clock).toBeLessThan(1_000_000 + PACK_BUDGET_MS);
+    expect(shotMs * 6).toBeGreaterThan(PACK_BUDGET_MS);
+    const rows = vi.mocked(db.generatedImage.create).mock.calls.map((call) => call[0].data);
+    expect(rows).toHaveLength(RECOMMENDED.length);
+    expect(rows.every((row: { aiProvider: string; modelVersion: string }) =>
+      row.aiProvider === "vega" && row.modelVersion === "wand-vega-image-1.5-pro"
+    )).toBe(true);
+    expect(JSON.stringify(rows)).not.toContain("unit-test-placeholder");
   });
 });

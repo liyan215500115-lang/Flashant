@@ -10,6 +10,8 @@ export async function GET() {
   }
 
   const quota = presentQuota(await checkGenerationQuota(session.user.id));
+  // 0/0 with allowed false is a failed wallet read, not a confirmed empty balance.
+  const quotaKnown = !(quota.used === 0 && quota.limit === 0 && quota.balance === 0 && quota.allowed === false);
   return NextResponse.json({
     used: quota.used,
     limit: quota.limit,
@@ -18,5 +20,6 @@ export async function GET() {
     balance: quota.balance,
     allotmentConfigured: quota.allotmentConfigured,
     unlimited: quota.unlimited,
+    quotaKnown,
   });
 }
