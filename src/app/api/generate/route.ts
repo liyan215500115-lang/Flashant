@@ -708,6 +708,20 @@ export async function generateDetailPack(input: {
     unsettled.clear();
   }
 
+  // Same close-out for a blocked first debit and for a pack that produced nothing.
+  // Otherwise the early 402 leaves the project on GENERATING.
+  const pendingCount = await db.task.count({
+    where: { imageProjectId: input.imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
+  });
+  if (pendingCount === 0) {
+    await db.imageProject.update({
+      where: { id: input.imageProjectId },
+      data: generated.length > 0
+        ? { status: "GENERATED", errorMessage: null }
+        : { status: "FAILED", errorMessage: failed[0]?.reason || "All predictions failed" },
+    });
+  }
+
   if (chargeBlocked && generated.length === 0) {
     const spend = await chargeBlocked.json() as Record<string, unknown>;
     return NextResponse.json({
@@ -720,18 +734,6 @@ export async function generateDetailPack(input: {
       creditsCharged,
       creditsRefunded,
     }, { status: chargeBlocked.status });
-  }
-
-  const pendingCount = await db.task.count({
-    where: { imageProjectId: input.imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
-  });
-  if (pendingCount === 0) {
-    await db.imageProject.update({
-      where: { id: input.imageProjectId },
-      data: generated.length > 0
-        ? { status: "GENERATED", errorMessage: null }
-        : { status: "FAILED", errorMessage: failed[0]?.reason || "All predictions failed" },
-    });
   }
 
   const body = {

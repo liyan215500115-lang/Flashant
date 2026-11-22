@@ -535,6 +535,41 @@ describe("POST /api/generate pack shots", () => {
     expect(input.prompt).not.toContain("serum on the cheek");
   });
 
+  it("does not leave the project GENERATING when the first shot debit is blocked", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_blocked"));
+    chargeMock.mockResolvedValue({
+      ok: false,
+      error: "insufficient_credits",
+      balance: 0,
+      required: 1,
+      tier: "PRO",
+      allotmentConfigured: true,
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      detailTypes: [
+        { key: "in_use", prompt: "gold earrings worn outdoors" },
+        { key: "detail", prompt: "gold hoop earring macro" },
+      ],
+    }));
+
+    expect(res.status).toBe(402);
+    const json = await res.json();
+    expect(json.error).toBe("insufficient_credits");
+    expect(createPrediction).not.toHaveBeenCalled();
+    expect(refundMock).not.toHaveBeenCalled();
+
+    const updates = dbMock.imageProject.update.mock.calls.map((call) => call[0].data);
+    expect(updates.map((data: { status: string }) => data.status)).toEqual(["GENERATING", "FAILED"]);
+    expect(updates[1]).toEqual({
+      status: "FAILED",
+      errorMessage: "insufficient_credits",
+    });
+  });
+
   it("stores a FAILED image when polling returns no output", async () => {
     fetchMock.mockResolvedValue(moderationResponse("allow", 200, "mod_poll"));
     chargePerImage();
