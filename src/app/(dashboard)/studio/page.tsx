@@ -54,6 +54,7 @@ export default function StudioPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const [loadedDetailResults, setLoadedDetailResults] = useState<Array<{key:string; url:string; label:string; rawUrl:string}>>([]);
+  const [loadedDetailFailures, setLoadedDetailFailures] = useState<Array<{ key: string; reason: string }>>([]);
 
   // Sync product name to project title (debounced)
   function handleProductNameChange(name: string) {
@@ -70,7 +71,23 @@ export default function StudioPage() {
   const [latestImage, setLatestImage] = useState<PreviewImage | null>(null);
   const [generationHistory, setGenerationHistory] = useState<PreviewImage[]>([]);
   const [quotaUsed, setQuotaUsed] = useState(0);
-  const [quotaLimit, setQuotaLimit] = useState(-1);
+  const [quotaLimit, setQuotaLimit] = useState(0);
+  const [quotaTier, setQuotaTier] = useState<string | null>(null);
+  const [allotmentConfigured, setAllotmentConfigured] = useState(false);
+  const [quotaLoading, setQuotaLoading] = useState(true);
+
+  function applyQuota(data: {
+    used?: number;
+    limit?: number;
+    tier?: string;
+    allotmentConfigured?: boolean;
+  }) {
+    setQuotaUsed(data.used ?? 0);
+    setQuotaLimit(typeof data.limit === "number" ? data.limit : 0);
+    setQuotaTier(data.tier ?? null);
+    setAllotmentConfigured(data.allotmentConfigured === true);
+    setQuotaLoading(false);
+  }
 
   async function createProject() {
     setProjectCreating(true);
@@ -101,11 +118,8 @@ export default function StudioPage() {
   useEffect(() => {
     fetch("/api/quota")
       .then((r) => r.json())
-      .then((d) => {
-        setQuotaUsed(d.used ?? 0);
-        setQuotaLimit(d.limit ?? -1);
-      })
-      .catch(() => {});
+      .then((d) => applyQuota(d))
+      .catch(() => setQuotaLoading(false));
     // If we got a projectId from URL, load project + restore history. Otherwise create a new one.
     if (existingId) {
       fetch(`/api/products/${existingId}`)
@@ -139,6 +153,16 @@ export default function StudioPage() {
                 url: g.url,
                 rawUrl: g.url,
                 label: ((g.generationMeta as any)?.detailKey) || "detail",
+              })));
+            }
+            const failedDetails = gens.filter((g: any) => {
+              const meta = g.generationMeta as { sourceType?: string; detailKey?: string } | null;
+              return g.status === "FAILED" && meta?.sourceType === "detail";
+            });
+            if (failedDetails.length > 0) {
+              setLoadedDetailFailures(failedDetails.map((g: any) => ({
+                key: ((g.generationMeta as any)?.detailKey) || "detail",
+                reason: g.errorMessage || "生成失败",
               })));
             }
           }
@@ -183,7 +207,7 @@ export default function StudioPage() {
             });
             setIsGenerating(false);
             toast.success(t("generate.success"));
-            fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
+            fetch("/api/quota").then((r) => r.json()).then((d) => applyQuota(d)).catch(() => {});
             return;
           }
           if (data.task?.status === "FAILED") {
@@ -250,7 +274,7 @@ export default function StudioPage() {
           });
         }
         toast.success(`Generated ${newPreviews.length} image${newPreviews.length > 1 ? "s" : ""}`);
-        fetch("/api/quota").then((r) => r.json()).then((d) => setQuotaUsed(d.used ?? 0)).catch(() => {});
+        fetch("/api/quota").then((r) => r.json()).then((d) => applyQuota(d)).catch(() => {});
       } else if (data.taskId) {
         pollTask(data.taskId);
         return; // polling manages its own setIsGenerating(false)
@@ -274,7 +298,9 @@ export default function StudioPage() {
       {/* ── Header ── */}
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{t("studio.title")}</h1>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            {existingId ? t("studio.editingTitle") : t("studio.title")}
+          </h1>
           {projectId && (
             <Link href={`/projects/${projectId}`} className="text-sm text-brand-600 hover:text-brand-700 font-medium">
               View project →
@@ -344,6 +370,9 @@ export default function StudioPage() {
             projectId={projectId}
             quotaUsed={quotaUsed}
             quotaLimit={quotaLimit}
+            quotaTier={quotaTier}
+            allotmentConfigured={allotmentConfigured}
+            quotaLoading={quotaLoading}
             generationError={generationError}
             onDismissError={() => setGenerationError("")}
           />
@@ -354,8 +383,15 @@ export default function StudioPage() {
               productImageId={selectedImage.id}
               basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
               referenceImageUrl={latestImage.url}
+              referenceHasPerson={
+                activeStyle === "in_use" ||
+                /模特|人物|人脸|面部|手部|皮肤|佩戴|穿着|涂抹|person|people|model|face|wearing|worn/i.test(
+                  `${prompt} ${latestImage.promptUsed ?? ""}`,
+                )
+              }
               targetPlatform={targetPlatform}
               initialResults={loadedDetailResults}
+              initialFailures={loadedDetailFailures}
             />
           )}
 

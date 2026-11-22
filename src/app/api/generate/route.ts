@@ -21,20 +21,18 @@ import {
   screenGenerationPrompts,
 } from "@/lib/creem/moderation";
 import { sharedStaticPromptFragments } from "@/lib/creem/static-fragments";
+import {
+  BEAUTY_PERSON_CLOSEUP_PROMPT,
+  planPackShot,
+  PRODUCT_MACRO_LOCK,
+  type PackShotPlan,
+} from "@/lib/generate/detail-shot";
 import type { PlanTier, Prisma } from "@prisma/client";
 
 function debitSnapshot(value: DebitHold | null): { accountId: string; transactionId: string } | null {
   if (!value) return null;
   return { accountId: value.accountId, transactionId: value.transactionId };
 }
-
-// Detail types where the model/person should be the FOCUS, not the product.
-const MODEL_CLOSEUP_TYPES = new Set(["detail"]);
-
-// Scene types that should use the main generated image (with model) as img2img
-// reference instead of the bare product photo. This keeps the model consistent
-// across all scene images in a set.
-const MODEL_SCENE_TYPES = new Set(["lifestyle", "scene_atmosphere", "in_use"]);
 
 // ── Module-level constants ──
 
@@ -311,9 +309,449 @@ function generationStaticFragments(): string[] {
     "CRITICAL: Keep the product and any person visually IDENTICAL to the reference image — same shape, same color, same materials, same details. Only change the background, scene, pose, framing, or camera angle. Do NOT substitute the product with a different one.",
     "CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.",
     "Keep any person visually identical to the reference image — same face, same body, same clothing.",
-    "Extreme close-up of the person from the reference image using or wearing the product. Focus on the face/head/hands where the product is being applied or worn. The product itself should be visible in use (on skin, on head, on body) but do NOT show any product packaging, bottles, boxes, or containers. Keep the person visually IDENTICAL to the reference image — same face, same features, same skin tone. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. CRITICAL: do NOT render any text or labels on the image.",
+    BEAUTY_PERSON_CLOSEUP_PROMPT,
+    PRODUCT_MACRO_LOCK,
   );
   return fragments;
+}
+
+type DetailShotInput = { key?: unknown; prompt?: unknown };
+
+function detailShotList(value: unknown): Array<{ key: string; prompt: string }> {
+  if (!Array.isArray(value)) return [];
+  const shots: Array<{ key: string; prompt: string }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as DetailShotInput;
+    if (typeof record.key !== "string" || !record.key.trim()) continue;
+    shots.push({
+      key: record.key.trim(),
+      prompt: typeof record.prompt === "string" ? record.prompt : "",
+    });
+  }
+  return shots;
+}
+
+function assemblePackPrompt(
+  dt: { key: string; prompt: string },
+  plan: PackShotPlan,
+  input: { baseStyle?: string; referenceImageUrl?: string; category?: string },
+): string {
+  if (plan.promptOverride) return plan.promptOverride;
+  const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
+  const tpl = TYPE_TEMPLATES[dt.key];
+  const catProfile = input.category ? CATEGORY_PROFILES[input.category] : null;
+  const categoryHint = !plan.omitCategoryHint && catProfile?.compositionHint
+    ? ` ${catProfile.compositionHint}.`
+    : "";
+  const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
+  const styleHint = input.baseStyle && !wantsTextOnImage
+    ? ` Match the overall aesthetic of: ${input.baseStyle}.`
+    : "";
+  const identityLock = input.referenceImageUrl && !wantsTextOnImage && plan.mode !== "product_macro"
+    ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
+    : "";
+  const noTextGuard = wantsTextOnImage
+    ? ""
+    : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
+  const beautySurfaceGuard = input.category === "beauty" ? BEAUTY_DARK_SURFACE_GUARD : "";
+  const body = tpl
+    ? [
+        identityLock,
+        styleHint,
+        userPrompt || "Professional product photography",
+        categoryHint,
+        tpl.composition,
+        tpl.lighting,
+        tpl.camera,
+        tpl.mood,
+        tpl.technical,
+        noTextGuard,
+        beautySurfaceGuard,
+      ].filter(Boolean).join(". ").trim()
+    : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}${beautySurfaceGuard ? ` ${beautySurfaceGuard}` : ""}`.trim();
+  if (plan.mode === "product_macro") return `${body} ${PRODUCT_MACRO_LOCK}`.trim();
+  return body;
+}
+
+/**
+ * One moderation id and one 1-credit debit per pack shot.
+ * The debit is taken when that shot starts, not for the whole pack up front.
+ * A failed shot is stored as FAILED and only that shot's debit is reversed.
+ * Holds that were taken but not stored are reversed before the handler returns.
+ * Identical outputs of one prompt may still share a debit on the single-image path.
+ */
+export async function generateDetailPack(input: {
+  userId: string;
+  imageProjectId: string;
+  productImageId: string;
+  detailTypes: unknown;
+  baseStyle?: string;
+  referenceImageUrl?: string;
+  referenceHasPerson?: boolean;
+  seed?: number;
+  category?: string;
+  projectTitle?: string;
+  /** Clock for the pack deadline. Tests advance it; production uses Date.now. */
+  now?: () => number;
+}): Promise<NextResponse> {
+  const shots = detailShotList(input.detailTypes);
+  if (shots.length === 0) {
+    return NextResponse.json({ error: "detailTypes are required" }, { status: 400 });
+  }
+
+  const project = await db.imageProject.findUnique({ where: { id: input.imageProjectId } });
+  if (!project || project.userId !== input.userId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  const productImage = await db.productImage.findUnique({ where: { id: input.productImageId } });
+  if (!productImage) {
+    return NextResponse.json({ error: "Product image not found" }, { status: 404 });
+  }
+
+  const fragments = generationStaticFragments();
+  const gates = [];
+  for (let index = 0; index < shots.length; index += 1) {
+    const shot = shots[index];
+    const gate = await screenGenerationPrompts({
+      userId: input.userId,
+      prompts: promptsForModeration(
+        { prompt: shot.prompt, baseStyle: input.baseStyle, detailTypes: [shot] },
+        fragments,
+      ),
+      placeholder: SCREEN_PLACEHOLDERS.generate,
+      combine: true,
+      externalSuffix: `pack-${index}-${shot.key}`,
+    });
+    const blocked = moderationHttpResponse(gate);
+    if (blocked) return blocked;
+    gates.push(gate);
+  }
+
+  const isR2Image = productImage.s3Key && (productImage.s3Key.startsWith("products/") || productImage.s3Key.startsWith("generated/"));
+  const rawBatchUrl = isR2Image
+    ? await getSignedGetUrl(productImage.s3Key, 3600).catch(() => productImage.originalUrl)
+    : productImage.originalUrl;
+  const sharedImageUrl = await prepareReferenceImage(rawBatchUrl);
+
+  try {
+    getProvider("flux");
+  } catch {
+    try {
+      getProvider("gpt-image");
+    } catch {
+      return NextResponse.json({ error: "No AI engine available" }, { status: 400 });
+    }
+  }
+
+  const generationId = crypto.randomUUID();
+
+  await db.imageProject.update({
+    where: { id: input.imageProjectId },
+    data: { status: "GENERATING", title: input.projectTitle || undefined },
+  });
+
+  const now = input.now ?? Date.now;
+  const DEADLINE = now() + 50_000;
+
+  type Attempt = {
+    key: string;
+    prompt: string;
+    engine: string;
+    hold: DebitHold | null;
+    predictionId?: string;
+    outputs?: Array<{ url: string }>;
+    error?: string;
+  };
+
+  const generated: Array<{ key: string; url: string; label: string }> = [];
+  const failed: Array<{ key: string; reason: string; creditsRefunded: boolean }> = [];
+  let creditsRefunded = 0;
+  let creditsCharged = 0;
+  /** Debits taken for a shot that is not stored yet. Cleared on store or refund. */
+  const unsettled = new Map<string, DebitHold>();
+
+  function trackHold(hold: DebitHold | null) {
+    if (hold) unsettled.set(hold.transactionId, hold);
+  }
+
+  function forgetHold(hold: DebitHold | null) {
+    if (hold) unsettled.delete(hold.transactionId);
+  }
+
+  function planShot(shot: { key: string; prompt: string }) {
+    const plan = planPackShot({
+      detailKey: shot.key,
+      category: input.category,
+      productImageUrl: sharedImageUrl,
+      referenceImageUrl: input.referenceImageUrl,
+      referenceHasPerson: input.referenceHasPerson,
+      contextText: [input.baseStyle, shot.prompt].filter(Boolean).join("\n"),
+    });
+    const { engine } = getEngineForDetailType(shot.key);
+    return { plan, prompt: assemblePackPrompt(shot, plan, input), engine };
+  }
+
+  async function settleFailure(attempt: Attempt, reason: string) {
+    const refunded = attempt.hold ? (await refundGenerationDebit(attempt.hold)).reversed : false;
+    forgetHold(attempt.hold);
+    if (refunded) creditsRefunded += 1;
+    const message = reason.slice(0, 500) || "generation_failed";
+    try {
+      await db.generatedImage.create({
+        data: {
+          imageProjectId: input.imageProjectId,
+          productImageId: input.productImageId,
+          s3Key: "failed",
+          url: "",
+          promptUsed: attempt.prompt,
+          aiProvider: attempt.engine,
+          status: "FAILED",
+          errorMessage: message,
+          completedAt: new Date(),
+          generationMeta: {
+            sourceType: "detail",
+            detailKey: attempt.key,
+            ...(attempt.hold
+              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
+              : {}),
+            ...(refunded ? { creditsRefunded: true } : {}),
+          },
+        },
+      });
+      await db.task.create({
+        data: {
+          imageProjectId: input.imageProjectId,
+          productImageId: input.productImageId,
+          engineType: attempt.engine,
+          status: "FAILED",
+          errorMessage: message,
+          generationMeta: {
+            sourceType: "detail",
+            detailKey: attempt.key,
+            ...(attempt.hold
+              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
+              : {}),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to persist pack failure", error);
+    }
+    failed.push({ key: attempt.key, reason: message, creditsRefunded: refunded });
+  }
+
+  async function storeSuccess(attempt: Attempt, url: string) {
+    await db.generatedImage.create({
+      data: {
+        imageProjectId: input.imageProjectId,
+        productImageId: input.productImageId,
+        s3Key: url,
+        url,
+        promptUsed: attempt.prompt,
+        aiProvider: attempt.engine,
+        status: "SUCCEEDED",
+        completedAt: new Date(),
+        generationMeta: {
+          sourceType: "detail",
+          detailKey: attempt.key,
+          ...(attempt.hold
+            ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
+            : {}),
+        },
+      },
+    });
+    forgetHold(attempt.hold);
+    generated.push({ key: attempt.key, url, label: attempt.key });
+    if (attempt.hold) creditsCharged += 1;
+    try {
+      await db.task.create({
+        data: {
+          imageProjectId: input.imageProjectId,
+          productImageId: input.productImageId,
+          engineType: attempt.engine,
+          status: "SUCCEEDED",
+          resultUrl: url,
+          predictionId: attempt.predictionId,
+          generationMeta: {
+            sourceType: "detail",
+            detailKey: attempt.key,
+            ...(attempt.hold
+              ? { creemDebit: { accountId: attempt.hold.accountId, transactionId: attempt.hold.transactionId } }
+              : {}),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to persist pack task", error);
+    }
+  }
+
+  let chargeBlocked: NextResponse | null = null;
+
+  try {
+    for (let index = 0; index < shots.length; index += 1) {
+      const shot = shots[index];
+      const planned = planShot(shot);
+      const baseAttempt = {
+        key: shot.key,
+        prompt: planned.prompt,
+        engine: planned.engine,
+      };
+
+      if (now() >= DEADLINE) {
+        await settleFailure({ ...baseAttempt, hold: null }, "prediction_timeout");
+        continue;
+      }
+
+      let hold: DebitHold | null = null;
+      if (creemModerationMode() !== "off") {
+        const charged = await chargeScreenedGeneration({
+          userId: input.userId,
+          gate: gates[index],
+          imageCount: 1,
+          reference: `gen:${generationId}:${index}:${shot.key}`,
+          idempotencyKey: `debit:${generationId}:${index}:${shot.key}`,
+        });
+        if (!charged.ok) {
+          const message = charged.error;
+          for (let rest = index; rest < shots.length; rest += 1) {
+            const restShot = shots[rest];
+            const restPlan = rest === index ? planned : planShot(restShot);
+            await settleFailure({
+              key: restShot.key,
+              prompt: restPlan.prompt,
+              engine: restPlan.engine,
+              hold: null,
+            }, message);
+          }
+          if (generated.length === 0) chargeBlocked = spendErrorResponse(charged);
+          break;
+        }
+        hold = charged.hold;
+        trackHold(hold);
+      }
+
+      let attempt: Attempt;
+      try {
+        const { provider } = getEngineForDetailType(shot.key);
+        const prediction = await provider.createPrediction({
+          prompt: planned.prompt,
+          productImageUrl: planned.plan.productImageUrl,
+          referenceImageUrl: planned.plan.referenceImageUrl,
+          numOutputs: 1,
+          width: 1024,
+          height: 1024,
+          seed: input.seed || undefined,
+        });
+        attempt = {
+          ...baseAttempt,
+          hold,
+          predictionId: prediction.predictionId,
+          outputs: prediction.outputs,
+        };
+      } catch (error) {
+        attempt = {
+          ...baseAttempt,
+          hold,
+          error: error instanceof Error ? error.message : "prediction_failed",
+        };
+      }
+
+      if (attempt.error || !attempt.predictionId) {
+        await settleFailure(attempt, attempt.error || "prediction_failed");
+        continue;
+      }
+
+      const syncUrl = attempt.outputs?.[0]?.url;
+      if (syncUrl) {
+        try {
+          await storeSuccess(attempt, syncUrl);
+        } catch (error) {
+          await settleFailure(attempt, error instanceof Error ? error.message : "result_not_stored");
+        }
+        continue;
+      }
+
+      let result;
+      try {
+        const provider = attempt.engine === "openai" ? getProvider("flux") : getProvider(attempt.engine);
+        result = await provider.getPrediction(attempt.predictionId);
+        while (result.status === "processing" && now() < DEADLINE) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          result = await provider.getPrediction(attempt.predictionId);
+        }
+      } catch (error) {
+        await settleFailure(attempt, error instanceof Error ? error.message : "prediction_failed");
+        continue;
+      }
+
+      const url = result.status === "succeeded" ? result.outputs[0]?.url : "";
+      if (url) {
+        try {
+          await storeSuccess(attempt, url);
+        } catch (error) {
+          await settleFailure(attempt, error instanceof Error ? error.message : "result_not_stored");
+        }
+      } else {
+        const reason = result.error
+          || (result.status === "processing" ? "prediction_timeout" : "no_output");
+        await settleFailure(attempt, reason);
+      }
+    }
+  } finally {
+    for (const hold of unsettled.values()) {
+      const refunded = (await refundGenerationDebit(hold)).reversed;
+      if (refunded) creditsRefunded += 1;
+    }
+    unsettled.clear();
+  }
+
+  // Same close-out for a blocked first debit and for a pack that produced nothing.
+  // Otherwise the early 402 leaves the project on GENERATING.
+  const pendingCount = await db.task.count({
+    where: { imageProjectId: input.imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
+  });
+  if (pendingCount === 0) {
+    await db.imageProject.update({
+      where: { id: input.imageProjectId },
+      data: generated.length > 0
+        ? { status: "GENERATED", errorMessage: null }
+        : { status: "FAILED", errorMessage: failed[0]?.reason || "All predictions failed" },
+    });
+  }
+
+  if (chargeBlocked && generated.length === 0) {
+    const spend = await chargeBlocked.json() as Record<string, unknown>;
+    return NextResponse.json({
+      ...spend,
+      generated,
+      failed,
+      requested: shots.length,
+      completed: 0,
+      count: 0,
+      creditsCharged,
+      creditsRefunded,
+    }, { status: chargeBlocked.status });
+  }
+
+  const body = {
+    generated,
+    failed,
+    requested: shots.length,
+    completed: generated.length,
+    count: generated.length,
+    creditsCharged,
+    creditsRefunded,
+  };
+  if (generated.length === 0) {
+    return NextResponse.json(
+      { error: "generation_failed", message: failed[0]?.reason || "All predictions failed", ...body },
+      { status: 500 },
+    );
+  }
+  return NextResponse.json(body);
 }
 
 export async function POST(req: Request) {
@@ -338,9 +776,31 @@ export async function POST(req: Request) {
     detailTypes, // batch detail types: [{ key, prompt }]
     baseStyle,
     referenceImageUrl,
+    referenceHasPerson,
     seed,
     category, // product category for template matching
   } = await req.json();
+
+  if (Array.isArray(detailTypes) && detailTypes.length > 0) {
+    if (!imageProjectId || !productImageId) {
+      return NextResponse.json(
+        { error: "imageProjectId and productImageId are required" },
+        { status: 400 },
+      );
+    }
+    return generateDetailPack({
+      userId,
+      imageProjectId,
+      productImageId,
+      detailTypes,
+      baseStyle,
+      referenceImageUrl,
+      referenceHasPerson: typeof referenceHasPerson === "boolean" ? referenceHasPerson : undefined,
+      seed: typeof seed === "number" ? seed : undefined,
+      category: typeof category === "string" ? category : undefined,
+      projectTitle,
+    });
+  }
 
   // Track which engine will actually be used (may fall back to flux at resolve time)
   let actualEngine = engineType;
@@ -430,186 +890,6 @@ export async function POST(req: Request) {
         { status: 409 }
       );
     }
-  }
-
-  // ── Batch detail types: fire all predictions in parallel, poll concurrently ──
-  if (detailTypes && detailTypes.length > 0) {
-    const productImage = await db.productImage.findUnique({
-      where: { id: productImageId },
-    });
-    if (!productImage) {
-      return NextResponse.json({ error: "Product image not found" }, { status: 404 });
-    }
-    const isR2Image = productImage.s3Key && (productImage.s3Key.startsWith("products/") || productImage.s3Key.startsWith("generated/"));
-    const rawBatchUrl = isR2Image
-      ? await getSignedGetUrl(productImage.s3Key, 3600).catch(() => productImage.originalUrl)
-      : productImage.originalUrl;
-    // Compress reference to ≤1MP before sending to Replicate — cuts input-megapixel cost ~70%.
-    const sharedImageUrl = await prepareReferenceImage(rawBatchUrl);
-    // Prefer FLUX for img2img support (input_images parameter), fallback to any available provider
-    let batchProvider;
-    try {
-      batchProvider = getProvider("flux");
-    } catch {
-      try {
-        batchProvider = getProvider("gpt-image");
-      } catch {
-        return NextResponse.json({ error: "No AI engine available" }, { status: 400 });
-      }
-    }
-
-    const detailTypesArray = detailTypes as Array<{ key: string; prompt: string }>;
-    const blockedSpend = await charge(detailTypesArray.length);
-    if (blockedSpend) return blockedSpend;
-
-    // Update project status
-    await db.imageProject.update({
-      where: { id: imageProjectId },
-      data: { status: "GENERATING", title: projectTitle || undefined },
-    });
-
-    // Fire predictions in parallel, poll concurrently
-    const POLL_MS = 2000;
-    const MAX_POLLS = 15;
-
-    const predictions = await Promise.all(
-      detailTypesArray.map(async (dt) => {
-        // 5-element prompt structure (inspired by awesome-gpt-image-2):
-        // [Subject] + [Composition] + [Lighting] + [Camera/Mood] + [Technical]
-        // User content leads the subject. Template fills the rest.
-        const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
-        const tpl = TYPE_TEMPLATES[dt.key];
-        const catProfile = category ? CATEGORY_PROFILES[category] : null;
-        const categoryHint = catProfile?.compositionHint ? ` ${catProfile.compositionHint}.` : "";
-        const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
-
-        const styleHint = baseStyle && !wantsTextOnImage
-          ? ` Match the overall aesthetic of: ${baseStyle}.`
-          : "";
-        const identityLock = referenceImageUrl && !wantsTextOnImage
-          ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
-          : "";
-        const noTextGuard = wantsTextOnImage ? "" : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
-        // Beauty-only. Electronics stays dark_moody without this charcoal/cyan guard.
-        const beautySurfaceGuard = category === "beauty" ? BEAUTY_DARK_SURFACE_GUARD : "";
-
-        // Assemble: category hint → identity → subject → composition → lighting → camera → mood → technical → guards
-        const detailPrompt = tpl
-          ? [
-              identityLock,
-              styleHint,
-              userPrompt || "Professional product photography",
-              categoryHint,
-              tpl.composition,
-              tpl.lighting,
-              tpl.camera,
-              tpl.mood,
-              tpl.technical,
-              noTextGuard,
-              beautySurfaceGuard,
-            ].filter(Boolean).join(". ").trim()
-          : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}${beautySurfaceGuard ? ` ${beautySurfaceGuard}` : ""}`.trim();
-        // Model close-ups: person using/wearing the product (e.g. headphones on
-        // ears, lotion on face, hat on head). Show the product IN USE but do NOT
-        // show the product packaging, bottle, or box.
-        const isModelCloseup = referenceImageUrl && MODEL_CLOSEUP_TYPES.has(dt.key);
-        const modelCloseupPrompt = `Extreme close-up of the person from the reference image using or wearing the product. Focus on the face/head/hands where the product is being applied or worn. The product itself should be visible in use (on skin, on head, on body) but do NOT show any product packaging, bottles, boxes, or containers. Keep the person visually IDENTICAL to the reference image — same face, same features, same skin tone. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. CRITICAL: do NOT render any text or labels on the image.`;
-
-        // For scene types with a model reference, use the main generated image
-        // (which includes the model) as img2img source instead of the bare product
-        // photo. This preserves the model across all scene images in the set.
-        const useModelRef = referenceImageUrl && MODEL_SCENE_TYPES.has(dt.key);
-        const effectiveProductUrl = isModelCloseup ? "" : useModelRef ? referenceImageUrl : sharedImageUrl;
-
-        // Per-type engine routing: GPT Image 2 for info types, FLUX for scene types
-        const { provider: typeProvider, engine: typeEngine } = getEngineForDetailType(dt.key);
-
-        try {
-          const p = await typeProvider.createPrediction({
-            prompt: isModelCloseup ? modelCloseupPrompt : detailPrompt,
-            productImageUrl: effectiveProductUrl,
-            referenceImageUrl: referenceImageUrl || undefined,
-            numOutputs: 1,
-            width: 1024,
-            height: 1024,
-            seed: seed || undefined,
-          });
-          return { key: dt.key, predictionId: p.predictionId, prompt: detailPrompt, engine: typeEngine, outputs: (p as any).outputs };
-        } catch {
-          return null;
-        }
-      })
-    );
-
-    // Poll async predictions server-side with a hard deadline (Vercel 60s limit).
-    // Sync results (OpenAI) are already done; async (Replicate) get polled up to 50s.
-    const DEADLINE = Date.now() + 50_000;
-    const generated: Array<{ key: string; url: string; label: string }> = [];
-
-    for (const p of predictions) {
-      if (!p) continue;
-
-      // Sync results (OpenAI) — use immediately
-      const syncOutputs = (p as any).outputs as Array<{ url: string }> | undefined;
-      if (syncOutputs?.length) {
-        const imgUrl = syncOutputs[0].url;
-        await db.generatedImage.create({
-          data: {
-            imageProjectId, productImageId,
-            s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
-            aiProvider: (p as any).engine || "flux",
-            status: "SUCCEEDED", completedAt: new Date(),
-            generationMeta: withDebit({ sourceType: "detail", detailKey: p.key }),
-          },
-        });
-        generated.push({ key: p.key, url: imgUrl, label: p.key });
-        continue;
-      }
-
-      // Async (Replicate) — poll until done or deadline
-      try {
-        const typeEngine = (p as any).engine || "flux";
-        const provider = typeEngine === "openai" ? getProvider("flux") : getProvider(typeEngine);
-        let result = await provider.getPrediction(p.predictionId);
-        while (result.status === "processing" && Date.now() < DEADLINE) {
-          await new Promise(r => setTimeout(r, 2000));
-          result = await provider.getPrediction(p.predictionId);
-        }
-
-        if (result.status === "succeeded" && result.outputs.length > 0) {
-          const imgUrl = result.outputs[0].url;
-          await db.generatedImage.create({
-            data: {
-              imageProjectId, productImageId,
-              s3Key: imgUrl, url: imgUrl, promptUsed: p.prompt,
-              aiProvider: typeEngine, status: "SUCCEEDED", completedAt: new Date(),
-              generationMeta: withDebit({ sourceType: "detail", detailKey: p.key }),
-            },
-          });
-          generated.push({ key: p.key, url: imgUrl, label: p.key });
-        }
-      } catch { /* skip failed prediction */ }
-    }
-
-    // A batch that produced nothing must not stay GENERATING, and must not be
-    // marked GENERATED. Leave GENERATING only while some other task is in flight.
-    const pendingCount = await db.task.count({
-      where: { imageProjectId, status: { in: ["PENDING", "PROCESSING"] } },
-    });
-    if (pendingCount === 0) {
-      await db.imageProject.update({
-        where: { id: imageProjectId },
-        data: generated.length > 0
-          ? { status: "GENERATED", errorMessage: null }
-          : { status: "FAILED", errorMessage: "All predictions failed" },
-      });
-    }
-
-    if (generated.length === 0) {
-      return fail(NextResponse.json({ error: "generation_failed", message: "All predictions failed" }, { status: 500 }));
-    }
-
-    return NextResponse.json({ generated, count: generated.length });
   }
 
   // Get product image

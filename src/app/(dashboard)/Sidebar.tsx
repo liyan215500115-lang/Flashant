@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -30,7 +30,9 @@ import {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const editingProject = pathname.startsWith("/studio") && !!searchParams.get("projectId");
   const { data: session } = useSession();
   const user = session?.user as { name?: string; role?: string; image?: string | null } | undefined;
   const { t } = useT();
@@ -40,7 +42,7 @@ export function Sidebar() {
       label: t("sidebar.production"),
       items: [
         { href: "/dashboard", label: t("sidebar.dashboard"), icon: LayoutDashboard },
-        { href: "/studio", label: t("sidebar.studio"), icon: Sparkles },
+        { href: "/studio", label: editingProject ? t("studio.editingTitle") : t("sidebar.studio"), icon: Sparkles },
         { href: "/projects", label: t("sidebar.products"), icon: Package },
       ],
     },

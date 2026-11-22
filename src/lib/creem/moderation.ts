@@ -141,6 +141,8 @@ export async function screenGenerationPrompts(input: {
    * authorize the one debit for this generation.
    */
   combine?: boolean;
+  /** Distinguishes one pack shot from another so each debit gets its own moderation id. */
+  externalSuffix?: string;
   env?: Env;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
@@ -175,7 +177,9 @@ export async function screenGenerationPrompts(input: {
       apiKey,
       url: `${base}${MODERATION_PATH}`,
       prompt: prompts[index],
-      externalId: `user_${input.userId}:p_${index}`,
+      externalId: input.externalSuffix
+        ? `user_${input.userId}:${input.externalSuffix}:${index}`
+        : `user_${input.userId}:p_${index}`,
       timeoutMs,
     });
     if (!result.allowed || !result.moderationId || !result.screenedAt) {

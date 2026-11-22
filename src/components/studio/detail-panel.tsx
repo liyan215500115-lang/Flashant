@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/i18n-provider";
+import {
+  applyCategoryChange,
+  GENERAL_PACK,
+  readPackDraft,
+  writePackDraft,
+} from "@/lib/studio-pack-session";
 
 const TYPE_GROUPS = [
   {
@@ -16,7 +22,7 @@ const TYPE_GROUPS = [
     name: "特写组",
     key: "closeup",
     types: ["detail"],
-    desc: "模特面部/手部特写，产品使用中，不带包装",
+    desc: "商品材质与结构微距，这件商品清晰可辨。美妆且参考图里有人才使用面部特写",
   },
   {
     name: "多角度",
@@ -55,6 +61,7 @@ const TYPE_LABELS: Record<string, string> = {
   brand_story: "品牌故事",
   craft: "制作工艺",
   lifestyle: "使用场景",
+  in_use: "使用中",
   flatlay: "平铺展示",
   scene_atmosphere: "场景氛围",
   gift_accessory: "配件赠品",
@@ -67,9 +74,11 @@ interface StudioDetailPanelProps {
   productImageId: string;
   basePrompt: string;
   referenceImageUrl?: string;
+  referenceHasPerson?: boolean;
   targetPlatform?: string;
   onDetailGenerated?: (results: Array<{key:string;url:string;label:string}>) => void;
   initialResults?: Array<{key:string; url:string; label:string; rawUrl:string}>;
+  initialFailures?: Array<{ key: string; reason: string }>;
 }
 
 function hashString(str: string): number {
@@ -105,17 +114,21 @@ async function overlayTextOnImage(imageUrl: string, text: string): Promise<strin
   return new Promise((resolve) => canvas.toBlob((b) => resolve(URL.createObjectURL(b!)), "image/png", 1.0));
 }
 
-export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, targetPlatform, onDetailGenerated, initialResults }: StudioDetailPanelProps) {
+export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures }: StudioDetailPanelProps) {
   const { t } = useT();
   const [open, setOpen] = useState(!!initialResults?.length);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["scene", "spec"]));
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(GENERAL_PACK));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(TYPE_GROUPS.filter((group) => group.types.some((type) => (GENERAL_PACK as readonly string[]).includes(type))).map((group) => group.key)),
+  );
   const [perTypeDesc, setPerTypeDesc] = useState<Record<string, string>>({});
   const [showCustomDesc, setShowCustomDesc] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [stageLabel, setStageLabel] = useState("");
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
+  const [failures, setFailures] = useState<Array<{ key: string; reason: string }>>([]);
+  const [batchSummary, setBatchSummary] = useState("");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [lockStyle, setLockStyle] = useState(false);
   const [category, setCategory] = useState("");
@@ -142,11 +155,45 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   };
 
   const handleCategoryChange = (catKey: string) => {
+    const next = applyCategoryChange({
+      category: catKey,
+      recommended: CATEGORY_RECOMMEND,
+      prompt: basePrompt,
+      style: null,
+      perTypeDesc,
+      currentSelected: [...selected],
+    });
     setCategory(catKey);
-    if (catKey && CATEGORY_RECOMMEND[catKey]) {
-      setSelected(new Set(CATEGORY_RECOMMEND[catKey]));
-    }
+    setSelected(new Set(next.selected));
+    setPerTypeDesc(next.perTypeDesc);
+    setExpandedGroups(new Set(
+      TYPE_GROUPS.filter((group) => group.types.some((type) => next.selected.includes(type))).map((group) => group.key),
+    ));
   };
+
+  const draftProject = useRef<string | null>(null);
+  useEffect(() => {
+    if (!projectId) return;
+    if (draftProject.current !== projectId) {
+      draftProject.current = projectId;
+      const draft = readPackDraft(projectId);
+      if (draft) {
+        setSelected(new Set(draft.selected.length > 0 ? draft.selected : GENERAL_PACK));
+        setCategory(draft.category);
+        setLockStyle(draft.lockStyle);
+        setPerTypeDesc(draft.perTypeDesc);
+        setOpen(draft.open || !!initialResults?.length);
+      }
+      return;
+    }
+    writePackDraft(projectId, {
+      selected: [...selected],
+      category,
+      lockStyle,
+      perTypeDesc,
+      open,
+    });
+  }, [projectId, selected, category, lockStyle, perTypeDesc, open, initialResults?.length]);
 
   // Sync initialResults after async load (e.g. when project is fetched from API)
   useEffect(() => {
@@ -155,6 +202,14 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       setOpen(true);
     }
   }, [initialResults]);
+
+  useEffect(() => {
+    if (!initialFailures?.length) return;
+    setFailures(initialFailures);
+    setOpen(true);
+    const completed = initialResults?.length ?? 0;
+    setBatchSummary(`已完成 ${completed}/${completed + initialFailures.length}`);
+  }, [initialFailures, initialResults?.length]);
 
   const toggleGroup = (groupKey: string) => {
     setExpandedGroups(prev => {
@@ -187,6 +242,8 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     if (selected.size === 0 || !projectId) return;
     setGenerating(true);
     setResults([]);
+    setFailures([]);
+    setBatchSummary("");
     const types = [...selected].map(key => ({ key, zh: TYPE_LABELS[key] || key }));
 
     const styleSeed = lockStyle ? Math.abs(hashString(projectId)) % 100000 : undefined;
@@ -204,6 +261,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           })),
           baseStyle: lockStyle ? basePrompt : undefined,
           referenceImageUrl: styleRef,
+          referenceHasPerson: lockStyle ? referenceHasPerson === true : false,
           seed: styleSeed,
           targetPlatform: targetPlatform || undefined,
           numOutputs: 1,
@@ -211,13 +269,27 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        alert(`生成失败: ${data.error || data.message || res.status}`);
+      const generated = data.generated as Array<{ key: string; url: string; label?: string }> | undefined;
+      const failedShots = Array.isArray(data.failed)
+        ? data.failed as Array<{ key?: string; reason?: string }>
+        : [];
+      const requested = typeof data.requested === "number" ? data.requested : types.length;
+      const completed = typeof data.completed === "number" ? data.completed : (generated?.length ?? 0);
+      const refunded = typeof data.creditsRefunded === "number" ? data.creditsRefunded : 0;
+      setFailures(failedShots.map((shot) => ({
+        key: shot.key || "unknown",
+        reason: shot.reason || data.message || "生成失败",
+      })));
+      setBatchSummary(
+        `已完成 ${completed}/${requested}` + (refunded > 0 ? `，已退回 ${refunded} 点额度` : ""),
+      );
+
+      if (!res.ok && (!generated || generated.length === 0)) {
+        const reason = failedShots[0]?.reason || data.message || data.error || res.status;
+        alert(`生成失败: ${reason}`);
         setGenerating(false);
         return;
       }
-
-      const generated = data.generated as Array<{ key: string; url: string; label?: string }> | undefined;
 
       if (generated && Array.isArray(generated) && generated.length > 0) {
         const out: typeof results = [];
@@ -252,7 +324,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       {!open ? (
         <button type="button" onClick={() => setOpen(true)} className="flex items-center gap-3 w-full text-left group">
           <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center"><FileText size={16} className="text-brand-600" /></div>
-          <div className="flex-1"><p className="text-sm font-medium text-zinc-700">{t("studio.detailImages")}</p><p className="text-xs text-zinc-400">{t("studio.detailImagesDesc")}</p></div>
+          <div className="flex-1"><p className="text-sm font-medium text-zinc-700">{t("studio.detailImages")}</p><p className="text-xs text-zinc-400">{selectedCount > 0 ? `已选 ${selectedCount} 张套图，消耗 ${selectedCount} 点额度` : t("studio.detailImagesDesc")}</p></div>
         </button>
       ) : (
         <>
@@ -329,6 +401,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
                             }`}
                           >
                             {TYPE_LABELS[typeKey] || typeKey}
+                            {(category ? CATEGORY_RECOMMEND[category] : [...GENERAL_PACK]).includes(typeKey) ? " · 荐" : ""}
                           </button>
                         ))}
                       </div>
@@ -369,18 +442,42 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
             <span className="text-[11px] text-zinc-500">锁定风格一致性（套图模式）</span>
           </label>
 
+          {category && CATEGORY_RECOMMEND[category] && (
+            <div className="mb-2 rounded-lg bg-brand-50 px-2.5 py-2 text-[11px] text-brand-800">
+              推荐套图 · {CATEGORIES.find((item) => item.key === category)?.name} · {CATEGORY_RECOMMEND[category].length} 张
+            </div>
+          )}
+
           {/* Preview */}
           {selectedCount > 0 && !generating && (
-            <div className="text-[10px] text-zinc-400 mb-2 text-center">
-              将生成 {selectedCount} 张详情图：{TYPE_GROUPS.filter(g => groupSelection(g.types) > 0).map(g => `${g.name}×${groupSelection(g.types)}`).join(" · ")}
+            <div className="text-[10px] text-zinc-500 mb-2 text-center">
+              将生成 {selectedCount} 张套图，消耗 {selectedCount} 点额度。失败的图片会退回额度。
+              {TYPE_GROUPS.filter(g => groupSelection(g.types) > 0).length > 0 && (
+                <span className="block text-zinc-400 mt-0.5">
+                  {TYPE_GROUPS.filter(g => groupSelection(g.types) > 0).map(g => `${g.name}×${groupSelection(g.types)}`).join(" · ")}
+                </span>
+              )}
             </div>
           )}
 
           <Button onClick={handleGenerate} disabled={selectedCount === 0 || generating}
             size="sm" className="w-full gap-1.5 cursor-pointer rounded-xl bg-brand-900 hover:bg-brand-800 text-white">
             {generating && <Loader2 size={12} className="animate-spin" />}
-            {generating ? (stageLabel || "生成中...") : `生成 ${selectedCount} 张套图`}
+            {generating ? (stageLabel || "生成中...") : selectedCount === 0 ? "请选择套图" : `生成 ${selectedCount} 张套图`}
           </Button>
+
+          {batchSummary && (
+            <p className="mt-2 text-[11px] text-center text-zinc-600">{batchSummary}</p>
+          )}
+          {failures.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {failures.map((failure) => (
+                <li key={`${failure.key}-${failure.reason}`} className="rounded-md bg-red-50 px-2 py-1 text-[10px] text-red-700">
+                  {(TYPE_LABELS[failure.key] || failure.key)} 失败：{failure.reason}
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* Results by group */}
           {results.length > 0 && (

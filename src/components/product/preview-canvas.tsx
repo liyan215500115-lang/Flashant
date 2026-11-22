@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
 import Link from "next/link";
+import { formatQuotaRemaining } from "@/lib/quota-display";
 
 interface GeneratedImage {
   id: string;
@@ -20,6 +21,9 @@ interface PreviewCanvasProps {
   latestImage: GeneratedImage | null;
   quotaUsed: number;
   quotaLimit: number;
+  quotaTier?: string | null;
+  allotmentConfigured?: boolean;
+  quotaLoading?: boolean;
   projectId?: string;
   className?: string;
 }
@@ -30,15 +34,26 @@ export function PreviewCanvas({
   latestImage,
   quotaUsed,
   quotaLimit,
+  quotaTier,
+  allotmentConfigured,
+  quotaLoading = false,
   projectId,
   className,
 }: PreviewCanvasProps) {
   const { t } = useT();
 
-  const quotaText =
-    quotaLimit === Infinity || quotaLimit <= 0
+  const quotaLabel = formatQuotaRemaining({
+    used: quotaUsed,
+    limit: quotaLimit,
+    tier: quotaTier,
+    allotmentConfigured,
+    loading: quotaLoading,
+  });
+  const quotaText = quotaLabel === "loading"
+    ? "…"
+    : quotaLabel === "unlimited"
       ? t("generate.unlimited")
-      : `${Math.max(0, quotaLimit - quotaUsed)}/${quotaLimit}`;
+      : quotaLabel;
 
   // Usage bar: color shifts to warning at 80%+
   const usageRatio = quotaLimit > 0 ? Math.min(quotaUsed / quotaLimit, 1) : 0;

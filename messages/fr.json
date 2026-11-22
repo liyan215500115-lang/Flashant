@@ -279,7 +279,8 @@
     "sectionProductImage": "Product Image",
     "sectionPublishSettings": "Export specs",
     "sectionGenerateSettings": "Generate Settings",
-    "exportSpecsHint": "Images are generated to the selected platform's size and background rules. Nothing is published to a store."
+    "exportSpecsHint": "Images are generated to the selected platform's size and background rules. Nothing is published to a store.",
+    "editingTitle": "Edit project"
   },
   "onboarding": {
     "welcome": "Welcome to Flashant",
@@ -554,7 +555,9 @@
     "upscaleSuccess": "Upscaled",
     "upscaleError": "Upscale failed",
     "engineGptImage": "GPT Image 2 · Text-only ($0.03)",
-    "engineFluxPro": "FLUX.2 Pro (Backup)"
+    "engineFluxPro": "FLUX.2 Pro (Backup)",
+    "chargePreview": "This run creates {count} images and charges {credits} credits.",
+    "mainImageHint": "Generate creates the main image. The pack is generated separately on the right."
   },
   "assets": {
     "title": "Asset Center",

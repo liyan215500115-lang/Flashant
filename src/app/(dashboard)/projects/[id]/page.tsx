@@ -35,6 +35,7 @@ import { downloadBlob, downloadUrls } from "@/lib/download-image";
 import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
 import { saveGeneratedImage } from "@/lib/persist-project-image";
 import { projectGenerationError } from "@/lib/project-fetch-error";
+import { formatQuotaRemaining } from "@/lib/quota-display";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
 
@@ -81,7 +82,13 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
-  const [quota, setQuota] = useState({ used: 0, limit: -1 });
+  const [quota, setQuota] = useState({
+    used: 0,
+    limit: 0,
+    tier: "" as string,
+    allotmentConfigured: false,
+    loading: true,
+  });
   const pollTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -128,7 +135,13 @@ export default function ProductDetailPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.used !== undefined) {
-          setQuota({ used: data.used, limit: data.limit === -1 ? Infinity : data.limit });
+          setQuota({
+            used: data.used,
+            limit: typeof data.limit === "number" ? data.limit : 0,
+            tier: typeof data.tier === "string" ? data.tier : "",
+            allotmentConfigured: data.allotmentConfigured === true,
+            loading: false,
+          });
         }
       })
       .catch(() => {});
@@ -238,7 +251,15 @@ export default function ProductDetailPage() {
 
   function refreshQuota() {
     fetch("/api/quota").then(r => r.json()).then(d => {
-      if (d.used !== undefined) setQuota({ used: d.used, limit: d.limit === -1 ? Infinity : d.limit });
+      if (d.used !== undefined) {
+        setQuota({
+          used: d.used,
+          limit: typeof d.limit === "number" ? d.limit : 0,
+          tier: typeof d.tier === "string" ? d.tier : "",
+          allotmentConfigured: d.allotmentConfigured === true,
+          loading: false,
+        });
+      }
     }).catch(() => {});
   }
 
@@ -393,6 +414,15 @@ export default function ProductDetailPage() {
   const succeededImages = project.generatedImages.filter(
     (img) => img.status === "SUCCEEDED"
   );
+  const failedImages = project.generatedImages.filter((img) => img.status === "FAILED");
+  const quotaLabel = formatQuotaRemaining({
+    used: quota.used,
+    limit: quota.limit,
+    tier: quota.tier,
+    allotmentConfigured: quota.allotmentConfigured,
+    loading: quota.loading,
+  });
+  const quotaText = quotaLabel === "loading" ? "" : quotaLabel === "unlimited" ? t("generate.unlimited") : quotaLabel;
   const deleteCount = imageDeleteTarget?.kind === "batch" ? selectedIds.size : 1;
   const removesDerivatives = imageDeleteTarget?.kind === "single"
     ? imageDeleteTarget.removesDerivatives
@@ -425,14 +455,14 @@ export default function ProductDetailPage() {
             )}
           </div>
           {/* Quota badge — only show when limit is known (not -1 loading state) */}
-          {quota.limit >= 0 && (
+          {!quota.loading && (
             <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border mt-2 ${
-              quota.used >= quota.limit
+              quota.limit > 0 && quota.used >= quota.limit
                 ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400"
                 : "bg-zinc-50 border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700"
             }`}>
               <span>本月剩余</span>
-              <span className="font-mono tabular-nums">{Math.max(0, quota.limit - quota.used)}/{quota.limit}</span>
+              <span className="font-mono tabular-nums">{quotaText}</span>
             </div>
           )}
         </div>
@@ -740,10 +770,20 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Completed badge */}
-      {project.status === "GENERATED" && succeededImages.length > 0 && (
+      {project.status === "GENERATED" && succeededImages.length > 0 && failedImages.length === 0 && (
         <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600 dark:text-emerald-400">
           <CheckCircle2 size={16} />
           {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
+        </div>
+      )}
+      {failedImages.length > 0 && (
+        <div className="flex flex-col items-center gap-1 py-4 text-sm text-amber-700 dark:text-amber-400">
+          <p>已完成 {succeededImages.length}/{succeededImages.length + failedImages.length}，{failedImages.length} 张失败</p>
+          <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
+            {failedImages.slice(0, 8).map((img) => (
+              <li key={img.id}>{img.errorMessage || "生成失败"}</li>
+            ))}
+          </ul>
         </div>
       )}
 

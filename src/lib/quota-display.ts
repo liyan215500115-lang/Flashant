@@ -1,0 +1,63 @@
+import { GENERATION_ALLOTMENT, type GenerationTier } from "@/lib/creem/credits";
+
+const FINITE_TIERS = new Set<GenerationTier>(["FREE", "PRO", "BUSINESS"]);
+
+export interface QuotaSnapshot {
+  used: number;
+  limit: number;
+  tier: string;
+  allowed: boolean;
+  balance: number;
+  allotmentConfigured: boolean;
+}
+
+/**
+ * Unlimited is a configured allotment, not a loading sentinel.
+ * ENTERPRISE's -1 in GENERATION_ALLOTMENT means "no monthly amount configured",
+ * so it is not shown as 无限. Free, Pro, and Business never are.
+ */
+export function quotaIsUnlimited(input: {
+  tier?: string | null;
+  limit: number;
+  allotmentConfigured?: boolean;
+}): boolean {
+  if (!input.tier || FINITE_TIERS.has(input.tier as GenerationTier)) return false;
+  return input.tier === "ENTERPRISE" && input.allotmentConfigured === true && input.limit < 0;
+}
+
+export function presentQuota(quota: QuotaSnapshot): QuotaSnapshot & { unlimited: boolean } {
+  const tier = quota.tier;
+  const finite = FINITE_TIERS.has(tier as GenerationTier);
+  let limit = quota.limit;
+  if (finite && !(typeof limit === "number" && Number.isFinite(limit) && limit >= 0)) {
+    limit = GENERATION_ALLOTMENT[tier as GenerationTier];
+  }
+  if (!finite && quota.allotmentConfigured !== true && !(typeof limit === "number" && Number.isFinite(limit) && limit >= 0)) {
+    limit = Number.isFinite(quota.balance) && quota.balance > 0 ? quota.balance : 0;
+  }
+  const unlimited = quotaIsUnlimited({
+    tier,
+    limit: quota.allotmentConfigured === true ? quota.limit : limit,
+    allotmentConfigured: quota.allotmentConfigured,
+  });
+  return {
+    ...quota,
+    limit: unlimited ? -1 : limit,
+    unlimited,
+  };
+}
+
+/** "loading" and "unlimited" are sentinels. Anything else is a finite remaining/limit label. */
+export function formatQuotaRemaining(input: {
+  used: number;
+  limit: number;
+  tier?: string | null;
+  allotmentConfigured?: boolean;
+  loading?: boolean;
+}): "loading" | "unlimited" | string {
+  if (input.loading) return "loading";
+  if (quotaIsUnlimited(input)) return "unlimited";
+  const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 0;
+  const used = Number.isFinite(input.used) && input.used > 0 ? Math.floor(input.used) : 0;
+  return `${Math.max(0, limit - used)}/${limit}`;
+}
