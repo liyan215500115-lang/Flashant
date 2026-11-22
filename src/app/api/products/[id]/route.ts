@@ -40,8 +40,9 @@ export async function GET(
   }
 
   // Heal a project left on GENERATING after a task already failed or produced
-  // nothing. Do not touch a project that still has an in-flight task, and do
-  // not touch detail-batch runs that never create tasks.
+  // nothing. Do not touch a project that still has an in-flight task.
+  // Pack shots write a terminal task when each image finishes, so a refresh
+  // before those rows exist leaves GENERATING alone.
   let status = project.status;
   let errorMessage = project.errorMessage;
   if (status === "GENERATING") {

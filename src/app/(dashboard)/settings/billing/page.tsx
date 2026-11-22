@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkGenerationQuota } from "@/lib/lemonsqueezy/billing";
+import { presentQuota } from "@/lib/quota-display";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Zap } from "lucide-react";
@@ -49,10 +50,11 @@ export default async function BillingPage() {
 
   const userId = session.user.id;
 
-  const [subscription, quota] = await Promise.all([
+  const [subscription, rawQuota] = await Promise.all([
     db.subscription.findUnique({ where: { userId } }),
     checkGenerationQuota(userId),
   ]);
+  const quota = presentQuota(rawQuota);
 
   const currentTier = subscription?.planTier ?? "FREE";
   const isCancelAtPeriodEnd = subscription?.cancelAtPeriodEnd ?? false;
@@ -84,7 +86,7 @@ export default async function BillingPage() {
             <div>
               <span className="text-3xl font-semibold tabular-nums">{quota.used}</span>
               <span className="text-muted-foreground ml-1">
-                / {quota.limit === -1 ? "∞" : quota.limit}
+                / {quota.unlimited ? "∞" : quota.limit}
               </span>
             </div>
             <Badge variant="default">

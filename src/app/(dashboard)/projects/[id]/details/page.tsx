@@ -60,6 +60,8 @@ export default function DetailsPage() {
   const [selectedPt, setSelectedPt] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string }>>([]);
+  const [failures, setFailures] = useState<Array<{ key: string; reason: string }>>([]);
+  const [batchSummary, setBatchSummary] = useState("");
 
   useEffect(() => {
     fetch(`/api/products/${projectId}`)
@@ -87,17 +89,31 @@ export default function DetailsPage() {
         }),
       });
       const data = await res.json();
-      const { generated } = data;
-      if (generated && Array.isArray(generated)) {
+      const generated = data.generated as Array<{ key: string; url: string; label: string }> | undefined;
+      const failedShots = Array.isArray(data.failed)
+        ? data.failed as Array<{ key?: string; reason?: string }>
+        : [];
+      const requested = typeof data.requested === "number" ? data.requested : types.length;
+      const completed = typeof data.completed === "number" ? data.completed : (generated?.length ?? 0);
+      setFailures(failedShots.map((shot) => ({
+        key: shot.key || "unknown",
+        reason: shot.reason || data.message || "生成失败",
+      })));
+      setBatchSummary(isZh ? `已完成 ${completed}/${requested}` : `${completed}/${requested} completed`);
+      if (generated && generated.length > 0) {
         const newResults: typeof results = generated.map(
-          (g: { key: string; url: string; label: string }) => ({
+          (g) => ({
             key: g.key, url: g.url, label: g.label,
           })
         );
         setResults((prev) => [...newResults, ...prev]);
-        toast.success(`${newResults.length} detail images ready`);
-      } else {
-        toast.error(data.error || "Generation failed");
+      }
+      if (!res.ok && (!generated || generated.length === 0)) {
+        toast.error(failedShots[0]?.reason || data.message || data.error || "Generation failed");
+      } else if (failedShots.length > 0) {
+        toast.error(`已完成 ${completed}/${requested}`);
+      } else if (generated && generated.length > 0) {
+        toast.success(`已完成 ${completed}/${requested}`);
       }
     } catch {
       toast.error("Network failed");
@@ -141,11 +157,28 @@ export default function DetailsPage() {
             </button>
           ))}
         </div>
+        {selectedPt.size > 0 && (
+          <p className="text-xs text-zinc-500 mb-3">
+            {isZh
+              ? `将生成 ${selectedPt.size} 张，消耗 ${selectedPt.size} 点额度。失败的图片会退回额度。`
+              : `This pack creates ${selectedPt.size} images and charges ${selectedPt.size} credits. Failed images are refunded.`}
+          </p>
+        )}
         <Button onClick={handleGenerate} disabled={selectedPt.size === 0 || generating}
           className="bg-brand-900 hover:bg-brand-800 text-white cursor-pointer gap-2 rounded-xl">
           {generating && <Loader2 size={14} className="animate-spin" />}
-          {generating ? t("detail.generating") : t("detail.generateBtn").replace("{count}", String(selectedPt.size || 0))}
+          {generating ? t("detail.generating") : selectedPt.size === 0 ? (isZh ? "请选择套图" : "Select shots") : t("detail.generateBtn").replace("{count}", String(selectedPt.size))}
         </Button>
+        {batchSummary && <p className="mt-3 text-xs text-zinc-600">{batchSummary}</p>}
+        {failures.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {failures.map((failure) => (
+              <li key={`${failure.key}-${failure.reason}`} className="text-xs text-red-700">
+                {failure.key} 失败：{failure.reason}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Results */}

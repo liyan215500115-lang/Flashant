@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { STYLE_PROMPTS } from "@/lib/ai/style-prompts";
 
-const { authMock, dbMock, chargeMock, refundMock, getProviderMock, createPrediction, signedUrl } = vi.hoisted(() => {
+const { authMock, dbMock, chargeMock, refundMock, getProviderMock, createPrediction, getPrediction, signedUrl } = vi.hoisted(() => {
   const createPrediction = vi.fn();
+  const getPrediction = vi.fn();
   return {
     createPrediction,
+    getPrediction,
     authMock: vi.fn(),
     chargeMock: vi.fn(),
     refundMock: vi.fn(),
-    getProviderMock: vi.fn(() => ({ createPrediction, getPrediction: vi.fn() })),
+    getProviderMock: vi.fn(() => ({ createPrediction, getPrediction })),
     signedUrl: vi.fn(async () => "https://cdn.example/signed.jpg"),
     dbMock: {
       imageProject: { findUnique: vi.fn(), update: vi.fn() },
@@ -48,8 +50,8 @@ import { POST as batchPost } from "@/app/api/generate/batch/route";
 
 const fetchMock = vi.fn();
 
-function moderationResponse(decision: string, status = 200) {
-  return new Response(JSON.stringify({ decision, id: "mod_1", object: "moderation_result" }), {
+function moderationResponse(decision: string, status = 200, id = "mod_1") {
+  return new Response(JSON.stringify({ decision, id, object: "moderation_result" }), {
     status,
     headers: { "content-type": "application/json" },
   });
@@ -301,5 +303,151 @@ describe("POST /api/generate/batch moderation gate", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).prompt).toContain("no additional user text");
     expect(createPrediction.mock.calls[0][0].prompt).toBe("Professional product photography");
     expect(chargeMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("POST /api/generate pack shots", () => {
+  const fashionPack = {
+    imageProjectId: "proj_1",
+    productImageId: "img_1",
+    category: "fashion",
+    baseStyle: "金色耳环，手工金饰",
+    referenceImageUrl: "https://cdn.example/latest-face.png",
+    referenceHasPerson: true,
+    detailTypes: [
+      { key: "in_use", prompt: "gold earrings worn outdoors" },
+      { key: "lifestyle", prompt: "gold earrings lifestyle" },
+      { key: "detail", prompt: "gold hoop earring macro" },
+      { key: "multi_angle", prompt: "gold earrings angles" },
+      { key: "flatlay", prompt: "gold earrings flatlay" },
+      { key: "color_variants", prompt: "gold earrings colors" },
+    ],
+  };
+
+  function chargePerImage() {
+    let n = 0;
+    chargeMock.mockImplementation(async (input: { gate: { moderationId?: string }; idempotencyKey: string; reference: string; imageCount: number }) => {
+      n += 1;
+      return {
+        ok: true,
+        tier: "PRO",
+        balance: 100 - n,
+        allotmentConfigured: true,
+        hold: {
+          accountId: "cca_1",
+          transactionId: `cct_${input.idempotencyKey}`,
+          amount: input.imageCount,
+          moderationId: input.gate.moderationId,
+          reference: input.reference,
+          idempotencyKey: input.idempotencyKey,
+        },
+      };
+    });
+  }
+
+  it("persists a FAILED row and refunds only the shots that did not come out", async () => {
+    let moderation = 0;
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_pack_${++moderation}`));
+    chargePerImage();
+    createPrediction.mockImplementation(async (input: { prompt: string }) => {
+      if (input.prompt.includes("gold hoop")) {
+        return {
+          predictionId: "pred_detail",
+          status: "succeeded",
+          outputs: [{ url: "https://cdn.example/detail.png" }],
+        };
+      }
+      throw new Error("provider exploded");
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", fashionPack));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.completed).toBe(1);
+    expect(json.requested).toBe(6);
+    expect(json.failed).toHaveLength(5);
+    expect(json.creditsCharged).toBe(1);
+    expect(json.creditsRefunded).toBe(5);
+
+    expect(chargeMock).toHaveBeenCalledTimes(6);
+    for (const call of chargeMock.mock.calls) {
+      expect(call[0].imageCount).toBe(1);
+    }
+    const keys = chargeMock.mock.calls.map((call) => call[0].idempotencyKey as string);
+    expect(new Set(keys).size).toBe(6);
+    const moderationIds = chargeMock.mock.calls.map((call) => call[0].gate.moderationId as string);
+    expect(new Set(moderationIds).size).toBe(6);
+
+    const detailCharge = chargeMock.mock.calls.find((call) => String(call[0].idempotencyKey).endsWith(":detail"));
+    const detailTransaction = `cct_${detailCharge?.[0].idempotencyKey}`;
+    const refunded = refundMock.mock.calls.map((call) => call[0].transactionId as string);
+    expect(refunded).toHaveLength(5);
+    expect(refunded).not.toContain(detailTransaction);
+
+    const rows = dbMock.generatedImage.create.mock.calls.map((call) => call[0].data);
+    const failedRows = rows.filter((row: { status: string }) => row.status === "FAILED");
+    const succeededRows = rows.filter((row: { status: string }) => row.status === "SUCCEEDED");
+    expect(failedRows).toHaveLength(5);
+    expect(succeededRows).toHaveLength(1);
+    expect(failedRows.every((row: { errorMessage: string }) => row.errorMessage === "provider exploded")).toBe(true);
+    expect(dbMock.task.create.mock.calls.filter((call) => call[0].data.status === "FAILED")).toHaveLength(5);
+
+    const detailCall = createPrediction.mock.calls
+      .map((call) => call[0] as { prompt: string; productImageUrl: string; referenceImageUrl?: string })
+      .find((input) => input.prompt.includes("gold hoop"));
+    expect(detailCall?.productImageUrl).toBe("https://cdn.example/product.jpg");
+    expect(detailCall?.prompt).not.toContain("visible in use (on skin");
+    expect(detailCall?.prompt).not.toContain("Do NOT show any product packaging");
+    expect(detailCall?.prompt).toContain("clearly recognizable");
+    expect(detailCall?.referenceImageUrl).toBeUndefined();
+    expect(succeededRows[0].promptUsed).toBe(detailCall?.prompt);
+  });
+
+  it("uses the product image for apparel detail and the smear prompt only for beauty with a person", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_beauty_${Math.random()}`));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_beauty",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/beauty.png" }],
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "beauty",
+      baseStyle: "a model applying cream on her face",
+      referenceImageUrl: "https://cdn.example/face.png",
+      detailTypes: [{ key: "detail", prompt: "serum on the cheek" }],
+    }));
+    expect(res.status).toBe(200);
+    const input = createPrediction.mock.calls[0][0] as { prompt: string; productImageUrl: string };
+    expect(input.productImageUrl).toBe("https://cdn.example/product.jpg");
+    expect(input.prompt).toContain("on skin");
+    expect(input.prompt).not.toContain("serum on the cheek");
+  });
+
+  it("stores a FAILED image when polling returns no output", async () => {
+    fetchMock.mockResolvedValue(moderationResponse("allow", 200, "mod_poll"));
+    chargePerImage();
+    createPrediction.mockResolvedValue({ predictionId: "pred_poll", status: "processing", outputs: [] });
+    getPrediction.mockResolvedValue({ status: "failed", outputs: [], error: "model rejected" });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      detailTypes: [{ key: "detail", prompt: "gold hoop earring macro" }],
+    }));
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.completed).toBe(0);
+    expect(json.requested).toBe(1);
+    expect(json.failed[0].reason).toBe("model rejected");
+    expect(refundMock).toHaveBeenCalledTimes(1);
+    const failed = dbMock.generatedImage.create.mock.calls.map((call) => call[0].data);
+    expect(failed).toHaveLength(1);
+    expect(failed[0].status).toBe("FAILED");
+    expect(failed[0].errorMessage).toBe("model rejected");
   });
 });

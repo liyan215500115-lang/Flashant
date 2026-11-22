@@ -127,6 +127,10 @@ export function StudioControlPanel({
       {/* CTA */}
       <FlashantButton onClick={onGenerate} loading={isGenerating} disabled={!selectedImage || isGenerating}
         label={t("generate.generateCta")} loadingLabel={t("generate.generatingCta")} />
+      <p className="text-center text-[11px] text-zinc-500 -mt-1">
+        {t("generate.chargePreview").replace("{count}", "1").replace("{credits}", "1")}
+      </p>
+      <p className="text-center text-[10px] text-zinc-400 -mt-2">{t("generate.mainImageHint")}</p>
     </div>
   );
 }

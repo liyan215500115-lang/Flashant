@@ -290,7 +290,8 @@
     "sectionProductImage": "产品图片",
     "sectionPublishSettings": "导出规格",
     "sectionGenerateSettings": "生成设置",
-    "exportSpecsHint": "按所选平台的尺寸和背景要求生成，不会自动发布到店铺。"
+    "exportSpecsHint": "按所选平台的尺寸和背景要求生成，不会自动发布到店铺。",
+    "editingTitle": "编辑项目"
   },
   "onboarding": {
     "welcome": "欢迎使用闪象",
@@ -564,7 +565,9 @@
     "languageLabel": "目标语种",
     "productLabel": "产品名称",
     "productPlaceholder": "如：银色耳环、无线耳机、有机绿茶...",
-    "engineFluxPro": "FLUX.2 Pro（备选）"
+    "engineFluxPro": "FLUX.2 Pro（备选）",
+    "chargePreview": "本次生成 {count} 张，消耗 {credits} 点额度",
+    "mainImageHint": "一键闪象只生成主图。套图在右侧单独生成。"
   },
   "assets": {
     "title": "素材中心",
