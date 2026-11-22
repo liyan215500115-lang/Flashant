@@ -10,7 +10,7 @@ import {
   readPackDraft,
   writePackDraft,
 } from "@/lib/studio-pack-session";
-import { formatPackCreditSummaryFromPayload } from "@/lib/generate/pack-summary";
+import { formatPackCreditSummaryFromPayload, packFailureReasonLabel } from "@/lib/generate/pack-summary";
 
 const TYPE_GROUPS = [
   {
@@ -278,12 +278,15 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       const completed = typeof data.completed === "number" ? data.completed : (generated?.length ?? 0);
       setFailures(failedShots.map((shot) => ({
         key: shot.key || "unknown",
-        reason: shot.reason || data.message || "生成失败",
+        reason: packFailureReasonLabel(shot.reason || data.message || "生成失败", locale),
       })));
       setBatchSummary(formatPackCreditSummaryFromPayload(data, { requested, completed }, locale));
 
       if (!res.ok && (!generated || generated.length === 0)) {
-        const reason = failedShots[0]?.reason || data.message || data.error || res.status;
+        const reason = packFailureReasonLabel(
+          String(failedShots[0]?.reason || data.message || data.error || res.status),
+          locale,
+        );
         alert(`生成失败: ${reason}`);
         setGenerating(false);
         return;
@@ -471,7 +474,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
             <ul className="mt-2 space-y-1">
               {failures.map((failure) => (
                 <li key={`${failure.key}-${failure.reason}`} className="rounded-md bg-red-50 px-2 py-1 text-[10px] text-red-700">
-                  {(TYPE_LABELS[failure.key] || failure.key)} 失败：{failure.reason}
+                  {(TYPE_LABELS[failure.key] || failure.key)} 失败：{packFailureReasonLabel(failure.reason, locale)}
                 </li>
               ))}
             </ul>

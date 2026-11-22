@@ -38,7 +38,6 @@ import {
   MIN_START_MS,
   NOT_STARTED_REASON,
   PACK_BUDGET_MS,
-  PER_SHOT_WAIT_MS,
 } from "@/lib/generate/pack-timing";
 import type { PlanTier, Prisma } from "@prisma/client";
 
@@ -398,7 +397,8 @@ function assemblePackPrompt(
  * The debit is taken when that shot starts, not for the whole pack up front.
  * A failed shot is stored as FAILED and only that shot's debit is reversed.
  * A shot that has not started is not labeled prediction_timeout and is not debited.
- * If the provider returns an image after the per-shot wait, that image is stored
+ * A started shot keeps polling until the pack budget, not a shorter per-shot cap.
+ * If the provider returns an image after that budget, that image is stored
  * and its debit is kept.
  * Holds that were taken but not stored are reversed before the handler returns.
  * Identical outputs of one prompt may still share a debit on the single-image path.
@@ -701,13 +701,15 @@ export async function generateDetailPack(input: {
       let result;
       try {
         const provider = attempt.engine === "openai" ? getProvider("flux") : getProvider(attempt.engine);
-        const shotDeadline = Math.min(now() + PER_SHOT_WAIT_MS, packDeadline);
+        // An already-debited shot uses the whole pack budget. PER_SHOT_WAIT_MS only
+        // decides whether the next shot is worth starting.
+        const shotDeadline = packDeadline;
         result = await provider.getPrediction(attempt.predictionId);
         while (result.status === "processing" && now() < shotDeadline) {
           await new Promise((resolve) => setTimeout(resolve, 2000));
           result = await provider.getPrediction(attempt.predictionId);
         }
-        // One read after the wait. Store a late image before any refund.
+        // One read after the pack budget. Store a late image before any refund.
         if (result.status === "processing" && !result.outputs?.[0]?.url) {
           try {
             const late = await provider.getPrediction(attempt.predictionId);

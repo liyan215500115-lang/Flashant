@@ -3,7 +3,9 @@ import { LOCALE_OPTIONS } from "@/lib/locales";
 import {
   formatPackCreditSummary,
   formatPackCreditSummaryFromPayload,
+  packFailureReasonLabel,
 } from "@/lib/generate/pack-summary";
+import { NOT_STARTED_REASON } from "@/lib/generate/pack-timing";
 
 const partial = {
   completed: 3,
@@ -68,5 +70,22 @@ describe("pack credit summary", () => {
       expect(text).not.toBe("已完成 3/6，已退回 1 点额度");
       expect(text.length).toBeGreaterThan(20);
     }
+  });
+
+  it("shows a plain not-started label in every locale and hides the raw code", () => {
+    expect(packFailureReasonLabel(NOT_STARTED_REASON, "zh")).toBe("未开始生成");
+    const labels = new Set<string>();
+    for (const { code } of LOCALE_OPTIONS) {
+      const label = packFailureReasonLabel(NOT_STARTED_REASON, code);
+      const line = `flatlay 失败：${label}`;
+      expect(label).not.toBe(NOT_STARTED_REASON);
+      expect(label).not.toContain(NOT_STARTED_REASON);
+      expect(line).not.toContain(NOT_STARTED_REASON);
+      expect(label.length).toBeGreaterThan(0);
+      labels.add(label);
+    }
+    expect(labels.size).toBe(LOCALE_OPTIONS.length);
+    expect(packFailureReasonLabel("prediction_timeout", "zh")).toBe("prediction_timeout");
+    expect(packFailureReasonLabel("provider exploded", "en")).toBe("provider exploded");
   });
 });

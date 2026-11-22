@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/components/i18n-provider";
-import { formatPackCreditSummaryFromPayload } from "@/lib/generate/pack-summary";
+import { formatPackCreditSummaryFromPayload, packFailureReasonLabel } from "@/lib/generate/pack-summary";
 
 const DETAIL_TYPES = [
   // ═══ 信息类型：白底图 ═══
@@ -98,7 +98,7 @@ export default function DetailsPage() {
       const completed = typeof data.completed === "number" ? data.completed : (generated?.length ?? 0);
       setFailures(failedShots.map((shot) => ({
         key: shot.key || "unknown",
-        reason: shot.reason || data.message || "生成失败",
+        reason: packFailureReasonLabel(shot.reason || data.message || "生成失败", locale),
       })));
       const summary = formatPackCreditSummaryFromPayload(data, { requested, completed }, locale);
       setBatchSummary(summary);
@@ -111,7 +111,10 @@ export default function DetailsPage() {
         setResults((prev) => [...newResults, ...prev]);
       }
       if (!res.ok && (!generated || generated.length === 0)) {
-        toast.error(failedShots[0]?.reason || data.message || data.error || "Generation failed");
+        toast.error(packFailureReasonLabel(
+          String(failedShots[0]?.reason || data.message || data.error || "Generation failed"),
+          locale,
+        ));
       } else if (failedShots.length > 0) {
         toast.error(summary);
       } else if (generated && generated.length > 0) {
@@ -176,7 +179,7 @@ export default function DetailsPage() {
           <ul className="mt-2 space-y-1">
             {failures.map((failure) => (
               <li key={`${failure.key}-${failure.reason}`} className="text-xs text-red-700">
-                {failure.key} 失败：{failure.reason}
+                {failure.key} 失败：{packFailureReasonLabel(failure.reason, locale)}
               </li>
             ))}
           </ul>

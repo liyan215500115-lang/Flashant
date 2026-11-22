@@ -1,4 +1,24 @@
 import { resolveLocale, type AppLocale } from "@/lib/locales";
+import { NOT_STARTED_REASON } from "@/lib/generate/pack-timing";
+
+const NOT_STARTED_LABEL: Record<AppLocale, string> = {
+  zh: "未开始生成",
+  en: "Not started",
+  ja: "生成を開始していません",
+  ko: "생성을 시작하지 않음",
+  es: "No se inició la generación",
+  fr: "Génération non commencée",
+  de: "Generierung nicht gestartet",
+  "pt-BR": "Geração não iniciada",
+  it: "Generazione non avviata",
+  ar: "لم يبدأ التوليد",
+};
+
+/** User-facing failure text. The stored code not_started is never shown raw. */
+export function packFailureReasonLabel(reason: string, locale?: string): string {
+  if (reason !== NOT_STARTED_REASON) return reason;
+  return NOT_STARTED_LABEL[resolveLocale(locale)];
+}
 
 export interface PackCreditCounts {
   completed: number;

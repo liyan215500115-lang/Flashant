@@ -16,14 +16,15 @@ export const PACK_CLOSE_MARGIN_MS = 30_000;
 export const PACK_BUDGET_MS = HOBBY_MAX_DURATION_SECONDS * 1000 - PACK_CLOSE_MARGIN_MS;
 
 /**
- * Poll cap for one shot that has already started.
- * Six full waits are 240s, which fits in the 270s budget with time left
- * for the debit, the provider call, and storing each result.
+ * Minimum time we require before debiting another shot.
+ * Six of these are 240s, which fits in the 270s budget.
+ * An in-flight shot is not cut off here. It keeps polling until the pack budget,
+ * because a slow shot can run longer than 40s while minutes are still left.
  */
 export const PER_SHOT_WAIT_MS = 40_000;
 
-/** Do not debit a shot when the pack budget cannot actually run it. */
-export const MIN_START_MS = 5_000;
+/** Do not debit a shot unless one full shot wait still fits in the pack budget. */
+export const MIN_START_MS = PER_SHOT_WAIT_MS;
 
 /** A shot that never started. Not a provider timeout, and not charged. */
 export const NOT_STARTED_REASON = "not_started";

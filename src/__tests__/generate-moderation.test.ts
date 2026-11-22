@@ -49,6 +49,7 @@ import { generateDetailPack, maxDuration, POST as generatePost } from "@/app/api
 import { POST as batchPost } from "@/app/api/generate/batch/route";
 import {
   HOBBY_MAX_DURATION_SECONDS,
+  MIN_START_MS,
   NOT_STARTED_REASON,
   PACK_BUDGET_MS,
   PACK_CLOSE_MARGIN_MS,
@@ -531,27 +532,23 @@ describe("POST /api/generate pack shots", () => {
     expect(PACK_BUDGET_MS + PACK_CLOSE_MARGIN_MS).toBe(maxDuration * 1000);
     expect(PACK_BUDGET_MS).toBeLessThan(maxDuration * 1000);
     expect(PER_SHOT_WAIT_MS * 6).toBeLessThanOrEqual(PACK_BUDGET_MS);
+    expect(MIN_START_MS).toBe(PER_SHOT_WAIT_MS);
+    expect(MIN_START_MS).toBeGreaterThan(5_000);
   });
 
-  it("does not label shots that have not started as prediction_timeout when only 50s have elapsed", async () => {
-    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_short_deadline"));
+  it("keeps polling a debited shot until the pack budget instead of stopping at 40s", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_keep_polling"));
     chargePerImage();
-    let started = 0;
-    createPrediction.mockImplementation(async () => {
-      started += 1;
-      if (started === 1) {
-        return { predictionId: "pred_wait", status: "processing", outputs: [] };
-      }
-      return {
-        predictionId: `pred_${started}`,
-        status: "succeeded",
-        outputs: [{ url: `https://cdn.example/${started}.png` }],
-      };
-    });
+    createPrediction.mockResolvedValue({ predictionId: "pred_slow", status: "processing", outputs: [] });
     let clock = 1_000_000;
+    let polls = 0;
     getPrediction.mockImplementation(async () => {
-      clock = 1_000_000 + 50_000;
-      return { status: "processing", outputs: [] };
+      polls += 1;
+      if (polls === 1) {
+        clock = 1_000_000 + PER_SHOT_WAIT_MS + 10_000;
+        return { status: "processing", outputs: [] };
+      }
+      return { status: "succeeded", outputs: [{ url: "https://cdn.example/slow.png" }] };
     });
 
     const timed = await generateDetailPack({
@@ -559,25 +556,86 @@ describe("POST /api/generate pack shots", () => {
       imageProjectId: "proj_1",
       productImageId: "img_1",
       category: "fashion",
-      referenceImageUrl: "https://cdn.example/latest-face.png",
+      detailTypes: [{ key: "multi_angle", prompt: "gold earrings angles" }],
+      now: () => clock,
+    });
+    const json = await timed.json();
+    expect(polls).toBeGreaterThan(1);
+    expect(clock).toBeGreaterThan(1_000_000 + PER_SHOT_WAIT_MS);
+    expect(clock).toBeLessThan(1_000_000 + PACK_BUDGET_MS);
+    expect(timed.status).toBe(200);
+    expect(chargeMock).toHaveBeenCalledTimes(1);
+    expect(refundMock).not.toHaveBeenCalled();
+    expect(json.creditsCharged).toBe(1);
+    expect(json.failed).toHaveLength(0);
+    expect(json.generated[0].url).toBe("https://cdn.example/slow.png");
+  });
+
+  it("does not debit a shot when the remaining pack budget is below one shot wait", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_below_min"));
+    chargePerImage();
+    let clock = 1_000_000;
+    createPrediction.mockImplementation(async () => {
+      clock = 1_000_000 + PACK_BUDGET_MS - MIN_START_MS + 1_000;
+      return { predictionId: "pred_first", status: "succeeded", outputs: [{ url: "https://cdn.example/first.png" }] };
+    });
+
+    const timed = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
       detailTypes: [
         { key: "in_use", prompt: "gold earrings worn outdoors" },
-        { key: "lifestyle", prompt: "gold earrings still waiting" },
-        { key: "scene_atmosphere", prompt: "gold earrings atmosphere" },
+        { key: "multi_angle", prompt: "gold earrings angles" },
       ],
       now: () => clock,
     });
     const json = await timed.json();
     expect(timed.status).toBe(200);
-    expect(createPrediction).toHaveBeenCalledTimes(3);
-    expect(json.completed).toBe(2);
-    expect(json.creditsCharged).toBe(2);
-    expect(json.creditsRefunded).toBe(1);
-    expect(json.creditsNotCharged).toBe(0);
-    expect(json.failed.map((shot: { key: string; reason: string }) => `${shot.key}:${shot.reason}`)).toEqual([
-      "in_use:prediction_timeout",
+    expect(chargeMock).toHaveBeenCalledTimes(1);
+    expect(createPrediction).toHaveBeenCalledTimes(1);
+    expect(json.completed).toBe(1);
+    expect(json.creditsNotCharged).toBe(1);
+    expect(json.failed).toEqual([
+      expect.objectContaining({ key: "multi_angle", reason: NOT_STARTED_REASON, charged: false, creditsRefunded: false }),
     ]);
-    expect(json.generated.map((shot: { key: string }) => shot.key)).toEqual(["lifestyle", "scene_atmosphere"]);
+  });
+
+  it("starts the next shot when the remaining pack budget covers one shot wait", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_at_min"));
+    chargePerImage();
+    let clock = 1_000_000;
+    let started = 0;
+    createPrediction.mockImplementation(async () => {
+      started += 1;
+      if (started === 1) clock = 1_000_000 + PACK_BUDGET_MS - MIN_START_MS;
+      return {
+        predictionId: `pred_${started}`,
+        status: "succeeded",
+        outputs: [{ url: `https://cdn.example/${started}.png` }],
+      };
+    });
+
+    const timed = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      detailTypes: [
+        { key: "in_use", prompt: "gold earrings worn outdoors" },
+        { key: "multi_angle", prompt: "gold earrings angles" },
+      ],
+      now: () => clock,
+    });
+    const json = await timed.json();
+    expect(timed.status).toBe(200);
+    expect(chargeMock).toHaveBeenCalledTimes(2);
+    expect(createPrediction).toHaveBeenCalledTimes(2);
+    expect(json.completed).toBe(2);
+    expect(json.failed).toHaveLength(0);
+    expect(json.creditsCharged).toBe(2);
+    expect(json.creditsNotCharged).toBe(0);
   });
 
   it("stores a late provider image instead of refunding the debit", async () => {
@@ -589,7 +647,7 @@ describe("POST /api/generate pack shots", () => {
     getPrediction.mockImplementation(async () => {
       polls += 1;
       if (polls === 1) {
-        clock = 5_000 + PER_SHOT_WAIT_MS;
+        clock = 5_000 + PACK_BUDGET_MS;
         return { status: "processing", outputs: [] };
       }
       return { status: "succeeded", outputs: [{ url: "https://cdn.example/late.png" }] };
