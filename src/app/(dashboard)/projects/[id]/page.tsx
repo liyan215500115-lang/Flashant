@@ -35,6 +35,7 @@ import { downloadBlob, downloadUrls } from "@/lib/download-image";
 import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
 import { saveGeneratedImage } from "@/lib/persist-project-image";
 import { projectGenerationError } from "@/lib/project-fetch-error";
+import { packFailureReasonLabel } from "@/lib/generate/pack-summary";
 import { quotaBadgeText } from "@/lib/quota-display";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
@@ -117,13 +118,13 @@ export default function ProductDetailPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setProject(data.project);
-      setError(projectGenerationError(data.project, t("error.generateFailed")));
+      setError(projectGenerationError(data.project, t("error.generateFailed"), locale));
       setLoading(false);
     } catch {
       setError(t("error.loadFailed"));
       setLoading(false);
     }
-  }, [params.id]);
+  }, [params.id, locale]);
 
   useEffect(() => {
     fetchProject();
@@ -175,7 +176,8 @@ export default function ProductDetailPage() {
 
         if (data.task.status === "SUCCEEDED" || data.task.status === "FAILED") {
           if (data.task.status === "FAILED") {
-            const detail = typeof data.task.errorMessage === "string" ? data.task.errorMessage.trim() : "";
+            const raw = typeof data.task.errorMessage === "string" ? data.task.errorMessage.trim() : "";
+            const detail = raw ? packFailureReasonLabel(raw, locale) : "";
             const message = detail
               ? `${t("error.generateFailed")}: ${detail}`
               : t("error.generateFailed");
@@ -778,7 +780,7 @@ export default function ProductDetailPage() {
           <p>已完成 {succeededImages.length}/{succeededImages.length + failedImages.length}，{failedImages.length} 张失败</p>
           <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
             {failedImages.slice(0, 8).map((img) => (
-              <li key={img.id}>{img.errorMessage || "生成失败"}</li>
+              <li key={img.id}>{packFailureReasonLabel(img.errorMessage || "生成失败", locale)}</li>
             ))}
           </ul>
         </div>

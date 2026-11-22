@@ -88,4 +88,12 @@ describe("pack credit summary", () => {
     expect(packFailureReasonLabel("prediction_timeout", "zh")).toBe("prediction_timeout");
     expect(packFailureReasonLabel("provider exploded", "en")).toBe("provider exploded");
   });
+
+  it("labels the project page failure list and hides not_started", () => {
+    const stored = ["not_started", "prediction_timeout", ""];
+    const shown = stored.map((message) => packFailureReasonLabel(message || "生成失败", "zh"));
+    expect(shown).toEqual(["未开始生成", "prediction_timeout", "生成失败"]);
+    expect(shown.join(" ")).not.toContain("not_started");
+    expect(packFailureReasonLabel("not_started", "en")).toBe("Not started");
+  });
 });

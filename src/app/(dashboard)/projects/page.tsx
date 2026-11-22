@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Image, Trash2, RefreshCw, Send, Package, Layers, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/components/i18n-provider";
+import { packFailureReasonLabel } from "@/lib/generate/pack-summary";
 
 type ProjectStatus = "DRAFT" | "GENERATING" | "GENERATED" | "REVIEW" | "APPROVED" | "PUBLISHING" | "PUBLISHED" | "FAILED";
 
@@ -29,7 +30,7 @@ interface Project {
 }
 
 export default function ProductsPage() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -199,7 +200,7 @@ export default function ProductsPage() {
                   {project.promptTemplate ? (
                     <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">{project.promptTemplate.nameZh || project.promptTemplate.name}</p>
                   ) : project.status === "FAILED" && project.errorMessage ? (
-                    <p className="text-[11px] text-red-500 truncate">{project.errorMessage}</p>
+                    <p className="text-[11px] text-red-500 truncate">{packFailureReasonLabel(project.errorMessage, locale)}</p>
                   ) : (
                     <p className="text-[11px] text-zinc-300 dark:text-zinc-600">{t("batch.noTemplate")}</p>
                   )}
