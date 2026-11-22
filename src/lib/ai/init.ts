@@ -6,6 +6,7 @@ import { createBriaProvider } from "./bria";
 import { createOpenAIProvider } from "./openai";
 import { createGeminiProvider } from "./gemini";
 import { createLaozhangKontextProvider } from "./laozhang-kontext";
+import { registerTencentVegaProviders } from "./tencent-vega";
 
 let initialized = false;
 
@@ -71,5 +72,14 @@ export function initProviders(): void {
     } catch {
       // Provider not available — skip registration
     }
+  }
+
+  // Recommended detail packs use Vega when every TokenHub setting is present.
+  // These four names are production-only. Do not copy production values onto Preview.
+  // Single-image generation and 一键闪象 keep their own engine selection.
+  try {
+    registerTencentVegaProviders(registerProvider);
+  } catch {
+    // Provider not available — pack shots fall back to flux.
   }
 }
