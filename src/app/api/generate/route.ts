@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProvider } from "@/lib/ai/registry";
+import { isTencentVegaConfigured } from "@/lib/ai/tencent-vega";
 import { releaseGeneratingProject } from "@/lib/project-status";
 
 // Hobby Fluid Compute default and maximum are both 300 seconds.
@@ -214,15 +215,19 @@ const CATEGORY_PROFILES: Record<string, {
 const GPT_IMAGE_TYPES = new Set(["selling_points", "compare", "size"]);
 
 /**
- * Pick the best engine for a detail type. Returns the provider and engine name.
- * GPT Image 2 excels at text rendering and clean layouts.
- * FLUX excels at img2img scene generation and model consistency.
+ * Pick the engine for one pack shot.
+ * selling_points / compare / size stay on OpenAI, then flux.
+ * Every other pack shot uses Vega when it is registered, then flux.
+ * Single-image generation does not call this.
  */
 function getEngineForDetailType(detailKey: string): { provider: ReturnType<typeof getProvider>; engine: string } {
   if (GPT_IMAGE_TYPES.has(detailKey)) {
     try { return { provider: getProvider("openai"), engine: "openai" }; } catch {}
+    return { provider: getProvider("flux"), engine: "flux" };
   }
-  // Default: use FLUX for everything else
+  if (isTencentVegaConfigured()) {
+    try { return { provider: getProvider("vega"), engine: "vega" }; } catch {}
+  }
   return { provider: getProvider("flux"), engine: "flux" };
 }
 
@@ -463,7 +468,11 @@ export async function generateDetailPack(input: {
     try {
       getProvider("gpt-image");
     } catch {
-      return NextResponse.json({ error: "No AI engine available" }, { status: 400 });
+      try {
+        getProvider("vega");
+      } catch {
+        return NextResponse.json({ error: "No AI engine available" }, { status: 400 });
+      }
     }
   }
 
