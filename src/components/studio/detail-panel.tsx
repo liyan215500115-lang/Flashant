@@ -10,6 +10,7 @@ import {
   readPackDraft,
   writePackDraft,
 } from "@/lib/studio-pack-session";
+import { formatPackCreditSummaryFromPayload, packFailureReasonLabel } from "@/lib/generate/pack-summary";
 
 const TYPE_GROUPS = [
   {
@@ -115,7 +116,7 @@ async function overlayTextOnImage(imageUrl: string, text: string): Promise<strin
 }
 
 export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures }: StudioDetailPanelProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [open, setOpen] = useState(!!initialResults?.length);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(GENERAL_PACK));
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
@@ -275,17 +276,17 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         : [];
       const requested = typeof data.requested === "number" ? data.requested : types.length;
       const completed = typeof data.completed === "number" ? data.completed : (generated?.length ?? 0);
-      const refunded = typeof data.creditsRefunded === "number" ? data.creditsRefunded : 0;
       setFailures(failedShots.map((shot) => ({
         key: shot.key || "unknown",
-        reason: shot.reason || data.message || "生成失败",
+        reason: packFailureReasonLabel(shot.reason || data.message || "生成失败", locale),
       })));
-      setBatchSummary(
-        `已完成 ${completed}/${requested}` + (refunded > 0 ? `，已退回 ${refunded} 点额度` : ""),
-      );
+      setBatchSummary(formatPackCreditSummaryFromPayload(data, { requested, completed }, locale));
 
       if (!res.ok && (!generated || generated.length === 0)) {
-        const reason = failedShots[0]?.reason || data.message || data.error || res.status;
+        const reason = packFailureReasonLabel(
+          String(failedShots[0]?.reason || data.message || data.error || res.status),
+          locale,
+        );
         alert(`生成失败: ${reason}`);
         setGenerating(false);
         return;
@@ -473,7 +474,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
             <ul className="mt-2 space-y-1">
               {failures.map((failure) => (
                 <li key={`${failure.key}-${failure.reason}`} className="rounded-md bg-red-50 px-2 py-1 text-[10px] text-red-700">
-                  {(TYPE_LABELS[failure.key] || failure.key)} 失败：{failure.reason}
+                  {(TYPE_LABELS[failure.key] || failure.key)} 失败：{packFailureReasonLabel(failure.reason, locale)}
                 </li>
               ))}
             </ul>

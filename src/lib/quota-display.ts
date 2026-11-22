@@ -47,6 +47,25 @@ export function presentQuota(quota: QuotaSnapshot): QuotaSnapshot & { unlimited:
   };
 }
 
+export function quotaBadgeText(
+  input: {
+    used: number;
+    limit: number;
+    tier?: string | null;
+    allotmentConfigured?: boolean;
+    loading?: boolean;
+  },
+  unlimitedLabel: string,
+): string {
+  const label = formatQuotaRemaining(input);
+  if (label === "loading" || label.trim() === "") return "…";
+  if (label === "unlimited") {
+    const word = unlimitedLabel.trim();
+    return word || "…";
+  }
+  return label;
+}
+
 /** "loading" and "unlimited" are sentinels. Anything else is a finite remaining/limit label. */
 export function formatQuotaRemaining(input: {
   used: number;

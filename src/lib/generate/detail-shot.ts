@@ -12,6 +12,41 @@ export const BEAUTY_PERSON_CLOSEUP_PROMPT =
 export const PRODUCT_MACRO_LOCK =
   "Macro photograph of this exact product's material and structure. The product must stay clearly recognizable: same shape, color, hardware, and construction. Do not replace it with a face, skincare smear, cream on skin, or a different object.";
 
+/** Appended to every shot while style-lock is on. Angle may change; the product may not. */
+export const STYLE_LOCK_SAME_PRODUCT =
+  "Style lock: every shot must keep this exact product, the same material, the same color, and the same overall style. Do not drift into a different item or a different look. Camera angle and framing may change; the product itself may not.";
+
+/**
+ * One multi-angle frame must show real viewpoint changes.
+ * A 2x2 grid of nearly matching three-quarter shots collapses into a symmetrical still life.
+ */
+export const MULTI_ANGLE_DISTINCT_VIEWS =
+  "Show distinguishable views of this same product: a true front, a true side near 90 degrees, and a back or opposite side. For earrings, a left-ear view and a right-ear view are allowed only when the camera angle still changes. Do not produce a nearly symmetrical still life, a mirrored duplicate, or the same front-facing angle twice.";
+
+/** Generator marks, and watermarks already printed on the source photo, must not appear in the result. */
+export const NO_SOURCE_WATERMARK =
+  "Do not add a watermark, signature, or corner badge, and do not write AI生成 or 即梦AI. If the original product photo or the reference image contains a watermark or corner mark, do not reproduce it.";
+
+export function packStyleLocked(input: {
+  baseStyle?: string | null;
+  referenceImageUrl?: string | null;
+}): boolean {
+  return Boolean(input.baseStyle?.trim() || input.referenceImageUrl?.trim());
+}
+
+export function applyPackPromptGuards(
+  prompt: string,
+  input: { detailKey: string; styleLocked: boolean },
+): string {
+  const parts = [prompt.trim()];
+  if (input.styleLocked) parts.push(STYLE_LOCK_SAME_PRODUCT);
+  if (input.detailKey === "multi_angle" && !prompt.includes(MULTI_ANGLE_DISTINCT_VIEWS)) {
+    parts.push(MULTI_ANGLE_DISTINCT_VIEWS);
+  }
+  if (!prompt.includes(NO_SOURCE_WATERMARK)) parts.push(NO_SOURCE_WATERMARK);
+  return parts.filter(Boolean).join(" ");
+}
+
 const PERSON_SIGNAL =
   /person|people|model|face|facial|\bhands?\b|skin|wearing|worn|applying|smear|模特|人物|人脸|面部|手部|皮肤|佩戴|穿着|涂抹|上脸/i;
 

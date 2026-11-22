@@ -34,4 +34,28 @@ describe("projectGenerationError", () => {
       )
     ).toBe("Generation failed, please retry: provider timeout");
   });
+
+  it("labels a stored not_started code for the project banner", () => {
+    expect(
+      projectGenerationError(
+        {
+          status: "FAILED",
+          errorMessage: "not_started",
+          tasks: [{ status: "FAILED", errorMessage: "not_started" }],
+        },
+        "生成失败",
+        "zh",
+      )
+    ).toBe("生成失败: 未开始生成");
+    expect(
+      projectGenerationError(
+        {
+          status: "FAILED",
+          errorMessage: "not_started",
+        },
+        "Generation failed",
+        "en",
+      )
+    ).not.toContain("not_started");
+  });
 });

@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyPackPromptGuards,
   BEAUTY_PERSON_CLOSEUP_PROMPT,
+  MULTI_ANGLE_DISTINCT_VIEWS,
+  NO_SOURCE_WATERMARK,
+  packStyleLocked,
   planPackShot,
   PRODUCT_MACRO_LOCK,
+  STYLE_LOCK_SAME_PRODUCT,
 } from "@/lib/generate/detail-shot";
 
 const product = "https://cdn.example/earrings.jpg";
@@ -73,5 +78,46 @@ describe("pack detail close-ups", () => {
         expect(plan.mode, detailKey).toBe("scene_reference");
       }
     }
+  });
+
+  it("locks the same product and style only when style-lock is on, and always forbids source watermarks", () => {
+    expect(packStyleLocked({ baseStyle: "金色耳环，手工金饰" })).toBe(true);
+    expect(packStyleLocked({ referenceImageUrl: reference })).toBe(true);
+    expect(packStyleLocked({ baseStyle: "  ", referenceImageUrl: "" })).toBe(false);
+
+    const locked = applyPackPromptGuards("flatlay of the earrings", {
+      detailKey: "flatlay",
+      styleLocked: true,
+    });
+    expect(locked).toContain(STYLE_LOCK_SAME_PRODUCT);
+    expect(locked).toContain("same material");
+    expect(locked).toContain("same color");
+    expect(locked).toContain("same overall style");
+    expect(locked).toContain("AI生成");
+    expect(locked).toContain("即梦AI");
+    expect(locked.toLowerCase()).toContain("do not reproduce");
+    expect(NO_SOURCE_WATERMARK).toContain("corner mark");
+
+    const open = applyPackPromptGuards("flatlay of the earrings", {
+      detailKey: "flatlay",
+      styleLocked: false,
+    });
+    expect(open).not.toContain("Style lock:");
+    expect(open).toContain(NO_SOURCE_WATERMARK);
+  });
+
+  it("asks multi-angle shots for distinguishable views instead of a symmetrical duplicate", () => {
+    const prompt = applyPackPromptGuards("gold earrings angles", {
+      detailKey: "multi_angle",
+      styleLocked: true,
+    });
+    expect(prompt).toContain(MULTI_ANGLE_DISTINCT_VIEWS);
+    expect(prompt).toContain("true side near 90 degrees");
+    expect(prompt.toLowerCase()).toContain("nearly symmetrical");
+    expect(prompt.toLowerCase()).toContain("earring");
+    expect(prompt).not.toContain("2×2");
+    expect(MULTI_ANGLE_DISTINCT_VIEWS.toLowerCase()).not.toContain("equal spacing");
+    expect(prompt).toContain(STYLE_LOCK_SAME_PRODUCT);
+    expect(prompt).toContain(NO_SOURCE_WATERMARK);
   });
 });
