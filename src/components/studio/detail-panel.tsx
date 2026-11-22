@@ -11,6 +11,13 @@ import {
   writePackDraft,
 } from "@/lib/studio-pack-session";
 import { formatPackCreditSummaryFromPayload, packFailureReasonLabel } from "@/lib/generate/pack-summary";
+import {
+  createPackIdempotencyKey,
+  isPackRequestDisconnect,
+  onPackPostDisconnect,
+  pollPackUntilSettled,
+  type PackRunView,
+} from "@/lib/generate/pack-run-client";
 
 const TYPE_GROUPS = [
   {
@@ -80,6 +87,8 @@ interface StudioDetailPanelProps {
   onDetailGenerated?: (results: Array<{key:string;url:string;label:string}>) => void;
   initialResults?: Array<{key:string; url:string; label:string; rawUrl:string}>;
   initialFailures?: Array<{ key: string; reason: string }>;
+  initialSummary?: string;
+  onEngineResolved?: (selection: { engine: string; label: string }) => void;
 }
 
 function hashString(str: string): number {
@@ -115,7 +124,7 @@ async function overlayTextOnImage(imageUrl: string, text: string): Promise<strin
   return new Promise((resolve) => canvas.toBlob((b) => resolve(URL.createObjectURL(b!)), "image/png", 1.0));
 }
 
-export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures }: StudioDetailPanelProps) {
+export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures, initialSummary, onEngineResolved }: StudioDetailPanelProps) {
   const { t, locale } = useT();
   const [open, setOpen] = useState(!!initialResults?.length);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(GENERAL_PACK));
@@ -125,6 +134,8 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   const [perTypeDesc, setPerTypeDesc] = useState<Record<string, string>>({});
   const [showCustomDesc, setShowCustomDesc] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const requestRef = useRef(0);
+  const packLock = useRef(false);
   const [enhancing, setEnhancing] = useState(false);
   const [stageLabel, setStageLabel] = useState("");
   const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
@@ -205,12 +216,23 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   }, [initialResults]);
 
   useEffect(() => {
-    if (!initialFailures?.length) return;
-    setFailures(initialFailures);
+    if (!initialSummary) return;
+    setBatchSummary(initialSummary);
     setOpen(true);
-    const completed = initialResults?.length ?? 0;
-    setBatchSummary(`已完成 ${completed}/${completed + initialFailures.length}`);
-  }, [initialFailures, initialResults?.length]);
+  }, [initialSummary]);
+
+  useEffect(() => {
+    if (!initialFailures?.length) return;
+    setFailures(initialFailures.map((failure) => ({
+      key: failure.key,
+      reason: packFailureReasonLabel(failure.reason, locale),
+    })));
+    setOpen(true);
+    if (!initialSummary) {
+      const completed = initialResults?.length ?? 0;
+      setBatchSummary(`已完成 ${completed}/${completed + initialFailures.length}`);
+    }
+  }, [initialFailures, initialResults?.length, initialSummary, locale]);
 
   const toggleGroup = (groupKey: string) => {
     setExpandedGroups(prev => {
@@ -239,8 +261,32 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     });
   };
 
+  function showPackView(view: PackRunView) {
+    setBatchSummary(view.summary);
+    setFailures(view.failures.map((failure) => ({
+      key: failure.key,
+      reason: packFailureReasonLabel(failure.reason, locale),
+    })));
+    if (view.engine.engine === "vega") onEngineResolved?.(view.engine);
+    if (view.successes.length > 0) {
+      const out = view.successes.map((shot) => ({
+        key: shot.key,
+        url: shot.url,
+        rawUrl: shot.url,
+        label: TYPE_LABELS[shot.key] || shot.label || shot.key,
+      }));
+      setResults(out);
+      onDetailGenerated?.(out);
+    }
+  }
+
   async function handleGenerate() {
-    if (selected.size === 0 || !projectId) return;
+    if (selected.size === 0 || !projectId || packLock.current) return;
+    packLock.current = true;
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+    const startedAt = Date.now();
+    const packIdempotencyKey = createPackIdempotencyKey();
     setGenerating(true);
     setResults([]);
     setFailures([]);
@@ -249,6 +295,41 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
 
     const styleSeed = lockStyle ? Math.abs(hashString(projectId)) % 100000 : undefined;
     const styleRef = lockStyle ? (referenceImageUrl ?? undefined) : undefined;
+    const finish = () => {
+      if (requestRef.current !== requestId) return;
+      packLock.current = false;
+      setGenerating(false);
+    };
+
+    const recoverFromDisconnect = async () => {
+      setStageLabel(locale === "zh" ? "连接已中断，正在确认这组套图的结果…" : "Connection dropped. Checking this pack…");
+      const recovered = await onPackPostDisconnect({
+        error: new TypeError("Failed to fetch"),
+        poll: () => pollPackUntilSettled({
+          startedAt,
+          locale,
+          fetchProject: async () => {
+            const projectRes = await fetch(`/api/products/${projectId}`);
+            if (!projectRes.ok) throw new Error("Project poll failed");
+            const body = await projectRes.json();
+            return {
+              status: body.project?.status,
+              generatedImages: body.project?.generatedImages ?? [],
+            };
+          },
+        }),
+      });
+      if (requestRef.current !== requestId) return;
+      if (recovered.view) {
+        showPackView(recovered.view);
+        setStageLabel("");
+        return;
+      }
+      setBatchSummary(locale === "zh"
+        ? "连接已中断。请刷新页面查看这组套图的结果。"
+        : "The connection dropped. Refresh this page to see this pack.");
+      setStageLabel("");
+    };
 
     try {
       const res = await fetch("/api/generate", {
@@ -267,13 +348,45 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           targetPlatform: targetPlatform || undefined,
           numOutputs: 1,
           category: category || undefined,
+          packIdempotencyKey,
         }),
       });
-      const data = await res.json();
-      const generated = data.generated as Array<{ key: string; url: string; label?: string }> | undefined;
-      const failedShots = Array.isArray(data.failed)
-        ? data.failed as Array<{ key?: string; reason?: string }>
-        : [];
+      let data: {
+        generated?: Array<{ key: string; url: string; label?: string }>;
+        failed?: Array<{ key?: string; reason?: string }>;
+        requested?: number;
+        completed?: number;
+        message?: string;
+        error?: string;
+        status?: string;
+        poll?: boolean;
+        engine?: string;
+        modelVersion?: string;
+        creditsCharged?: number;
+        creditsRefunded?: number;
+        creditsNotCharged?: number;
+      };
+      try {
+        data = await res.json();
+      } catch (error) {
+        if (isPackRequestDisconnect(error) || error instanceof SyntaxError) {
+          await recoverFromDisconnect();
+          finish();
+          return;
+        }
+        throw error;
+      }
+      if (requestRef.current !== requestId) return;
+      if (data.status === "pack_in_progress" || data.poll === true) {
+        await recoverFromDisconnect();
+        finish();
+        return;
+      }
+      if (data.engine === "vega" && data.modelVersion) {
+        onEngineResolved?.({ engine: "vega", label: data.modelVersion });
+      }
+      const generated = data.generated;
+      const failedShots = Array.isArray(data.failed) ? data.failed : [];
       const requested = typeof data.requested === "number" ? data.requested : types.length;
       const completed = typeof data.completed === "number" ? data.completed : (generated?.length ?? 0);
       setFailures(failedShots.map((shot) => ({
@@ -287,8 +400,8 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           String(failedShots[0]?.reason || data.message || data.error || res.status),
           locale,
         );
-        alert(`生成失败: ${reason}`);
-        setGenerating(false);
+        setBatchSummary(formatPackCreditSummaryFromPayload(data, { requested, completed }, locale) || reason);
+        finish();
         return;
       }
 
@@ -305,13 +418,21 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         }
         setResults(out);
         onDetailGenerated?.(out);
-      } else {
-        alert("生成完成但没有返回图片，请重试。");
+      } else if (failedShots.length === 0) {
+        setBatchSummary(locale === "zh" ? "生成完成但没有返回图片，请重试。" : "Generation finished without an image. Please retry.");
       }
-    } catch (e: any) {
-      alert(`请求失败: ${e.message || "未知错误"}`);
+    } catch (error: unknown) {
+      if (requestRef.current !== requestId) return;
+      if (isPackRequestDisconnect(error)) {
+        await recoverFromDisconnect();
+      } else {
+        const message = error instanceof Error ? error.message : "";
+        setBatchSummary(message
+          ? (locale === "zh" ? `请求没有完成：${message}` : `The request did not finish: ${message}`)
+          : (locale === "zh" ? "请求没有完成，请刷新页面查看结果。" : "The request did not finish. Refresh to see the result."));
+      }
     }
-    setGenerating(false);
+    finish();
   }
 
   const selectedCount = selected.size;

@@ -506,23 +506,24 @@ describe("POST /api/generate pack shots", () => {
         { key: "scene_atmosphere", prompt: "gold earrings atmosphere" },
       ],
       now: () => clock,
+      sleep: async () => {},
     });
     const timedJson = await timed.json();
     expect(timed.status).toBe(500);
-    expect(chargeMock).toHaveBeenCalledTimes(1);
-    expect(refundMock).toHaveBeenCalledTimes(1);
-    expect(createPrediction).toHaveBeenCalledTimes(1);
-    const startedCall = createPrediction.mock.calls[0][0] as { productImageUrl: string; referenceImageUrl?: string };
-    expect(startedCall.productImageUrl).toBe("https://cdn.example/product.jpg");
-    expect(startedCall.referenceImageUrl).toBe("https://cdn.example/latest-face.png");
+    // Polling no longer blocks the next create, so every shot is submitted
+    // before the shared clock jumps past the pack budget.
+    expect(chargeMock).toHaveBeenCalledTimes(3);
+    expect(refundMock).toHaveBeenCalledTimes(3);
+    expect(createPrediction).toHaveBeenCalledTimes(3);
+    for (const call of createPrediction.mock.calls) {
+      const startedCall = call[0] as { productImageUrl: string; referenceImageUrl?: string };
+      expect(startedCall.productImageUrl).toBe("https://cdn.example/product.jpg");
+      expect(startedCall.referenceImageUrl).toBe("https://cdn.example/latest-face.png");
+    }
     expect(timedJson.creditsCharged).toBe(0);
-    expect(timedJson.creditsNotCharged).toBe(2);
+    expect(timedJson.creditsNotCharged).toBe(0);
     expect(timedJson.failed).toHaveLength(3);
-    expect(timedJson.failed[0].reason).toBe("prediction_timeout");
-    expect(timedJson.failed[0].charged).toBe(true);
-    expect(timedJson.failed[1].reason).toBe(NOT_STARTED_REASON);
-    expect(timedJson.failed[2].reason).toBe(NOT_STARTED_REASON);
-    expect(timedJson.failed.slice(1).every((shot: { charged: boolean }) => shot.charged === false)).toBe(true);
+    expect(timedJson.failed.every((shot: { reason: string; charged: boolean }) => shot.reason === "prediction_timeout" && shot.charged)).toBe(true);
   });
 
   it("keeps six per-shot waits inside the Hobby 300s cap", () => {
@@ -558,6 +559,7 @@ describe("POST /api/generate pack shots", () => {
       category: "fashion",
       detailTypes: [{ key: "multi_angle", prompt: "gold earrings angles" }],
       now: () => clock,
+      sleep: async () => {},
     });
     const json = await timed.json();
     expect(polls).toBeGreaterThan(1);

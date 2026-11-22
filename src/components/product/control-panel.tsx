@@ -7,6 +7,7 @@ import { QuantitySlider } from "./quantity-slider";
 import { FlashantButton } from "./flashant-button";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
+import { workbenchEngineOptionLabel } from "@/lib/generate/engine-label";
 
 interface ProductImage {
   id: string;
@@ -36,6 +37,7 @@ interface ControlPanelProps {
   onEnhancePrompt: () => void;
   isEnhancing: boolean;
   engineType: string;
+  vegaModelLabel?: string;
   onEngineTypeChange: (engine: string) => void;
   onGenerate: () => void;
   isGenerating: boolean;
@@ -64,6 +66,7 @@ export function ControlPanel({
   onEnhancePrompt,
   isEnhancing,
   engineType,
+  vegaModelLabel,
   onEngineTypeChange,
   onGenerate,
   isGenerating,
@@ -90,6 +93,13 @@ export function ControlPanel({
           className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
         >
           <option value="flux">{t("generate.engineFlux")}</option>
+          {engineType === "vega" && (
+            <option value="vega">{workbenchEngineOptionLabel({
+              engine: "vega",
+              vegaLabel: vegaModelLabel,
+              fluxLabel: t("generate.engineFlux"),
+            })}</option>
+          )}
           <option value="bria">{t("generate.engineBria")}</option>
           <option value="gpt-image">{t("generate.engineGptImage")}</option>
         </select>

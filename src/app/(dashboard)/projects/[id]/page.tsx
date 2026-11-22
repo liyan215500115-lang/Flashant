@@ -36,7 +36,9 @@ import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
 import { saveGeneratedImage } from "@/lib/persist-project-image";
 import { projectGenerationError } from "@/lib/project-fetch-error";
 import { packFailureReasonLabel } from "@/lib/generate/pack-summary";
-import { quotaBadgeText } from "@/lib/quota-display";
+import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
+import { loadProjectWithRetry } from "@/lib/project-load";
+import { loadConfirmedQuota, quotaBadgeText } from "@/lib/quota-display";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
 
@@ -55,6 +57,9 @@ interface GeneratedImage {
   promptUsed: string | null;
   errorMessage: string | null;
   createdAt: string;
+  aiProvider?: string | null;
+  modelVersion?: string | null;
+  generationMeta?: unknown;
 }
 
 interface Task {
@@ -106,6 +111,7 @@ export default function ProductDetailPage() {
   const [imageDeleting, setImageDeleting] = useState(false);
   const router = useRouter();
   const { t, locale } = useT();
+  const projectRef = useRef<Project | null>(null);
 
   function copy(key: string, fallback: string) {
     const value = t(key);
@@ -113,39 +119,55 @@ export default function ProductDetailPage() {
   }
 
   const fetchProject = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/products/${params.id}`);
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      setProject(data.project);
-      setError(projectGenerationError(data.project, t("error.generateFailed"), locale));
+    const loaded = await loadProjectWithRetry({
+      hasVisibleProject: () => Boolean(projectRef.current),
+      fetchProject: async () => {
+        const res = await fetch(`/api/products/${params.id}`);
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        if (!data?.project?.id) return null;
+        return data.project as Project;
+      },
+    });
+    if (loaded.ok) {
+      projectRef.current = loaded.project;
+      setProject(loaded.project);
+      setError(projectGenerationError(loaded.project, t("error.generateFailed"), locale));
       setLoading(false);
-    } catch {
+      return;
+    }
+    if (!loaded.keepVisible) {
       setError(t("error.loadFailed"));
       setLoading(false);
     }
-  }, [params.id, locale]);
+  }, [params.id, locale, t]);
 
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
 
-  // Fetch quota
+  // Fetch quota. A transient empty payload stays on the loading ellipsis.
   useEffect(() => {
-    fetch("/api/quota")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.used !== undefined) {
-          setQuota({
-            used: data.used,
-            limit: typeof data.limit === "number" ? data.limit : 0,
-            tier: typeof data.tier === "string" ? data.tier : "",
-            allotmentConfigured: data.allotmentConfigured === true,
-            loading: false,
-          });
-        }
-      })
-      .catch(() => {});
+    let cancelled = false;
+    loadConfirmedQuota({
+      fetchQuota: async () => {
+        const res = await fetch("/api/quota");
+        if (!res.ok) throw new Error("quota");
+        return res.json();
+      },
+    }).then((data) => {
+      if (cancelled || !data) return;
+      setQuota({
+        used: data.used,
+        limit: data.limit,
+        tier: typeof data.tier === "string" ? data.tier : "",
+        allotmentConfigured: data.allotmentConfigured === true,
+        loading: false,
+      });
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [project?.id]);
 
   // Resume polling for in-progress tasks on mount
@@ -252,16 +274,21 @@ export default function ProductDetailPage() {
   }
 
   function refreshQuota() {
-    fetch("/api/quota").then(r => r.json()).then(d => {
-      if (d.used !== undefined) {
-        setQuota({
-          used: d.used,
-          limit: typeof d.limit === "number" ? d.limit : 0,
-          tier: typeof d.tier === "string" ? d.tier : "",
-          allotmentConfigured: d.allotmentConfigured === true,
-          loading: false,
-        });
-      }
+    loadConfirmedQuota({
+      fetchQuota: async () => {
+        const res = await fetch("/api/quota");
+        if (!res.ok) throw new Error("quota");
+        return res.json();
+      },
+    }).then((data) => {
+      if (!data) return;
+      setQuota({
+        used: data.used,
+        limit: data.limit,
+        tier: typeof data.tier === "string" ? data.tier : "",
+        allotmentConfigured: data.allotmentConfigured === true,
+        loading: false,
+      });
     }).catch(() => {});
   }
 
@@ -417,6 +444,13 @@ export default function ProductDetailPage() {
     (img) => img.status === "SUCCEEDED"
   );
   const failedImages = project.generatedImages.filter((img) => img.status === "FAILED");
+  const packView = packRunViewFromImages(project.generatedImages, locale);
+  const listedFailures = packView
+    ? packView.failures.map((failure, index) => ({ id: `${failure.key}-${index}`, reason: failure.reason }))
+    : failedImages.map((img) => ({
+        id: img.id,
+        reason: packFailureReasonLabel(img.errorMessage || "生成失败", locale),
+      }));
   const quotaText = quotaBadgeText({
     used: quota.used,
     limit: quota.limit,
@@ -775,12 +809,24 @@ export default function ProductDetailPage() {
           {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
         </div>
       )}
-      {failedImages.length > 0 && (
+      {packView && (
+        <div className={`flex flex-col items-center gap-1 py-4 text-sm ${packView.failures.length > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+          <p>{packView.summary}</p>
+          {packView.failures.length > 0 && (
+            <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
+              {listedFailures.slice(0, 8).map((failure) => (
+                <li key={failure.id}>{failure.reason}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {!packView && failedImages.length > 0 && (
         <div className="flex flex-col items-center gap-1 py-4 text-sm text-amber-700 dark:text-amber-400">
           <p>已完成 {succeededImages.length}/{succeededImages.length + failedImages.length}，{failedImages.length} 张失败</p>
           <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
-            {failedImages.slice(0, 8).map((img) => (
-              <li key={img.id}>{packFailureReasonLabel(img.errorMessage || "生成失败", locale)}</li>
+            {listedFailures.slice(0, 8).map((failure) => (
+              <li key={failure.id}>{failure.reason}</li>
             ))}
           </ul>
         </div>

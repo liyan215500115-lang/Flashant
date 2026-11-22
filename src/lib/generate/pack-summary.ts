@@ -14,10 +14,85 @@ const NOT_STARTED_LABEL: Record<AppLocale, string> = {
   ar: "لم يبدأ التوليد",
 };
 
-/** User-facing failure text. The stored code not_started is never shown raw. */
+const RATE_LIMIT_LABEL: Record<AppLocale, string> = {
+  zh: "图像服务繁忙，请稍后再试",
+  en: "The image service is busy. Please try again shortly.",
+  ja: "画像サービスが混み合っています。しばらくしてからもう一度お試しください。",
+  ko: "이미지 서비스가 혼잡합니다. 잠시 후 다시 시도해 주세요.",
+  es: "El servicio de imágenes está ocupado. Inténtalo de nuevo en unos momentos.",
+  fr: "Le service d'images est occupé. Réessayez dans un instant.",
+  de: "Der Bilddienst ist ausgelastet. Bitte versuchen Sie es gleich noch einmal.",
+  "pt-BR": "O serviço de imagens está ocupado. Tente de novo em instantes.",
+  it: "Il servizio immagini è occupato. Riprova tra poco.",
+  ar: "خدمة الصور مشغولة. أعد المحاولة بعد قليل.",
+};
+
+const SAFETY_LABEL: Record<AppLocale, string> = {
+  zh: "内容未通过安全检查",
+  en: "This image did not pass the safety check.",
+  ja: "安全性チェックを通過しませんでした。",
+  ko: "안전 검사를 통과하지 못했습니다.",
+  es: "Esta imagen no superó el control de seguridad.",
+  fr: "Cette image n'a pas passé le contrôle de sécurité.",
+  de: "Dieses Bild hat die Sicherheitsprüfung nicht bestanden.",
+  "pt-BR": "Esta imagem não passou na verificação de segurança.",
+  it: "Questa immagine non ha superato il controllo di sicurezza.",
+  ar: "لم تجتز هذه الصورة فحص الأمان.",
+};
+
+const TIMEOUT_LABEL: Record<AppLocale, string> = {
+  zh: "生成超时，请重试",
+  en: "Generation timed out. Please try again.",
+  ja: "生成がタイムアウトしました。もう一度お試しください。",
+  ko: "생성 시간이 초과되었습니다. 다시 시도해 주세요.",
+  es: "La generación agotó el tiempo. Inténtalo de nuevo.",
+  fr: "La génération a expiré. Réessayez.",
+  de: "Die Generierung hat das Zeitlimit überschritten. Bitte erneut versuchen.",
+  "pt-BR": "A geração expirou. Tente de novo.",
+  it: "La generazione è scaduta. Riprova.",
+  ar: "انتهت مهلة التوليد. أعد المحاولة.",
+};
+
+const GENERIC_LABEL: Record<AppLocale, string> = {
+  zh: "生成失败，请重试",
+  en: "Generation failed. Please try again.",
+  ja: "生成に失敗しました。もう一度お試しください。",
+  ko: "생성에 실패했습니다. 다시 시도해 주세요.",
+  es: "La generación falló. Inténtalo de nuevo.",
+  fr: "La génération a échoué. Réessayez.",
+  de: "Die Generierung ist fehlgeschlagen. Bitte erneut versuchen.",
+  "pt-BR": "A geração falhou. Tente de novo.",
+  it: "Generazione non riuscita. Riprova.",
+  ar: "فشل التوليد. أعد المحاولة.",
+};
+
+type FailureKind = "not_started" | "rate_limit" | "safety" | "timeout" | "generic" | "raw";
+
+function failureKind(reason: string): FailureKind {
+  const text = reason.trim();
+  if (text === NOT_STARTED_REASON) return "not_started";
+  if (/\bprediction_timeout\b/i.test(text)) return "timeout";
+  if (/\bE005\b/i.test(text) || /flagged as sensitive/i.test(text)) return "safety";
+  if (/\b429\b/.test(text) || /rate limit/i.test(text) || /throttl/i.test(text) || /retry_after/i.test(text)) {
+    return "rate_limit";
+  }
+  if (/replicate api error/i.test(text) || /\{[\s\S]*"[^"]+"\s*:/.test(text)) return "generic";
+  return "raw";
+}
+
+/**
+ * User-facing failure text. Stored codes stay in the database.
+ * not_started, rate limits, safety flags, timeouts, and provider JSON are not shown raw.
+ */
 export function packFailureReasonLabel(reason: string, locale?: string): string {
-  if (reason !== NOT_STARTED_REASON) return reason;
-  return NOT_STARTED_LABEL[resolveLocale(locale)];
+  const code = resolveLocale(locale);
+  const kind = failureKind(reason);
+  if (kind === "not_started") return NOT_STARTED_LABEL[code];
+  if (kind === "rate_limit") return RATE_LIMIT_LABEL[code];
+  if (kind === "safety") return SAFETY_LABEL[code];
+  if (kind === "timeout") return TIMEOUT_LABEL[code];
+  if (kind === "generic") return GENERIC_LABEL[code];
+  return reason;
 }
 
 export interface PackCreditCounts {

@@ -25,6 +25,40 @@ export function quotaIsUnlimited(input: {
   return input.tier === "ENTERPRISE" && input.allotmentConfigured === true && input.limit < 0;
 }
 
+/**
+ * A wallet read that failed comes back as 0/0 with allowed false.
+ * That is not a confirmed empty balance. Free, Pro, and Business with a real
+ * zero balance still have a positive monthly limit.
+ */
+export function isConfirmedQuotaPayload(data: unknown): data is QuotaSnapshot {
+  if (!data || typeof data !== "object") return false;
+  const row = data as Partial<QuotaSnapshot> & { quotaKnown?: boolean; allowed?: boolean };
+  if (row.quotaKnown === false) return false;
+  if (typeof row.used !== "number" || typeof row.limit !== "number") return false;
+  if (!Number.isFinite(row.used) || !Number.isFinite(row.limit)) return false;
+  if (row.used === 0 && row.limit === 0 && row.allowed === false) return false;
+  return true;
+}
+
+export async function loadConfirmedQuota(options: {
+  fetchQuota: () => Promise<unknown>;
+  attempts?: number;
+  sleep?: (ms: number) => Promise<void>;
+}): Promise<QuotaSnapshot | null> {
+  const attempts = options.attempts ?? 3;
+  const sleep = options.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const data = await options.fetchQuota();
+      if (isConfirmedQuotaPayload(data)) return data;
+    } catch {
+      // Retry. A dropped quota request must not become 0/0.
+    }
+    if (attempt < attempts - 1) await sleep(200);
+  }
+  return null;
+}
+
 export function presentQuota(quota: QuotaSnapshot): QuotaSnapshot & { unlimited: boolean } {
   const tier = quota.tier;
   const finite = FINITE_TIERS.has(tier as GenerationTier);

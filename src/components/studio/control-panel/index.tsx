@@ -7,6 +7,7 @@ import { BrandPresetSelector } from "./brand-preset-selector";
 import { StylePicker } from "./style-picker";
 import { PromptEnhancer } from "./prompt-enhancer";
 import { useT } from "@/components/i18n-provider";
+import { workbenchEngineOptionLabel } from "@/lib/generate/engine-label";
 
 interface ProductImage {
   id: string; originalUrl: string; fileName: string; mimeType: string;
@@ -15,7 +16,7 @@ interface ProductImage {
 interface StudioControlPanelProps {
   projectId: string | null; selectedImage: ProductImage | null;
   prompt: string; productName: string;
-  engineType: string; targetPlatform: string; targetLanguage: string;
+  engineType: string; vegaModelLabel?: string; targetPlatform: string; targetLanguage: string;
   brandPresetId: string | null; isGenerating: boolean;
   activeStyle: string | null;
   onImageChange: (image: ProductImage) => void;
@@ -35,7 +36,7 @@ interface StudioControlPanelProps {
 
 export function StudioControlPanel({
   projectId, selectedImage, prompt, productName,
-  engineType, targetPlatform, targetLanguage, brandPresetId, isGenerating,
+  engineType, vegaModelLabel, targetPlatform, targetLanguage, brandPresetId, isGenerating,
   activeStyle, onImageChange, onAccessoryUpload, accessoryImages, onPromptChange,
   onProductNameChange, onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
   onStyleChange, onStyleReferenceChange, onStyleReferenceUploaded, onGenerate,
@@ -89,6 +90,13 @@ export function StudioControlPanel({
           <select value={engineType} onChange={(e) => onEngineChange(e.target.value)}
             className="w-full h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs text-zinc-700 dark:text-zinc-200 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 transition-all">
             <option value="flux">{t("generate.engineFlux")}</option>
+            {engineType === "vega" && (
+              <option value="vega">{workbenchEngineOptionLabel({
+                engine: "vega",
+                vegaLabel: vegaModelLabel,
+                fluxLabel: t("generate.engineFlux"),
+              })}</option>
+            )}
             <option value="bria">{t("generate.engineBria")}</option>
             <option value="gpt-image">{t("generate.engineGptImage")}</option>
             <option value="openai">{t("generate.engineOpenai")}</option>
