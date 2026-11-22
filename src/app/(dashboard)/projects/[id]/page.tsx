@@ -36,6 +36,7 @@ import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
 import { saveGeneratedImage } from "@/lib/persist-project-image";
 import { projectGenerationError } from "@/lib/project-fetch-error";
 import { packFailureReasonLabel } from "@/lib/generate/pack-summary";
+import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
 import { quotaBadgeText } from "@/lib/quota-display";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
@@ -55,6 +56,7 @@ interface GeneratedImage {
   promptUsed: string | null;
   errorMessage: string | null;
   createdAt: string;
+  generationMeta?: unknown;
 }
 
 interface Task {
@@ -417,6 +419,13 @@ export default function ProductDetailPage() {
     (img) => img.status === "SUCCEEDED"
   );
   const failedImages = project.generatedImages.filter((img) => img.status === "FAILED");
+  const packView = packRunViewFromImages(project.generatedImages, locale);
+  const listedFailures = packView
+    ? packView.failures.map((failure, index) => ({ id: `${failure.key}-${index}`, reason: failure.reason }))
+    : failedImages.map((img) => ({
+        id: img.id,
+        reason: packFailureReasonLabel(img.errorMessage || "生成失败", locale),
+      }));
   const quotaText = quotaBadgeText({
     used: quota.used,
     limit: quota.limit,
@@ -775,12 +784,24 @@ export default function ProductDetailPage() {
           {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
         </div>
       )}
-      {failedImages.length > 0 && (
+      {packView && (
+        <div className={`flex flex-col items-center gap-1 py-4 text-sm ${packView.failures.length > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+          <p>{packView.summary}</p>
+          {packView.failures.length > 0 && (
+            <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
+              {listedFailures.slice(0, 8).map((failure) => (
+                <li key={failure.id}>{failure.reason}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {!packView && failedImages.length > 0 && (
         <div className="flex flex-col items-center gap-1 py-4 text-sm text-amber-700 dark:text-amber-400">
           <p>已完成 {succeededImages.length}/{succeededImages.length + failedImages.length}，{failedImages.length} 张失败</p>
           <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
-            {failedImages.slice(0, 8).map((img) => (
-              <li key={img.id}>{packFailureReasonLabel(img.errorMessage || "生成失败", locale)}</li>
+            {listedFailures.slice(0, 8).map((failure) => (
+              <li key={failure.id}>{failure.reason}</li>
             ))}
           </ul>
         </div>

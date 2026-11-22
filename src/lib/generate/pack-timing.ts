@@ -26,5 +26,15 @@ export const PER_SHOT_WAIT_MS = 40_000;
 /** Do not debit a shot unless one full shot wait still fits in the pack budget. */
 export const MIN_START_MS = PER_SHOT_WAIT_MS;
 
+/**
+ * Minimum space between prediction creates.
+ * A low-balance Replicate account drops to about 6 requests per minute with burst 1.
+ * A create that just succeeded, or a create that just returned 429, will 429 the next
+ * create if it starts in the same burst. This gap is skipped when the previous create
+ * is already older than the gap, so a long poll does not add it again.
+ * The same shot's own 429 retry waits for retry_after instead of this gap.
+ */
+export const PREDICTION_CREATE_GAP_MS = 10_000;
+
 /** A shot that never started. Not a provider timeout, and not charged. */
 export const NOT_STARTED_REASON = "not_started";

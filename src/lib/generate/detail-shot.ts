@@ -10,7 +10,14 @@ export const BEAUTY_PERSON_CLOSEUP_PROMPT =
   "Extreme close-up of the person from the reference image using or wearing the product. Focus on the face/head/hands where the product is being applied or worn. The product itself should be visible in use (on skin, on head, on body) but do NOT show any product packaging, bottles, boxes, or containers. Keep the person visually IDENTICAL to the reference image — same face, same features, same skin tone. Soft diffused lighting, 100mm macro lens f/2.8, very shallow depth of field, editorial quality. CRITICAL: do NOT render any text or labels on the image.";
 
 export const PRODUCT_MACRO_LOCK =
-  "Macro photograph of this exact product's material and structure. The product must stay clearly recognizable: same shape, color, hardware, and construction. Do not replace it with a face, skincare smear, cream on skin, or a different object.";
+  "Macro photograph of this exact product's material and structure. The product must stay clearly recognizable: same shape, color, hardware, and construction. Show only this product, not a person and not a different object.";
+
+/**
+ * In-use stays a person wearing or using the product.
+ * The framing stays an everyday catalog pose so a close crop is less likely to be flagged.
+ */
+export const IN_USE_CATALOG_GUARD =
+  "Everyday fashion catalog: the product is worn or used with ordinary clothing in a standing or walking pose. The product stays recognizable and is the subject of a commercial lookbook frame.";
 
 /** Appended to every shot while style-lock is on. Angle may change; the product may not. */
 export const STYLE_LOCK_SAME_PRODUCT =
@@ -40,6 +47,9 @@ export function applyPackPromptGuards(
 ): string {
   const parts = [prompt.trim()];
   if (input.styleLocked) parts.push(STYLE_LOCK_SAME_PRODUCT);
+  if (input.detailKey === "in_use" && !prompt.includes(IN_USE_CATALOG_GUARD)) {
+    parts.push(IN_USE_CATALOG_GUARD);
+  }
   if (input.detailKey === "multi_angle" && !prompt.includes(MULTI_ANGLE_DISTINCT_VIEWS)) {
     parts.push(MULTI_ANGLE_DISTINCT_VIEWS);
   }

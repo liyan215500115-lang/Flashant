@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { STYLE_PROMPTS } from "@/lib/ai/style-prompts";
 
-const { authMock, dbMock, chargeMock, refundMock, getProviderMock, createPrediction, getPrediction, signedUrl } = vi.hoisted(() => {
+const { authMock, dbMock, chargeMock, refundMock, getProviderMock, createPrediction, getPrediction, signedUrl, packSleepMock } = vi.hoisted(() => {
   const createPrediction = vi.fn();
   const getPrediction = vi.fn();
   return {
     createPrediction,
     getPrediction,
+    packSleepMock: vi.fn(async () => {}),
     authMock: vi.fn(),
     chargeMock: vi.fn(),
     refundMock: vi.fn(),
@@ -44,6 +45,7 @@ vi.mock("@/lib/overlay-logo", () => ({
   fetchImageBuffer: vi.fn(),
 }));
 vi.mock("@/lib/server-t", () => ({ serverT: vi.fn(async (key: string) => key) }));
+vi.mock("@/lib/generate/pack-wait", () => ({ packSleep: packSleepMock }));
 
 import { generateDetailPack, maxDuration, POST as generatePost } from "@/app/api/generate/route";
 import { POST as batchPost } from "@/app/api/generate/batch/route";
@@ -54,6 +56,7 @@ import {
   PACK_BUDGET_MS,
   PACK_CLOSE_MARGIN_MS,
   PER_SHOT_WAIT_MS,
+  PREDICTION_CREATE_GAP_MS,
 } from "@/lib/generate/pack-timing";
 import { MULTI_ANGLE_DISTINCT_VIEWS, NO_SOURCE_WATERMARK, STYLE_LOCK_SAME_PRODUCT } from "@/lib/generate/detail-shot";
 
@@ -76,6 +79,7 @@ function post(url: string, body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  packSleepMock.mockImplementation(async () => {});
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("CREEM_MODERATION", "enforce");
   vi.stubEnv("CREEM_API_KEY", "creem_test_unit");
@@ -821,5 +825,138 @@ describe("POST /api/generate pack shots", () => {
     expect(failed).toHaveLength(1);
     expect(failed[0].status).toBe("FAILED");
     expect(failed[0].errorMessage).toBe("model rejected");
+  });
+
+  it("retries the same shot after a 429 and does not refund that first try", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_429_ok"));
+    chargePerImage();
+    const limited = new Error(
+      'Replicate API error: 429 {"detail":"Request was throttled. Credit balance is under $5, rate limit 6/min burst 1.","retry_after":3}',
+    );
+    createPrediction
+      .mockRejectedValueOnce(limited)
+      .mockResolvedValueOnce({
+        predictionId: "pred_after_429",
+        status: "succeeded",
+        outputs: [{ url: "https://cdn.example/after-429.png" }],
+      });
+
+    const res = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      detailTypes: [{ key: "flatlay", prompt: "gold earrings flatlay" }],
+    });
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(createPrediction).toHaveBeenCalledTimes(2);
+    expect(createPrediction.mock.calls[0][0].prompt).toBe(createPrediction.mock.calls[1][0].prompt);
+    expect(packSleepMock).toHaveBeenCalledWith(3_000);
+    expect(chargeMock).toHaveBeenCalledTimes(1);
+    expect(refundMock).not.toHaveBeenCalled();
+    expect(json.completed).toBe(1);
+    expect(json.creditsCharged).toBe(1);
+    expect(json.creditsRefunded).toBe(0);
+    expect(json.failed).toHaveLength(0);
+    expect(json.generated[0].url).toBe("https://cdn.example/after-429.png");
+    const stored = dbMock.generatedImage.update.mock.calls.map((call) => call[0].data.generationMeta.packCredit);
+    expect(stored[0]).toEqual(expect.objectContaining({
+      requested: 1,
+      completed: 1,
+      creditsCharged: 1,
+      creditsRefunded: 0,
+    }));
+  });
+
+  it("keeps retrying a 429 until the pack budget and refunds only after those retries", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_429_budget"));
+    chargePerImage();
+    let clock = 1_000_000;
+    packSleepMock.mockImplementation(async (ms: number) => {
+      clock += ms;
+    });
+    createPrediction.mockRejectedValue(new Error(
+      'Replicate API error: 429 {"detail":"balance under $5, burst 1","retry_after":3}',
+    ));
+
+    const res = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      detailTypes: [{ key: "color_variants", prompt: "gold earrings colors" }],
+      now: () => clock,
+    });
+    const json = await res.json();
+    expect(res.status).toBe(500);
+    expect(createPrediction.mock.calls.length).toBeGreaterThan(1);
+    expect(chargeMock).toHaveBeenCalledTimes(1);
+    expect(refundMock).toHaveBeenCalledTimes(1);
+    expect(json.creditsCharged).toBe(0);
+    expect(json.creditsRefunded).toBe(1);
+    expect(json.failed[0].charged).toBe(true);
+    expect(json.failed[0].reason).toContain("429");
+    expect(clock).toBeGreaterThan(1_000_000 + 3_000);
+    expect(clock).toBeLessThanOrEqual(1_000_000 + PACK_BUDGET_MS + 3_000);
+  });
+
+  it("leaves a gap before the next prediction create so burst 1 does not fire immediately", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_gap"));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_gap",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/gap.png" }],
+    });
+
+    const res = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      detailTypes: [
+        { key: "flatlay", prompt: "gold earrings flatlay" },
+        { key: "color_variants", prompt: "gold earrings colors" },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(createPrediction).toHaveBeenCalledTimes(2);
+    expect(packSleepMock).toHaveBeenCalledWith(PREDICTION_CREATE_GAP_MS);
+    expect(refundMock).not.toHaveBeenCalled();
+    const json = await res.json();
+    expect(json.creditsCharged).toBe(2);
+  });
+
+  it("tightens detail and in-use prompts without dropping the product or the worn-product meaning", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_prompt_tight"));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_tight_prompt",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/tight-prompt.png" }],
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      baseStyle: "金色耳环",
+      referenceImageUrl: "https://cdn.example/latest.png",
+      detailTypes: [
+        { key: "detail", prompt: "gold hoop earring macro" },
+        { key: "in_use", prompt: "gold earrings worn outdoors" },
+      ],
+    }));
+    expect(res.status).toBe(200);
+    const prompts = createPrediction.mock.calls.map((call) => (call[0] as { prompt: string }).prompt);
+    expect(prompts).toHaveLength(2);
+    expect(prompts[0]).toContain("only this product");
+    expect(prompts[0].toLowerCase()).not.toContain("cream on skin");
+    expect(prompts[0].toLowerCase()).not.toContain("skincare");
+    expect(prompts[1]).toContain("worn or used");
+    expect(prompts[1]).toContain("ordinary clothing");
+    expect(prompts[1]).toContain("gold earrings worn outdoors");
+    expect(prompts[1].toLowerCase()).not.toContain("same body");
   });
 });

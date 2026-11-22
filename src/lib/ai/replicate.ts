@@ -77,8 +77,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
       });
 
       if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Replicate API error: ${res.status} ${err}`);
+        throw new Error(await replicateErrorMessage(res));
       }
 
       const data = await res.json();
@@ -97,8 +96,7 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
       });
 
       if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Replicate API error: ${res.status} ${err}`);
+        throw new Error(await replicateErrorMessage(res));
       }
 
       const data = await res.json();
@@ -137,4 +135,12 @@ export function createReplicateProvider(config?: Partial<ReplicateConfig>): Imag
       return result.status === "succeeded";
     },
   };
+}
+
+async function replicateErrorMessage(res: Response): Promise<string> {
+  const err = await res.text();
+  const header = typeof res.headers?.get === "function" ? res.headers.get("retry-after") : null;
+  const headerSeconds = header && /^\d+(?:\.\d+)?$/.test(header.trim()) ? header.trim() : "";
+  const suffix = headerSeconds && !/retry_after/i.test(err) ? ` retry_after=${headerSeconds}` : "";
+  return `Replicate API error: ${res.status} ${err}${suffix}`;
 }

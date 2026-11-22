@@ -9,6 +9,7 @@ import { StudioControlPanel } from "@/components/studio/control-panel";
 import { StudioPreviewCanvas } from "@/components/studio/preview-canvas";
 import { StudioDetailPanel } from "@/components/studio/detail-panel";
 import { useT } from "@/components/i18n-provider";
+import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { toast } from "sonner";
 
@@ -34,7 +35,7 @@ function hashStr(str: string): number {
 }
 
 export default function StudioPage() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const searchParams = useSearchParams();
   const existingId = searchParams.get("projectId");
   const [projectId, setProjectId] = useState<string | null>(existingId);
@@ -55,6 +56,7 @@ export default function StudioPage() {
   const [generationError, setGenerationError] = useState("");
   const [loadedDetailResults, setLoadedDetailResults] = useState<Array<{key:string; url:string; label:string; rawUrl:string}>>([]);
   const [loadedDetailFailures, setLoadedDetailFailures] = useState<Array<{ key: string; reason: string }>>([]);
+  const [loadedPackSummary, setLoadedPackSummary] = useState("");
 
   // Sync product name to project title (debounced)
   function handleProductNameChange(name: string) {
@@ -155,15 +157,21 @@ export default function StudioPage() {
                 label: ((g.generationMeta as any)?.detailKey) || "detail",
               })));
             }
-            const failedDetails = gens.filter((g: any) => {
-              const meta = g.generationMeta as { sourceType?: string; detailKey?: string } | null;
-              return g.status === "FAILED" && meta?.sourceType === "detail";
-            });
-            if (failedDetails.length > 0) {
-              setLoadedDetailFailures(failedDetails.map((g: any) => ({
-                key: ((g.generationMeta as any)?.detailKey) || "detail",
-                reason: g.errorMessage || "生成失败",
-              })));
+            const packView = packRunViewFromImages(gens, locale);
+            if (packView) {
+              setLoadedPackSummary(packView.summary);
+              setLoadedDetailFailures(packView.failures);
+            } else {
+              const failedDetails = gens.filter((g: any) => {
+                const meta = g.generationMeta as { sourceType?: string; detailKey?: string } | null;
+                return g.status === "FAILED" && meta?.sourceType === "detail";
+              });
+              if (failedDetails.length > 0) {
+                setLoadedDetailFailures(failedDetails.map((g: any) => ({
+                  key: ((g.generationMeta as any)?.detailKey) || "detail",
+                  reason: g.errorMessage || "生成失败",
+                })));
+              }
             }
           }
         })
@@ -392,6 +400,7 @@ export default function StudioPage() {
               targetPlatform={targetPlatform}
               initialResults={loadedDetailResults}
               initialFailures={loadedDetailFailures}
+              initialSummary={loadedPackSummary}
             />
           )}
 
