@@ -55,7 +55,22 @@ import {
   PACK_CLOSE_MARGIN_MS,
   PER_SHOT_WAIT_MS,
 } from "@/lib/generate/pack-timing";
-import { MULTI_ANGLE_DISTINCT_VIEWS, NO_SOURCE_WATERMARK, STYLE_LOCK_SAME_PRODUCT } from "@/lib/generate/detail-shot";
+import {
+  ATMOSPHERE_DISTINCT_COMPOSITION,
+  COMPARE_ONLY_REAL_ATTRIBUTES,
+  JEWELRY_SILHOUETTE_LOCK,
+  LIFESTYLE_DISTINCT_COMPOSITION,
+  MULTI_ANGLE_DISTINCT_VIEWS,
+  NO_ELECTRONICS_ON_NONELECTRONIC,
+  NO_INVENTED_ACCESSORIES,
+  NO_SOURCE_WATERMARK,
+  NO_UNSEEN_STRUCTURE,
+  PORTRAIT_REFERENCE_LOCK,
+  SELLING_POINTS_UNCHANGED_PRODUCT,
+  SINGLE_COLOR_MERCHANDISING,
+  SOURCE_STRUCTURE_LOCK,
+  STYLE_LOCK_SAME_PRODUCT,
+} from "@/lib/generate/detail-shot";
 
 const fetchMock = vi.fn();
 
@@ -530,20 +545,21 @@ describe("POST /api/generate pack shots", () => {
     });
     const timedJson = await timed.json();
     expect(timed.status).toBe(500);
-    // Polling no longer blocks the next create, so every shot is submitted
-    // before the shared clock jumps past the pack budget.
-    expect(chargeMock).toHaveBeenCalledTimes(3);
-    expect(refundMock).toHaveBeenCalledTimes(3);
-    expect(createPrediction).toHaveBeenCalledTimes(3);
-    for (const call of createPrediction.mock.calls) {
-      const startedCall = call[0] as { productImageUrl: string; referenceImageUrl?: string };
-      expect(startedCall.productImageUrl).toBe("https://cdn.example/product.jpg");
-      expect(startedCall.referenceImageUrl).toBe("https://cdn.example/latest-face.png");
-    }
+    // Lifestyle waits for the in-use portrait. The shared clock jumps on that
+    // poll, so the later shots never start and are not debited.
+    expect(chargeMock).toHaveBeenCalledTimes(1);
+    expect(refundMock).toHaveBeenCalledTimes(1);
+    expect(createPrediction).toHaveBeenCalledTimes(1);
+    const startedCall = createPrediction.mock.calls[0][0] as { productImageUrl: string; referenceImageUrl?: string };
+    expect(startedCall.productImageUrl).toBe("https://cdn.example/product.jpg");
+    expect(startedCall.referenceImageUrl).toBe("https://cdn.example/latest-face.png");
     expect(timedJson.creditsCharged).toBe(0);
-    expect(timedJson.creditsNotCharged).toBe(0);
+    expect(timedJson.creditsNotCharged).toBe(2);
     expect(timedJson.failed).toHaveLength(3);
-    expect(timedJson.failed.every((shot: { reason: string; charged: boolean }) => shot.reason === "prediction_timeout" && shot.charged)).toBe(true);
+    const failedByKey = Object.fromEntries(timedJson.failed.map((shot: { key: string }) => [shot.key, shot]));
+    expect(failedByKey.in_use).toMatchObject({ reason: "prediction_timeout", charged: true, creditsRefunded: true });
+    expect(failedByKey.lifestyle).toMatchObject({ reason: NOT_STARTED_REASON, charged: false, creditsRefunded: false });
+    expect(failedByKey.scene_atmosphere).toMatchObject({ reason: NOT_STARTED_REASON, charged: false, creditsRefunded: false });
   });
 
   it("keeps six per-shot waits inside the Hobby 300s cap", () => {
@@ -843,5 +859,122 @@ describe("POST /api/generate pack shots", () => {
     expect(failed).toHaveLength(1);
     expect(failed[0].status).toBe("FAILED");
     expect(failed[0].errorMessage).toBe("model rejected");
+  });
+
+  it("feeds the in-use portrait to a later single-color color_variants shot", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_portrait_${Math.random()}`));
+    chargePerImage();
+    createPrediction.mockImplementation(async (input: { prompt: string }) => {
+      const key = input.prompt.includes("worn outdoors") ? "in_use" : "color_variants";
+      return {
+        predictionId: `pred_${key}`,
+        status: "succeeded",
+        outputs: [{ url: `https://cdn.example/${key}.png` }],
+      };
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "fashion",
+      baseStyle: "金色耳环",
+      detailTypes: [
+        { key: "in_use", prompt: "gold earrings worn outdoors" },
+        { key: "multi_angle", prompt: "gold earrings angles" },
+        { key: "color_variants", prompt: "gold earrings colors" },
+      ],
+    }));
+    expect(res.status).toBe(200);
+    const calls = createPrediction.mock.calls.map((call) => call[0] as {
+      prompt: string;
+      productImageUrl: string;
+      referenceImageUrl?: string;
+    });
+    const inUse = calls.find((call) => call.prompt.includes("worn outdoors"));
+    const angles = calls.find((call) => call.prompt.includes("gold earrings angles"));
+    const colors = calls.find((call) => call.prompt.includes("gold earrings colors"));
+    expect(inUse?.productImageUrl).toBe("https://cdn.example/product.jpg");
+    expect(inUse?.referenceImageUrl).toBeUndefined();
+    expect(angles?.referenceImageUrl).toBeUndefined();
+    expect(angles?.prompt).toContain(MULTI_ANGLE_DISTINCT_VIEWS);
+    expect(angles?.prompt).toContain(JEWELRY_SILHOUETTE_LOCK);
+    expect(angles?.prompt).toContain(NO_UNSEEN_STRUCTURE);
+    expect(colors?.productImageUrl).toBe("https://cdn.example/product.jpg");
+    expect(colors?.referenceImageUrl).toBe("https://cdn.example/in_use.png");
+    expect(colors?.prompt).toContain(PORTRAIT_REFERENCE_LOCK);
+    expect(colors?.prompt).toContain(SINGLE_COLOR_MERCHANDISING);
+    expect(colors?.prompt.toLowerCase()).not.toContain("horizontal grid");
+    expect(colors?.prompt).toContain(STYLE_LOCK_SAME_PRODUCT);
+  });
+
+  it("keeps selling points and compare from inventing a brand, a second color, or unseen hardware", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_case_${Math.random()}`));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_case",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/case.png" }],
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "electronics",
+      baseStyle: "closed white charging case",
+      detailTypes: [
+        { key: "selling_points", prompt: "core selling points" },
+        { key: "compare", prompt: "effect comparison" },
+        { key: "multi_angle", prompt: "case angles" },
+      ],
+    }));
+    expect(res.status).toBe(200);
+    const prompts = createPrediction.mock.calls.map((call) => (call[0] as { prompt: string }).prompt);
+    const selling = prompts.find((prompt) => prompt.includes("caption band"));
+    const compare = prompts.find((prompt) => prompt.includes("do not invent a second colorway"));
+    const angles = prompts.find((prompt) => prompt.includes("case angles"));
+    expect(selling).toContain(SELLING_POINTS_UNCHANGED_PRODUCT);
+    expect(selling?.toLowerCase()).not.toContain("neon accent");
+    expect(compare).toContain(COMPARE_ONLY_REAL_ATTRIBUTES);
+    expect(compare).toContain("logo");
+    expect(angles).toContain(NO_UNSEEN_STRUCTURE);
+    expect(angles).toContain("ear post");
+    expect(angles?.toLowerCase()).toContain("ports");
+  });
+
+  it("separates home usage from atmosphere and refuses invented unboxing accessories", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_home_${Math.random()}`));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_home",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/home.png" }],
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "home",
+      baseStyle: "enclosed litter box",
+      detailTypes: [
+        { key: "lifestyle", prompt: "USAGE-MARKER living room" },
+        { key: "scene_atmosphere", prompt: "MOOD-MARKER dramatic space" },
+        { key: "brand_story", prompt: "UNBOX-MARKER the box" },
+      ],
+    }));
+    expect(res.status).toBe(200);
+    const calls = createPrediction.mock.calls.map((call) => call[0] as { prompt: string; referenceImageUrl?: string });
+    const lifestyle = calls.find((call) => call.prompt.includes("USAGE-MARKER"));
+    const atmosphere = calls.find((call) => call.prompt.includes("MOOD-MARKER"));
+    const story = calls.find((call) => call.prompt.includes("UNBOX-MARKER"));
+    expect(lifestyle?.prompt).toContain(LIFESTYLE_DISTINCT_COMPOSITION);
+    expect(lifestyle?.prompt).toContain(NO_ELECTRONICS_ON_NONELECTRONIC);
+    expect(lifestyle?.prompt).toContain(SOURCE_STRUCTURE_LOCK);
+    expect(atmosphere?.prompt).toContain(ATMOSPHERE_DISTINCT_COMPOSITION);
+    expect(atmosphere?.prompt).not.toContain(LIFESTYLE_DISTINCT_COMPOSITION);
+    expect(atmosphere?.prompt.toLowerCase()).not.toContain("warm hygge");
+    expect(story?.prompt).toContain(NO_INVENTED_ACCESSORIES);
+    expect(story?.prompt).toContain("charging cable");
+    expect(lifestyle?.referenceImageUrl).toBeUndefined();
+    expect(atmosphere?.referenceImageUrl).toBeUndefined();
   });
 });

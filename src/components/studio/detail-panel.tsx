@@ -633,9 +633,33 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
                     <p className="text-[10px] font-medium text-zinc-500 mb-1">{group.name}</p>
                     <div className="grid grid-cols-4 gap-1.5">
                       {groupResults.map((r, i) => (
-                        <div key={i} className="group relative rounded-lg overflow-hidden border border-zinc-200 hover:ring-2 hover:ring-brand-400 transition-all">
-                          <button type="button" onClick={() => openShot(r)} className="w-full cursor-pointer">
-                            <img src={r.url} alt={r.label} className="aspect-square object-cover w-full" />
+                        <div key={i} className="group relative min-w-0 self-start rounded-lg overflow-hidden border border-zinc-200 hover:ring-2 hover:ring-brand-400 transition-all">
+                          {/* The square lives on the button, not the img. aspect-ratio on the
+                              replaced image was losing to the file's intrinsic box inside this
+                              grid, and object-fit:cover then sliced some tiles into a top strip.
+                              Every shot type shares this markup; the image is taken out of flow
+                              so its pixel size cannot stretch or crop the tile. */}
+                          <button
+                            type="button"
+                            data-testid="pack-result-thumb"
+                            data-shot-key={r.key}
+                            onClick={() => openShot(r)}
+                            className="relative block w-full cursor-pointer overflow-hidden bg-zinc-50"
+                            style={{ aspectRatio: "1 / 1", width: "100%", padding: 0, border: 0 }}
+                          >
+                            <img
+                              src={r.url}
+                              alt={r.label}
+                              data-testid="pack-result-thumb-image"
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "contain",
+                                objectPosition: "center",
+                              }}
+                            />
                           </button>
                           <div className="flex items-center justify-between px-1 pb-1">
                             <p className="text-[9px] text-zinc-600 truncate">{r.label}</p>
