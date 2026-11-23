@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/components/i18n-provider";
+import { pushPostLoginRoute, submitCredentialsLogin } from "@/lib/credentials-login";
 
 export function RegisterForm() {
   const { t } = useT();
@@ -46,25 +46,30 @@ export function RegisterForm() {
         } else {
           setError(t("auth.errorRegisterFailed"));
         }
-        setLoading(false);
         return;
       }
 
-      // Auto sign-in after registration
-      const result = await signIn("credentials", {
+      const result = await submitCredentialsLogin({
         email,
         password,
-        redirect: false,
+        callbackUrl: "/dashboard",
+        origin: window.location.origin,
       });
 
-      if (result?.error) {
-        // Registration succeeded but auto-login failed — redirect to login page
-        router.push("/login?registered=1");
-      } else {
-        router.push("/dashboard");
+      if (!result.ok) {
+        if (result.reason === "credentials") {
+          router.push("/login?registered=1");
+        } else {
+          setError(t("auth.errorNetwork"));
+        }
+        return;
       }
+
+      const opened = await pushPostLoginRoute((path) => router.push(path), result.destination);
+      if (!opened) setError(t("auth.signedInRetry"));
     } catch {
       setError(t("auth.errorRegisterFailed"));
+    } finally {
       setLoading(false);
     }
   }
@@ -72,7 +77,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+        <div role="alert" className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
           {error}
         </div>
       )}
