@@ -5,8 +5,13 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { applyAuthBaseUrl, resolveAuthRedirect } from "@/lib/auth-base-url";
+
+// A *.vercel.app AUTH_URL / NEXTAUTH_URL rewrites callbacks off the custom domain.
+applyAuthBaseUrl(process.env);
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
@@ -48,6 +53,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      return resolveAuthRedirect(url, baseUrl);
+    },
     async signIn({ user, account }) {
       if (account?.provider === "google") {
         const existing = await db.user.findUnique({
