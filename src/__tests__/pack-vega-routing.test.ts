@@ -184,10 +184,12 @@ describe("recommended pack Vega routing", () => {
     }
     const detail = inputs.find((input) => input.prompt.includes("detail shot"));
     expect(detail?.referenceImageUrl).toBeUndefined();
-    for (const key of ["lifestyle", "in_use", "multi_angle", "flatlay", "color_variants"]) {
-      const shot = inputs.find((input) => input.prompt.includes(`${key} shot`));
-      expect(shot?.referenceImageUrl, key).toBe(STYLE);
-    }
+    const portrait = "https://cdn.example/out.png";
+    expect(inputs.find((input) => input.prompt.includes("lifestyle shot"))?.referenceImageUrl).toBe(STYLE);
+    expect(inputs.find((input) => input.prompt.includes("in_use shot"))?.referenceImageUrl).toBe(portrait);
+    expect(inputs.find((input) => input.prompt.includes("multi_angle shot"))?.referenceImageUrl).toBe(STYLE);
+    expect(inputs.find((input) => input.prompt.includes("flatlay shot"))?.referenceImageUrl).toBe(STYLE);
+    expect(inputs.find((input) => input.prompt.includes("color_variants shot"))?.referenceImageUrl).toBe(portrait);
   });
 
   it("falls back to flux when the Vega env vars are missing or the endpoint is incomplete", async () => {
@@ -347,13 +349,24 @@ describe("recommended pack Vega routing", () => {
     });
     const json = await res.json();
     const firstPoll = events.findIndex((event) => event.startsWith("poll:"));
-    expect(firstPoll).toBe(RECOMMENDED.length);
-    expect(events.slice(0, firstPoll).every((event) => event.startsWith("create:"))).toBe(true);
+    // The fashion portrait anchor (lifestyle) is polled before later people shots
+    // are created. Product-only shots are not held behind that face.
+    expect(events[0]).toBe("create:task_1");
+    expect(events[1]).toBe("poll:task_1");
+    expect(firstPoll).toBe(1);
+    expect(events.filter((event) => event.startsWith("create:"))).toHaveLength(RECOMMENDED.length);
     expect(json.completed).toBe(RECOMMENDED.length);
     expect(json.completed).toBeGreaterThan(3);
     for (const call of createPrediction.mock.calls) {
       expect((call[0] as { productImageUrl: string }).productImageUrl).toBe(PRODUCT);
     }
+    const byPrompt = (needle: string) => createPrediction.mock.calls
+      .map((call) => call[0] as { prompt: string; referenceImageUrl?: string })
+      .find((input) => input.prompt.includes(needle));
+    expect(byPrompt("lifestyle shot")?.referenceImageUrl).toBe(STYLE);
+    expect(byPrompt("in_use shot")?.referenceImageUrl).toBe("https://cdn.example/task_1.png");
+    expect(byPrompt("color_variants shot")?.referenceImageUrl).toBe("https://cdn.example/task_1.png");
+    expect(byPrompt("multi_angle shot")?.referenceImageUrl).toBe(STYLE);
     expect(clock - 1_000_000).toBe(shotMs);
     expect(clock).toBeLessThan(1_000_000 + PACK_BUDGET_MS);
     expect(shotMs * 6).toBeGreaterThan(PACK_BUDGET_MS);

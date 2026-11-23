@@ -29,12 +29,30 @@ import {
 import { sharedStaticPromptFragments } from "@/lib/creem/static-fragments";
 import {
   applyPackPromptGuards,
+  ATMOSPHERE_DISTINCT_COMPOSITION,
   BEAUTY_PERSON_CLOSEUP_PROMPT,
+  COMPARE_NAMED_DIFFERENCES,
+  COMPARE_ONLY_REAL_ATTRIBUTES,
+  COMPARE_SPLIT_LAYOUT,
+  extraPackInstructions,
+  isPortraitAnchor,
+  JEWELRY_SILHOUETTE_LOCK,
+  LIFESTYLE_DISTINCT_COMPOSITION,
+  MULTI_ANGLE_CAMERA,
   MULTI_ANGLE_DISTINCT_VIEWS,
+  NO_ELECTRONICS_ON_NONELECTRONIC,
+  NO_INVENTED_ACCESSORIES,
   NO_SOURCE_WATERMARK,
+  NO_UNSEEN_STRUCTURE,
+  packShotTemplatePatch,
   packStyleLocked,
   planPackShot,
+  PORTRAIT_REFERENCE_LOCK,
   PRODUCT_MACRO_LOCK,
+  SELLING_POINTS_UNCHANGED_PRODUCT,
+  shotIncludesPerson,
+  SINGLE_COLOR_MERCHANDISING,
+  SOURCE_STRUCTURE_LOCK,
   STYLE_LOCK_SAME_PRODUCT,
   type PackShotPlan,
 } from "@/lib/generate/detail-shot";
@@ -66,14 +84,14 @@ const TYPE_TEMPLATES: Record<string, {
 }> = {
   // ── Scene types (model + real environment) ──
   lifestyle: {
-    composition: "Product naturally placed in a beautiful real-world interior or outdoor setting, product sharp in foreground occupying 40% of frame, background softly blurred",
+    composition: LIFESTYLE_DISTINCT_COMPOSITION,
     lighting: "Soft natural daylight 5600K from large windows or open shade, warm neutral undertones, gentle shadows",
     camera: "50mm lens, f/2.2, shallow depth of field, editorial lifestyle composition",
     mood: "Aspirational yet attainable, warm and inviting atmosphere, Kinfolk/Cereal magazine aesthetic",
     technical: "4K, photorealistic, professional product photography, sharp focus on product",
   },
   scene_atmosphere: {
-    composition: "Product as lone hero, dramatic center framing with generous negative space, 85% product in frame",
+    composition: ATMOSPHERE_DISTINCT_COMPOSITION,
     lighting: "Single dramatic directional key light at 45°, deep rich shadows, controlled specular highlights, cinematic chiaroscuro",
     camera: "85mm lens, f/1.8, ultra-shallow depth of field, product pin-sharp against dramatic bokeh",
     mood: "Cinematic, moody, high-end luxury atmosphere, Byredo/Diptyque editorial aesthetic",
@@ -97,7 +115,7 @@ const TYPE_TEMPLATES: Record<string, {
   multi_angle: {
     composition: MULTI_ANGLE_DISTINCT_VIEWS,
     lighting: "Consistent soft studio lighting across all views, same exposure and white balance, so only the camera angle changes",
-    camera: "Move the camera between a front view, a side profile near 90 degrees, and a back or opposite-side view. A small turn is not an angle change. Keep the product the same size in each view.",
+    camera: MULTI_ANGLE_CAMERA,
     mood: "Clean professional catalog presentation, informative and precise",
     technical: "8K, photorealistic, professional product catalog photography",
   },
@@ -117,8 +135,8 @@ const TYPE_TEMPLATES: Record<string, {
   },
   // ── Info/spec types (white bg + text overlay via Canvas) ──
   selling_points: {
-    composition: "Product centered in the upper portion of a pure white infinity background, occupying about 60% of the frame height, with white space on the sides and a clear empty white caption band across the bottom of at least 22% of the frame. Do not let the product touch the bottom edge",
-    lighting: "Three-point studio lighting: large softbox key from top-left, subtle fill from front, soft rim from back-right, 5500K",
+    composition: `Product centered in the upper portion of a pure white infinity background, occupying about 60% of the frame height, with white space on the sides and a clear empty white caption band across the bottom of at least 22% of the frame. Do not let the product touch the bottom edge. ${SELLING_POINTS_UNCHANGED_PRODUCT}`,
+    lighting: "Three-point studio lighting: large softbox key from top-left, subtle fill from front, soft separation from the background, 5500K. No colored glow, under-glow, or decorative rim light that is not in the source photo",
     camera: "f/8 for full product sharpness, 70mm lens, straight-on product photography angle",
     mood: "Clean minimal e-commerce packshot, pure professional presentation",
     technical: "8K sharp focus, pure white background #FFFFFF, professional e-commerce product photography",
@@ -145,7 +163,7 @@ const TYPE_TEMPLATES: Record<string, {
     technical: "4K, photorealistic, professional product photography, pure white background",
   },
   compare: {
-    composition: "Split-screen comparison layout: before/after or version A/B side by side on pure white background, clean vertical dividing line centered, identical lighting and scale both sides",
+    composition: `${COMPARE_SPLIT_LAYOUT}. ${COMPARE_ONLY_REAL_ATTRIBUTES}`,
     lighting: "Consistent studio lighting 5500K both sides, identical exposure",
     camera: "f/11 for edge-to-edge sharpness both sides, identical focal length",
     mood: "Professional comparison presentation, clean and informative, empty space for text overlay",
@@ -153,14 +171,14 @@ const TYPE_TEMPLATES: Record<string, {
   },
   // ── Brand/experience types ──
   brand_story: {
-    composition: "Premium unboxing scene: packaging box open, tissue paper draped, product nestled in insert, accessories arranged around, overhead or 45° angle",
+    composition: "Premium unboxing of this exact product body only. Packaging may appear only if it is in the source image. Do not surround the product with invented accessories.",
     lighting: "Warm window light 5000K, soft natural illumination, gentle wrap-around shadows",
     camera: "50mm lens, f/4, slight overhead angle, editorial quality",
     mood: "Premium unboxing experience, anticipation and luxury, editorial magazine quality",
     technical: "4K, photorealistic, premium editorial product photography",
   },
   gift_accessory: {
-    composition: "Main product centered with all included accessories neatly arranged around it on clean white surface, visual inventory layout",
+    composition: "Main product on a clean white surface with only accessories that are visible in the source image or named in the copy. Do not invent extras to fill the frame.",
     lighting: "Soft even studio lighting from two 45° angles, all items equally illuminated, no shadows",
     camera: "f/11 for edge-to-edge sharpness across all items, 50mm lens",
     mood: "Clean visual inventory, professional and comprehensive",
@@ -187,13 +205,13 @@ const CATEGORY_PROFILES: Record<string, {
     name: "服饰配饰",
     defaultStyle: "in_use",
     recommendedTypes: ["in_use", "multi_angle", "detail", "flatlay", "color_variants", "lifestyle"],
-    compositionHint: "Garment or accessory worn by model, natural body language, candid lifestyle moment, soft natural lighting, editorial fashion lookbook style",
+    compositionHint: "Keep the real silhouette, material, and color of the garment or accessory. Soft natural light, editorial finish.",
   },
   electronics: {
     name: "3C数码",
     defaultStyle: "dark_moody",
     recommendedTypes: ["selling_points", "multi_angle", "detail", "compare", "lifestyle", "scene_atmosphere"],
-    compositionHint: "Sleek tech product, dramatic chiaroscuro lighting, matte dark surfaces, neon accent rim lights, futuristic high-tech atmosphere",
+    compositionHint: "Sleek tech product. Do not add neon rim lights, under-glow, ports, or colored lighting that is not in the source photo.",
   },
   food: {
     name: "食品饮料",
@@ -375,7 +393,21 @@ function generationStaticFragments(): string[] {
     PRODUCT_MACRO_LOCK,
     STYLE_LOCK_SAME_PRODUCT,
     MULTI_ANGLE_DISTINCT_VIEWS,
+    MULTI_ANGLE_CAMERA,
     NO_SOURCE_WATERMARK,
+    COMPARE_SPLIT_LAYOUT,
+    COMPARE_ONLY_REAL_ATTRIBUTES,
+    COMPARE_NAMED_DIFFERENCES,
+    SELLING_POINTS_UNCHANGED_PRODUCT,
+    SINGLE_COLOR_MERCHANDISING,
+    JEWELRY_SILHOUETTE_LOCK,
+    NO_INVENTED_ACCESSORIES,
+    NO_ELECTRONICS_ON_NONELECTRONIC,
+    SOURCE_STRUCTURE_LOCK,
+    NO_UNSEEN_STRUCTURE,
+    LIFESTYLE_DISTINCT_COMPOSITION,
+    ATMOSPHERE_DISTINCT_COMPOSITION,
+    PORTRAIT_REFERENCE_LOCK,
   );
   return fragments;
 }
@@ -407,18 +439,30 @@ function withoutSpecText(prompt: string, specText: string): string {
 function assemblePackPrompt(
   dt: { key: string; prompt: string; specText?: string },
   plan: PackShotPlan,
-  input: { baseStyle?: string; referenceImageUrl?: string; category?: string },
+  input: { baseStyle?: string; referenceImageUrl?: string; category?: string; lockPortrait?: boolean },
 ): string {
   const styleLocked = packStyleLocked(input);
   if (plan.promptOverride) {
-    return applyPackPromptGuards(plan.promptOverride, { detailKey: dt.key, styleLocked });
+    const guardedOverride = applyPackPromptGuards(plan.promptOverride, { detailKey: dt.key, styleLocked });
+    const overrideCopy = [input.baseStyle, dt.prompt, dt.specText].filter(Boolean).join("\n");
+    return [
+      guardedOverride,
+      ...extraPackInstructions({
+        detailKey: dt.key,
+        category: input.category,
+        copy: overrideCopy,
+        lockPortrait: input.lockPortrait,
+      }),
+    ].join(" ");
   }
   const infoShot = isInfoShot(dt.key);
   const specText = dt.specText?.trim() ?? "";
   const supplied = dt.prompt && dt.prompt !== dt.key ? withoutSpecText(dt.prompt, specText) : "";
   // Info shots are a clean product photo. Spec text is composited afterwards and must not be painted by the model.
   const userPrompt = infoShot ? "" : supplied;
-  const tpl = TYPE_TEMPLATES[dt.key];
+  const copy = [input.baseStyle, supplied, specText].filter(Boolean).join("\n");
+  const tplBase = TYPE_TEMPLATES[dt.key];
+  const tpl = tplBase ? { ...tplBase, ...packShotTemplatePatch(dt.key, copy) } : undefined;
   const catProfile = input.category ? CATEGORY_PROFILES[input.category] : null;
   const categoryHint = !plan.omitCategoryHint && catProfile?.compositionHint
     ? ` ${catProfile.compositionHint}.`
@@ -427,7 +471,8 @@ function assemblePackPrompt(
   const styleHint = !infoShot && input.baseStyle && !wantsTextOnImage
     ? ` Keep the same overall style, material, and color: ${input.baseStyle}.`
     : "";
-  const identityLock = input.referenceImageUrl && !wantsTextOnImage && plan.mode !== "product_macro" && dt.key !== "multi_angle"
+  const identityReference = plan.referenceImageUrl || input.referenceImageUrl;
+  const identityLock = identityReference && !wantsTextOnImage && plan.mode !== "product_macro" && dt.key !== "multi_angle"
     ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
     : "";
   // Product-showing shots keep printed brand lettering. The blanket ban erases it.
@@ -456,7 +501,16 @@ function assemblePackPrompt(
     : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}${beautySurfaceGuard ? ` ${beautySurfaceGuard}` : ""}`.trim();
   const withMacro = plan.mode === "product_macro" ? `${body} ${PRODUCT_MACRO_LOCK}`.trim() : body;
   const guarded = applyPackPromptGuards(withMacro, { detailKey: dt.key, styleLocked });
-  return specText ? withoutSpecText(guarded, specText) : guarded;
+  const withFidelity = [
+    guarded,
+    ...extraPackInstructions({
+      detailKey: dt.key,
+      category: input.category,
+      copy,
+      lockPortrait: input.lockPortrait,
+    }),
+  ].join(" ");
+  return specText ? withoutSpecText(withFidelity, specText) : withFidelity;
 }
 
 /**
@@ -638,6 +692,28 @@ export async function generateDetailPack(input: {
   const unsettled = new Map<string, DebitHold>();
   const packRows: Array<{ id: string; generationMeta: Record<string, unknown> }> = [];
   let vegaModelVersion: string | undefined;
+  const styleLocked = packStyleLocked({
+    baseStyle: input.baseStyle,
+    referenceImageUrl: input.referenceImageUrl,
+  });
+  /** Face already known from style lock, or filled when the portrait anchor image lands. */
+  let portraitUrl = styleLocked && input.referenceHasPerson
+    ? input.referenceImageUrl?.trim() || undefined
+    : undefined;
+  /** First people shot that can establish the face for later shots in this pack. */
+  let anchorKey: string | undefined;
+
+  function shotContext(shot: { prompt: string }) {
+    return [input.baseStyle, shot.prompt].filter(Boolean).join("\n");
+  }
+
+  function shotPeople(shot: { key: string; prompt: string }) {
+    return shotIncludesPerson({
+      detailKey: shot.key,
+      category: input.category,
+      contextText: shotContext(shot),
+    });
+  }
 
   function trackHold(hold: DebitHold | null) {
     if (hold) unsettled.set(hold.transactionId, hold);
@@ -648,20 +724,23 @@ export async function generateDetailPack(input: {
   }
 
   function planShot(shot: { key: string; prompt: string; specText: string }) {
+    const people = shotPeople(shot);
+    const usePortrait = Boolean(styleLocked && people && portraitUrl);
     const plan = planPackShot({
       detailKey: shot.key,
       category: input.category,
       productImageUrl: sharedImageUrl,
       referenceImageUrl: input.referenceImageUrl,
+      portraitImageUrl: usePortrait ? portraitUrl : undefined,
       referenceHasPerson: input.referenceHasPerson,
-      contextText: [input.baseStyle, shot.prompt].filter(Boolean).join("\n"),
+      contextText: shotContext(shot),
     });
     const picked = getEngineForDetailType(shot.key);
     const modelVersion = modelVersionForEngine(picked.engine, picked.provider as { model?: string });
     if (picked.engine === "vega" && modelVersion) vegaModelVersion = modelVersion;
     return {
       plan,
-      prompt: assemblePackPrompt(shot, plan, input),
+      prompt: assemblePackPrompt(shot, plan, { ...input, lockPortrait: usePortrait }),
       engine: picked.engine,
       modelVersion,
       provider: picked.provider,
@@ -725,6 +804,9 @@ export async function generateDetailPack(input: {
   }
 
   async function storeSuccess(attempt: Attempt, providerUrl: string) {
+    if (!portraitUrl && anchorKey && attempt.key === anchorKey && providerUrl) {
+      portraitUrl = providerUrl;
+    }
     const spec = isInfoShot(attempt.key) ? attempt.specText.trim() : "";
     let captioned: Buffer | undefined;
     if (spec) {
@@ -840,6 +922,7 @@ export async function generateDetailPack(input: {
 
   let chargeBlocked: NextResponse | null = null;
   const inflight: Array<{ attempt: Attempt; provider: ReturnType<typeof getProvider> }> = [];
+  let anchorInflight: { attempt: Attempt; provider: ReturnType<typeof getProvider> } | null = null;
 
   async function pollInflight(
     pending: Array<{ attempt: Attempt; provider: ReturnType<typeof getProvider> }>,
@@ -880,9 +963,29 @@ export async function generateDetailPack(input: {
     return still;
   }
 
+  async function waitForAnchorPortrait() {
+    if (portraitUrl || !anchorInflight) return;
+    let pending = [anchorInflight];
+    anchorInflight = null;
+    while (pending.length > 0 && !portraitUrl && now() < packDeadline) {
+      pending = await pollInflight(pending);
+      if (portraitUrl || pending.length === 0) break;
+      if (packDeadline - now() < 1) break;
+      await sleep(2_000);
+    }
+    if (pending.length > 0) inflight.push(...pending);
+  }
+
   try {
     for (let index = 0; index < shots.length; index += 1) {
       const shot = shots[index];
+      const people = shotPeople(shot);
+      if (styleLocked && people && shot.key !== anchorKey && !portraitUrl && anchorInflight) {
+        await waitForAnchorPortrait();
+      }
+      if (styleLocked && !portraitUrl && !anchorKey && people && isPortraitAnchor(shot.key)) {
+        anchorKey = shot.key;
+      }
       const planned = planShot(shot);
       const baseAttempt = {
         key: shot.key,
@@ -967,8 +1070,19 @@ export async function generateDetailPack(input: {
         continue;
       }
 
+      // The portrait anchor stays out of the shared poll until a later people
+      // shot needs its face, or until the rest of the pack is submitted.
+      if (attempt.key === anchorKey && !portraitUrl) {
+        anchorInflight = { attempt, provider: planned.provider };
+        continue;
+      }
       // Submit the rest of this pack before waiting on this shot.
       inflight.push({ attempt, provider: planned.provider });
+    }
+
+    if (anchorInflight) {
+      inflight.push(anchorInflight);
+      anchorInflight = null;
     }
 
     let pending = inflight;
