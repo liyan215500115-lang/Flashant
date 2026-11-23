@@ -85,7 +85,10 @@ export function collectUserControlledPrompts(input: {
   if (Array.isArray(input.detailTypes)) {
     for (const item of input.detailTypes) {
       if (!item || typeof item !== "object") continue;
-      const record = item as { prompt?: unknown; key?: unknown };
+      const record = item as { prompt?: unknown; key?: unknown; specText?: unknown };
+      if (typeof record.specText === "string" && record.specText.trim()) {
+        prompts.push(record.specText.trim());
+      }
       if (typeof record.prompt !== "string") continue;
       const trimmed = record.prompt.trim();
       if (!trimmed) continue;

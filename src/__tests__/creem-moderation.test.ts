@@ -75,6 +75,13 @@ describe("user-controlled prompt selection", () => {
     ).toEqual([]);
   });
 
+  it("screens spec text even when the model prompt is empty", () => {
+    expect(promptsForModeration(
+      { detailTypes: [{ key: "selling_points", prompt: "", specText: "温和保湿" }] },
+      fragments,
+    )).toEqual(["温和保湿"]);
+  });
+
   it("screens typed detail text without the surrounding scene template", () => {
     const screened = promptsForModeration(
       {

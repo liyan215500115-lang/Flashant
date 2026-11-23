@@ -128,6 +128,20 @@ export async function uploadBuffer(
   return { s3Key, publicUrl };
 }
 
+/** Read an object we stored. Caller must already know the key belongs to this user. */
+export async function readObjectBuffer(s3Key: string): Promise<{ buffer: Buffer; contentType: string }> {
+  const bucket = process.env.S3_BUCKET ?? "uploads";
+  const stored = await getClient();
+  const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+  const result = await stored.send(new GetObjectCommand({ Bucket: bucket, Key: s3Key }));
+  const bytes = await result.Body?.transformToByteArray();
+  if (!bytes || bytes.byteLength === 0) throw new Error("empty object");
+  return {
+    buffer: Buffer.from(bytes),
+    contentType: result.ContentType || "image/png",
+  };
+}
+
 /** Save a buffer locally (dev only). Throws in production. */
 export async function saveBufferLocally(
   buffer: Buffer,

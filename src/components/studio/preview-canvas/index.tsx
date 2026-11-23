@@ -5,7 +5,9 @@ import { Sparkles, AlertTriangle, X, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
 import { downloadUrl } from "@/lib/download-image";
+import { generatedImageFilePath } from "@/lib/stored-image";
 import { quotaBadgeText } from "@/lib/quota-display";
+import { toast } from "sonner";
 
 interface PreviewImage {
   id: string;
@@ -127,7 +129,12 @@ export function StudioPreviewCanvas({
             <button
               type="button"
               onClick={() => {
-                void downloadUrl(latestImage.url, `flashant-${latestImage.id.slice(0, 8)}.png`);
+                const target = latestImage.id
+                  ? generatedImageFilePath(latestImage.id)
+                  : latestImage.url;
+                void downloadUrl(target, `flashant-${latestImage.id.slice(0, 8)}.png`).then((ok) => {
+                  if (!ok) toast.error(t("generate.downloadFailed"));
+                });
               }}
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-800 cursor-pointer transition-colors"
             >

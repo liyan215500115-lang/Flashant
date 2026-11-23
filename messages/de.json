@@ -505,6 +505,7 @@
     "generatingOverlay": "Flashant is composing your scene, estimated 5–8 seconds...",
     "emptyPreview": "Upload an image and click generate",
     "downloadImage": "Download",
+    "downloadFailed": "Download fehlgeschlagen. Diese Seite bleibt offen.",
     "syncToShopify": "Sync to Shopify",
     "slogan": "Product Photos. Done in a Flash. · 商品图，一拍即成。",
     "modeLabel": "Generation Mode",

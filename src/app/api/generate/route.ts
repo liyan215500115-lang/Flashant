@@ -12,6 +12,9 @@ import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { getSignedGetUrl } from "@/lib/s3";
 import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
+import { isInfoShot } from "@/lib/generate/info-shots";
+import { PRESERVE_PRODUCT_LETTERING } from "@/lib/generate/product-lettering";
+import { compositeSpecCaption } from "@/lib/spec-caption";
 import { prepareReferenceImage } from "@/lib/reference-image";
 import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES, BEAUTY_DARK_SURFACE_GUARD } from "@/lib/ai/constants";
 import { chargeScreenedGeneration, localPlanTier, refundGenerationDebit, type DebitHold } from "@/lib/creem/credits-runtime";
@@ -113,7 +116,7 @@ const TYPE_TEMPLATES: Record<string, {
   },
   // ── Info/spec types (white bg + text overlay via Canvas) ──
   selling_points: {
-    composition: "Product centered on pure white infinity background, filling 85% of frame, generous empty space around product for text overlay",
+    composition: "Product centered in the upper portion of a pure white infinity background, occupying about 60% of the frame height, with white space on the sides and a clear empty white caption band across the bottom of at least 22% of the frame. Do not let the product touch the bottom edge",
     lighting: "Three-point studio lighting: large softbox key from top-left, subtle fill from front, soft rim from back-right, 5500K",
     camera: "f/8 for full product sharpness, 70mm lens, straight-on product photography angle",
     mood: "Clean minimal e-commerce packshot, pure professional presentation",
@@ -251,10 +254,49 @@ function modelVersionForEngine(engine: string, provider: { model?: string } | un
   return ENGINE_MODELS[engine];
 }
 
+const PERSIST_ATTEMPTS = 3;
+const PERSIST_RETRY_MS = 150;
+
+/**
+ * Copy a provider image onto our storage as soon as the bytes are in hand.
+ * Retries a timed-out fetch (a US function pulling Shanghai COS) and only then
+ * keeps the provider URL. The URL is not logged: signed provider URLs can carry secrets.
+ * A failed transfer is not reported as our file.
+ */
+async function reuploadGeneratedImage(input: {
+  sourceUrl: string;
+  buffer?: Buffer;
+  mimeType: string;
+  generatedImageId: string;
+}): Promise<string> {
+  if (!hasS3Config()) return input.sourceUrl;
+  let lastMessage = "persist_failed";
+  for (let attempt = 1; attempt <= PERSIST_ATTEMPTS; attempt += 1) {
+    try {
+      const imageBuf = input.buffer ?? await fetchImageBuffer(input.sourceUrl, 12_000);
+      const uploaded = await uploadBuffer(imageBuf, input.mimeType || "image/png", "generated/");
+      await db.generatedImage.update({
+        where: { id: input.generatedImageId },
+        data: { url: uploaded.publicUrl, s3Key: uploaded.s3Key },
+      });
+      return uploaded.publicUrl;
+    } catch (error) {
+      lastMessage = error instanceof Error ? error.message : "persist_failed";
+      console.error(`Failed to persist generated image (attempt ${attempt}/${PERSIST_ATTEMPTS}): ${lastMessage}`);
+      if (attempt < PERSIST_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, PERSIST_RETRY_MS * attempt));
+      }
+    }
+  }
+  console.error("Generated image persistence failed after retries; keeping the provider URL");
+  return input.sourceUrl;
+}
+
 /**
  * Re-upload a generated image to R2 (so it doesn't expire) and optionally apply a
  * brand logo overlay for non-FREE users. Returns the final URL and updates the
  * generatedImage DB record in place.
+ * `sourceBuffer` is the image to store, including a spec caption already drawn on it.
  */
 async function postProcessImage(
   imageUrl: string,
@@ -262,25 +304,14 @@ async function postProcessImage(
   generatedImageId: string,
   brandPreset: { logoUrl?: string | null } | null,
   quotaTier: string,
+  sourceBuffer?: Buffer,
 ): Promise<string> {
-  let finalUrl = imageUrl;
-
-  // Re-upload to R2 so the image doesn't expire with the provider
-  if (hasS3Config()) {
-    try {
-      const imageBuf = await fetchImageBuffer(imageUrl);
-      const { publicUrl: newUrl, s3Key: newKey } = await uploadBuffer(
-        imageBuf,
-        mimeType || "image/png",
-        "generated/",
-      );
-      finalUrl = newUrl;
-      await db.generatedImage.update({
-        where: { id: generatedImageId },
-        data: { url: newUrl, s3Key: newKey },
-      });
-    } catch { /* keep provider URL as fallback */ }
-  }
+  let finalUrl = await reuploadGeneratedImage({
+    sourceUrl: imageUrl,
+    buffer: sourceBuffer,
+    mimeType,
+    generatedImageId,
+  });
 
   // Apply brand logo overlay if present (non-FREE users)
   const presetLogo = brandPreset?.logoUrl;
@@ -337,6 +368,7 @@ function generationStaticFragments(): string[] {
     BEAUTY_DARK_SURFACE_GUARD,
     "CRITICAL: Keep the product and any person visually IDENTICAL to the reference image — same shape, same color, same materials, same details. Only change the background, scene, pose, framing, or camera angle. Do NOT substitute the product with a different one.",
     "CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.",
+    PRESERVE_PRODUCT_LETTERING,
     "Keep any person visually identical to the reference image — same face, same body, same clothing.",
     BEAUTY_PERSON_CLOSEUP_PROMPT,
     PRODUCT_MACRO_LOCK,
@@ -347,11 +379,11 @@ function generationStaticFragments(): string[] {
   return fragments;
 }
 
-type DetailShotInput = { key?: unknown; prompt?: unknown };
+type DetailShotInput = { key?: unknown; prompt?: unknown; specText?: unknown };
 
-function detailShotList(value: unknown): Array<{ key: string; prompt: string }> {
+function detailShotList(value: unknown): Array<{ key: string; prompt: string; specText: string }> {
   if (!Array.isArray(value)) return [];
-  const shots: Array<{ key: string; prompt: string }> = [];
+  const shots: Array<{ key: string; prompt: string; specText: string }> = [];
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
     const record = item as DetailShotInput;
@@ -359,13 +391,20 @@ function detailShotList(value: unknown): Array<{ key: string; prompt: string }> 
     shots.push({
       key: record.key.trim(),
       prompt: typeof record.prompt === "string" ? record.prompt : "",
+      specText: typeof record.specText === "string" ? record.specText.trim() : "",
     });
   }
   return shots;
 }
 
+function withoutSpecText(prompt: string, specText: string): string {
+  const spec = specText.trim();
+  if (!spec || !prompt.includes(spec)) return prompt;
+  return prompt.split(spec).join(" ").replace(/\s+/g, " ").trim();
+}
+
 function assemblePackPrompt(
-  dt: { key: string; prompt: string },
+  dt: { key: string; prompt: string; specText?: string },
   plan: PackShotPlan,
   input: { baseStyle?: string; referenceImageUrl?: string; category?: string },
 ): string {
@@ -373,22 +412,28 @@ function assemblePackPrompt(
   if (plan.promptOverride) {
     return applyPackPromptGuards(plan.promptOverride, { detailKey: dt.key, styleLocked });
   }
-  const userPrompt = dt.prompt && dt.prompt !== dt.key ? dt.prompt : "";
+  const infoShot = isInfoShot(dt.key);
+  const specText = dt.specText?.trim() ?? "";
+  const supplied = dt.prompt && dt.prompt !== dt.key ? withoutSpecText(dt.prompt, specText) : "";
+  // Info shots are a clean product photo. Spec text is composited afterwards and must not be painted by the model.
+  const userPrompt = infoShot ? "" : supplied;
   const tpl = TYPE_TEMPLATES[dt.key];
   const catProfile = input.category ? CATEGORY_PROFILES[input.category] : null;
   const categoryHint = !plan.omitCategoryHint && catProfile?.compositionHint
     ? ` ${catProfile.compositionHint}.`
     : "";
-  const wantsTextOnImage = /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
-  const styleHint = input.baseStyle && !wantsTextOnImage
+  const wantsTextOnImage = !infoShot && /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
+  const styleHint = !infoShot && input.baseStyle && !wantsTextOnImage
     ? ` Keep the same overall style, material, and color: ${input.baseStyle}.`
     : "";
   const identityLock = input.referenceImageUrl && !wantsTextOnImage && plan.mode !== "product_macro" && dt.key !== "multi_angle"
     ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
     : "";
-  const noTextGuard = wantsTextOnImage
-    ? ""
-    : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
+  const noTextGuard = infoShot
+    ? ` ${PRESERVE_PRODUCT_LETTERING}`
+    : wantsTextOnImage
+      ? ""
+      : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
   const beautySurfaceGuard = input.category === "beauty" ? BEAUTY_DARK_SURFACE_GUARD : "";
   const body = tpl
     ? [
@@ -571,6 +616,7 @@ export async function generateDetailPack(input: {
   type Attempt = {
     key: string;
     prompt: string;
+    specText: string;
     engine: string;
     modelVersion?: string;
     hold: DebitHold | null;
@@ -579,7 +625,7 @@ export async function generateDetailPack(input: {
     error?: string;
   };
 
-  const generated: Array<{ key: string; url: string; label: string }> = [];
+  const generated: Array<{ key: string; url: string; label: string; id: string }> = [];
   const failed: Array<{ key: string; reason: string; creditsRefunded: boolean; charged: boolean }> = [];
   let creditsRefunded = 0;
   let creditsCharged = 0;
@@ -596,7 +642,7 @@ export async function generateDetailPack(input: {
     if (hold) unsettled.delete(hold.transactionId);
   }
 
-  function planShot(shot: { key: string; prompt: string }) {
+  function planShot(shot: { key: string; prompt: string; specText: string }) {
     const plan = planPackShot({
       detailKey: shot.key,
       category: input.category,
@@ -673,14 +719,28 @@ export async function generateDetailPack(input: {
     failed.push({ key: attempt.key, reason: message, creditsRefunded: refunded, charged });
   }
 
-  async function storeSuccess(attempt: Attempt, url: string) {
+  async function storeSuccess(attempt: Attempt, providerUrl: string) {
+    const spec = isInfoShot(attempt.key) ? attempt.specText.trim() : "";
+    let captioned: Buffer | undefined;
+    if (spec) {
+      try {
+        const source = await fetchImageBuffer(providerUrl, 12_000);
+        captioned = await compositeSpecCaption(source, spec);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "caption_overlay_failed";
+        console.error(`Spec caption overlay failed: ${message}`);
+        await settleFailure(attempt, "caption_overlay_failed");
+        return;
+      }
+    }
+
     const meta = shotMeta(attempt);
     const created = await db.generatedImage.create({
       data: {
         imageProjectId: input.imageProjectId,
         productImageId: input.productImageId,
-        s3Key: url,
-        url,
+        s3Key: providerUrl,
+        url: providerUrl,
         promptUsed: attempt.prompt,
         aiProvider: attempt.engine,
         ...(attempt.modelVersion ? { modelVersion: attempt.modelVersion } : {}),
@@ -690,8 +750,71 @@ export async function generateDetailPack(input: {
       },
     });
     rememberPackRow(created, meta);
+    const imageId = created?.id ? String(created.id) : "";
+
+    let finalUrl = providerUrl;
+    if (imageId) {
+      try {
+        finalUrl = await postProcessImage(
+          providerUrl,
+          "image/png",
+          imageId,
+          null,
+          "FREE",
+          captioned,
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "persist_failed";
+        console.error(`Pack image persistence failed: ${message}`);
+        finalUrl = providerUrl;
+      }
+    }
+
+    // A caption that never landed in our storage must not look like a finished image.
+    if (spec && finalUrl === providerUrl) {
+      const refunded = attempt.hold ? (await refundGenerationDebit(attempt.hold)).reversed : false;
+      forgetHold(attempt.hold);
+      if (refunded) creditsRefunded += 1;
+      if (imageId) {
+        try {
+          await db.generatedImage.update({
+            where: { id: imageId },
+            data: {
+              status: "FAILED",
+              errorMessage: "caption_not_persisted",
+              url: "",
+              s3Key: "failed",
+            },
+          });
+        } catch (error) {
+          console.error("Failed to record caption persistence failure", error);
+        }
+      }
+      failed.push({
+        key: attempt.key,
+        reason: "caption_not_persisted",
+        creditsRefunded: refunded,
+        charged: Boolean(attempt.hold),
+      });
+      return;
+    }
+
     forgetHold(attempt.hold);
-    generated.push({ key: attempt.key, url, label: attempt.key });
+    if (imageId && finalUrl !== providerUrl) {
+      try {
+        await db.generatedImage.update({
+          where: { id: imageId },
+          data: {
+            status: "SUCCEEDED",
+            url: finalUrl,
+            completedAt: new Date(),
+          },
+        });
+      } catch (error) {
+        console.error("Failed to mark pack image succeeded", error);
+      }
+    }
+    generated.push({ key: attempt.key, url: finalUrl, label: attempt.key, id: imageId });
     if (attempt.hold) creditsCharged += 1;
     try {
       await db.task.create({
@@ -700,7 +823,7 @@ export async function generateDetailPack(input: {
           productImageId: input.productImageId,
           engineType: attempt.engine,
           status: "SUCCEEDED",
-          resultUrl: url,
+          resultUrl: finalUrl,
           predictionId: attempt.predictionId,
           generationMeta: meta as Prisma.InputJsonValue,
         },
@@ -759,6 +882,7 @@ export async function generateDetailPack(input: {
       const baseAttempt = {
         key: shot.key,
         prompt: planned.prompt,
+        specText: shot.specText,
         engine: planned.engine,
         modelVersion: planned.modelVersion,
       };
@@ -785,6 +909,7 @@ export async function generateDetailPack(input: {
             await settleFailure({
               key: restShot.key,
               prompt: restPlan.prompt,
+              specText: restShot.specText,
               engine: restPlan.engine,
               modelVersion: restPlan.modelVersion,
               hold: null,

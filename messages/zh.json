@@ -516,6 +516,7 @@
     "generatingOverlay": "闪象正在为你重构画面，预计需要 5-8 秒...",
     "emptyPreview": "上传图片并点击生成",
     "downloadImage": "下载",
+    "downloadFailed": "下载失败，页面会留在这里。请重试。",
     "syncToShopify": "同步至 Shopify",
     "slogan": "一键闪象，万象更新 · Product photos. Done in a flash.",
     "modeLabel": "生成模式",

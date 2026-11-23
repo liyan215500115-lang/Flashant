@@ -8,6 +8,9 @@ const isVercel = process.env.VERCEL === "1";
 const nextConfig: NextConfig = {
   // standalone output for Docker self-hosting; default output for Vercel
   ...(!isVercel && { output: "standalone" }),
+  outputFileTracingIncludes: {
+    "/api/generate": ["./assets/fonts/DroidSansFallbackFull.ttf"],
+  },
   // native pg packages only needed for direct TCP connections (local dev / Docker)
   serverExternalPackages: isVercel
     ? []

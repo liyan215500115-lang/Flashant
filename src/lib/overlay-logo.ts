@@ -40,8 +40,8 @@ export async function overlayLogo(
 /**
  * Fetch an image from a URL and return it as a Buffer.
  */
-export async function fetchImageBuffer(url: string): Promise<Buffer> {
-  const res = await fetch(url);
+export async function fetchImageBuffer(url: string, timeoutMs = 20_000): Promise<Buffer> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
   return Buffer.from(await res.arrayBuffer());
 }

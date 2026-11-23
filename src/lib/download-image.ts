@@ -12,22 +12,13 @@ export function downloadBlob(blob: Blob, fileName: string) {
 export async function downloadUrl(url: string, fileName: string): Promise<boolean> {
   try {
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`download failed (${res.status})`);
-    downloadBlob(await res.blob(), fileName);
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    if (!blob.size) return false;
+    downloadBlob(blob, fileName);
     return true;
   } catch {
-    try {
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      a.rel = "noopener noreferrer";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      return true;
-    } catch {
-      return false;
-    }
+    return false;
   }
 }
 

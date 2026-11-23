@@ -18,6 +18,10 @@ import {
   pollPackUntilSettled,
   type PackRunView,
 } from "@/lib/generate/pack-run-client";
+import { isInfoShot } from "@/lib/generate/info-shots";
+import { packShotRequest } from "@/lib/generate/pack-shot-request";
+import { downloadUrl } from "@/lib/download-image";
+import { generatedImageFilePath } from "@/lib/stored-image";
 
 const TYPE_GROUPS = [
   {
@@ -75,8 +79,6 @@ const TYPE_LABELS: Record<string, string> = {
   gift_accessory: "配件赠品",
 };
 
-const INFO_TYPES = new Set(["selling_points", "material", "size", "craft", "compare"]);
-
 interface StudioDetailPanelProps {
   projectId: string | null;
   productImageId: string;
@@ -85,10 +87,11 @@ interface StudioDetailPanelProps {
   referenceHasPerson?: boolean;
   targetPlatform?: string;
   onDetailGenerated?: (results: Array<{key:string;url:string;label:string}>) => void;
-  initialResults?: Array<{key:string; url:string; label:string; rawUrl:string}>;
+  initialResults?: Array<{key:string; url:string; label:string; rawUrl:string; id?: string}>;
   initialFailures?: Array<{ key: string; reason: string }>;
   initialSummary?: string;
   onEngineResolved?: (selection: { engine: string; label: string }) => void;
+  onPackSettled?: () => void;
 }
 
 function hashString(str: string): number {
@@ -99,32 +102,7 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-async function overlayTextOnImage(imageUrl: string, text: string): Promise<string> {
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new window.Image(); i.crossOrigin = "anonymous"; i.onload = () => resolve(i); i.onerror = reject; i.src = imageUrl;
-  });
-  const canvas = document.createElement("canvas");
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0);
-
-  if (text.trim()) {
-    const fontSize = Math.max(32, Math.floor(img.width / 18));
-    ctx.font = `700 ${fontSize}px Inter, -apple-system, sans-serif`;
-    ctx.fillStyle = "#1a1a1a";
-    ctx.textAlign = "center";
-    const lines = text.split("\n");
-    const lineHeight = fontSize * 1.4;
-    const startY = img.height / 2 - (lines.length * lineHeight) / 2;
-    lines.forEach((line, i) => ctx.fillText(line, img.width / 2, startY + i * lineHeight));
-    ctx.textAlign = "left";
-  }
-
-  return new Promise((resolve) => canvas.toBlob((b) => resolve(URL.createObjectURL(b!)), "image/png", 1.0));
-}
-
-export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures, initialSummary, onEngineResolved }: StudioDetailPanelProps) {
+export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures, initialSummary, onEngineResolved, onPackSettled }: StudioDetailPanelProps) {
   const { t, locale } = useT();
   const [open, setOpen] = useState(!!initialResults?.length);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(GENERAL_PACK));
@@ -138,7 +116,8 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   const packLock = useRef(false);
   const [enhancing, setEnhancing] = useState(false);
   const [stageLabel, setStageLabel] = useState("");
-  const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string }>>([]);
+  const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string; id?: string }>>([]);
+  const [downloadNotice, setDownloadNotice] = useState("");
   const [failures, setFailures] = useState<Array<{ key: string; reason: string }>>([]);
   const [batchSummary, setBatchSummary] = useState("");
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -274,6 +253,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         url: shot.url,
         rawUrl: shot.url,
         label: TYPE_LABELS[shot.key] || shot.label || shot.key,
+        id: shot.id,
       }));
       setResults(out);
       onDetailGenerated?.(out);
@@ -291,6 +271,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     setResults([]);
     setFailures([]);
     setBatchSummary("");
+    setDownloadNotice("");
     const types = [...selected].map(key => ({ key, zh: TYPE_LABELS[key] || key }));
 
     const styleSeed = lockStyle ? Math.abs(hashString(projectId)) % 100000 : undefined;
@@ -299,6 +280,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
       if (requestRef.current !== requestId) return;
       packLock.current = false;
       setGenerating(false);
+      onPackSettled?.();
     };
 
     const recoverFromDisconnect = async () => {
@@ -337,9 +319,12 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         body: JSON.stringify({
           imageProjectId: projectId,
           productImageId,
-          detailTypes: types.map((t) => ({
+          detailTypes: types.map((t) => packShotRequest({
             key: t.key,
-            prompt: [TYPE_LABELS[t.key], basePrompt, perTypeDesc[t.key] || ""].filter(Boolean).join(" — "),
+            label: t.zh,
+            basePrompt,
+            note: perTypeDesc[t.key] || "",
+            info: isInfoShot(t.key),
           })),
           baseStyle: lockStyle ? basePrompt : undefined,
           referenceImageUrl: styleRef,
@@ -352,7 +337,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         }),
       });
       let data: {
-        generated?: Array<{ key: string; url: string; label?: string }>;
+        generated?: Array<{ key: string; url: string; label?: string; id?: string }>;
         failed?: Array<{ key?: string; reason?: string }>;
         requested?: number;
         completed?: number;
@@ -409,12 +394,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         const out: typeof results = [];
         for (const g of generated) {
           const label = TYPE_LABELS[g.key] || g.label || g.key;
-          const isInfo = INFO_TYPES.has(g.key);
-          const desc = perTypeDesc[g.key] || "";
-          const overlayedUrl = isInfo && desc.trim()
-            ? await overlayTextOnImage(g.url, desc).catch(() => g.url)
-            : g.url;
-          out.push({ key: g.key, url: overlayedUrl, rawUrl: g.url, label });
+          out.push({ key: g.key, url: g.url, rawUrl: g.url, label, id: g.id });
         }
         setResults(out);
         onDetailGenerated?.(out);
@@ -551,7 +531,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
                     type="text"
                     value={perTypeDesc[typeKey] ?? ""}
                     onChange={(e) => setPerTypeDesc(p => ({ ...p, [typeKey]: e.target.value }))}
-                    placeholder={INFO_TYPES.has(typeKey) ? "规格文字（写在图上）" : "AI 视觉描述（不写字）"}
+                    placeholder={isInfoShot(typeKey) ? "规格文字（写在图上）" : "AI 视觉描述（不写字）"}
                     className="flex-1 rounded-md border border-zinc-200 px-2 py-1 text-[10px] placeholder:text-zinc-300 focus:border-brand-500 focus:outline-none"
                   />
                 </div>
@@ -591,6 +571,9 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
           {batchSummary && (
             <p className="mt-2 text-[11px] text-center text-zinc-600">{batchSummary}</p>
           )}
+          {downloadNotice && (
+            <p className="mt-1 text-[11px] text-center text-red-600">{downloadNotice}</p>
+          )}
           {failures.length > 0 && (
             <ul className="mt-2 space-y-1">
               {failures.map((failure) => (
@@ -618,11 +601,22 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
                           </button>
                           <div className="flex items-center justify-between px-1 pb-1">
                             <p className="text-[9px] text-zinc-600 truncate">{r.label}</p>
-                            <a href={r.rawUrl ?? r.url} download={`${r.label}.png`}
+                            <button
+                              type="button"
                               className="text-[9px] text-zinc-400 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-all"
-                              onClick={(e) => e.stopPropagation()}>
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const target = r.id ? generatedImageFilePath(r.id) : r.url;
+                                void downloadUrl(target, `${r.label}.png`).then((ok) => {
+                                  if (!ok) {
+                                    setDownloadNotice(locale === "zh"
+                                      ? "下载失败，页面会留在这里。请重试。"
+                                      : "Couldn't download. This page stays open.");
+                                  }
+                                });
+                              }}>
                               下载
-                            </a>
+                            </button>
                           </div>
                         </div>
                       ))}
