@@ -61,6 +61,21 @@ describe("public crawler and legal paths", () => {
     expect(loginCallback(generate)).toBeNull();
   });
 
+  it("does not send a custom-domain login redirect to the Vercel deployment host", async () => {
+    const response = await proxy(new NextRequest("https://flashant.vercel.app/dashboard", {
+      headers: {
+        host: "flashant.cn",
+        "x-forwarded-host": "flashant.cn",
+        "x-forwarded-proto": "https",
+      },
+    }));
+    expect(response.status).toBe(307);
+    const location = response.headers.get("location") ?? "";
+    expect(location.startsWith("https://flashant.cn/login")).toBe(true);
+    expect(location).not.toContain("vercel.app");
+    expect(new URL(location).searchParams.get("callbackUrl")).toBe("/dashboard");
+  });
+
   it("allows the public pages in robots.txt and does not disallow them", () => {
     const result = robots();
     const rules = Array.isArray(result.rules) ? result.rules : [result.rules];

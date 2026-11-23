@@ -142,6 +142,34 @@ export async function readObjectBuffer(s3Key: string): Promise<{ buffer: Buffer;
   };
 }
 
+/**
+ * Stream an object we stored. Buffering the whole file into a Uint8Array before
+ * the response starts drops the connection on a larger older image
+ * (ERR_CONNECTION_CLOSED). A hung read becomes an error instead of an open socket.
+ */
+export async function openStoredObject(s3Key: string): Promise<{
+  stream: ReadableStream<Uint8Array>;
+  contentType: string;
+  contentLength: number | null;
+}> {
+  const bucket = process.env.S3_BUCKET ?? "uploads";
+  const stored = await getClient();
+  const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+  const result = await stored.send(
+    new GetObjectCommand({ Bucket: bucket, Key: s3Key }),
+    { abortSignal: AbortSignal.timeout(20_000) },
+  );
+  if (!result.Body) throw new Error("empty object");
+  const length = result.ContentLength;
+  const contentLength = typeof length === "number" && Number.isFinite(length) && length > 0 ? length : null;
+  if (length === 0) throw new Error("empty object");
+  return {
+    stream: result.Body.transformToWebStream(),
+    contentType: result.ContentType || "application/octet-stream",
+    contentLength,
+  };
+}
+
 /** Save a buffer locally (dev only). Throws in production. */
 export async function saveBufferLocally(
   buffer: Buffer,

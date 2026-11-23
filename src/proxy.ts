@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { chooseAuthOrigin } from "@/lib/auth-base-url";
 import { isPublicCrawlerPath, isPublicLegalPath, normalizePathname } from "@/lib/legal/paths";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -69,7 +70,14 @@ export async function proxy(request: NextRequest) {
   // ── Page routes: redirect to login if no session ──
   const session = await auth();
   if (!session?.user?.id) {
-    const redirectUrl = new URL("/login", request.url);
+    const origin = chooseAuthOrigin({
+      env: process.env,
+      forwardedHost: request.headers.get("x-forwarded-host"),
+      forwardedProto: request.headers.get("x-forwarded-proto"),
+      host: request.headers.get("host"),
+      requestUrl: request.url,
+    }) ?? request.nextUrl.origin;
+    const redirectUrl = new URL("/login", origin);
     redirectUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(redirectUrl);
   }

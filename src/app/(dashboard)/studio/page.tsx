@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
 import { workbenchEngineFromShots } from "@/lib/generate/engine-label";
 import { loadProjectWithRetry } from "@/lib/project-load";
-import { refreshWorkbenchQuota } from "@/lib/quota-display";
+import { refreshWorkbenchQuota, type QuotaSnapshot } from "@/lib/quota-display";
 import { packWorkbenchEngine, singleImageEngineType } from "@/lib/generate/pack-engine";
 
 interface ProductImage {
@@ -85,28 +85,25 @@ export default function StudioPage() {
   const [quotaTier, setQuotaTier] = useState<string | null>(null);
   const [allotmentConfigured, setAllotmentConfigured] = useState(false);
   const [quotaLoading, setQuotaLoading] = useState(true);
+  const quotaRef = useRef<QuotaSnapshot | null>(null);
 
-  function applyQuota(data: {
-    used?: number;
-    limit?: number;
-    tier?: string;
-    allotmentConfigured?: boolean;
-  }) {
-    setQuotaUsed(data.used ?? 0);
-    setQuotaLimit(typeof data.limit === "number" ? data.limit : 0);
-    setQuotaTier(data.tier ?? null);
-    setAllotmentConfigured(data.allotmentConfigured === true);
-    setQuotaLoading(false);
-  }
-
-  const refreshQuota = useCallback(() => {
+  const refreshQuota = useCallback((reason?: "settle") => {
+    const baseline = reason === "settle" ? quotaRef.current : null;
     void refreshWorkbenchQuota({
       fetchQuota: async () => {
         const response = await fetch("/api/quota");
         if (!response.ok) throw new Error("quota");
         return response.json();
       },
-      apply: applyQuota,
+      apply: (quota) => {
+        quotaRef.current = quota;
+        setQuotaUsed(quota.used);
+        setQuotaLimit(typeof quota.limit === "number" ? quota.limit : 0);
+        setQuotaTier(quota.tier ?? null);
+        setAllotmentConfigured(quota.allotmentConfigured === true);
+        setQuotaLoading(false);
+      },
+      untilDiffersFrom: baseline,
     });
   }, []);
 
@@ -280,7 +277,7 @@ export default function StudioPage() {
             });
             setIsGenerating(false);
             toast.success(t("generate.success"));
-            refreshQuota();
+            refreshQuota("settle");
             return;
           }
           if (data.task?.status === "FAILED") {
@@ -351,7 +348,7 @@ export default function StudioPage() {
           });
         }
         toast.success(`Generated ${newPreviews.length} image${newPreviews.length > 1 ? "s" : ""}`);
-        refreshQuota();
+        refreshQuota("settle");
       } else if (data.taskId) {
         pollTask(data.taskId);
         return; // polling manages its own setIsGenerating(false)
@@ -484,8 +481,15 @@ export default function StudioPage() {
                   setVegaModelLabel(selection.label);
                 }
               }}
+              onViewShot={(shot) => {
+                setLatestImage(shot);
+                setGenerationHistory((prev) => {
+                  const next = [shot, ...prev.filter((item) => item.id !== shot.id || item.url !== shot.url)];
+                  return next.slice(0, 12);
+                });
+              }}
               onPackSettled={() => {
-                refreshQuota();
+                refreshQuota("settle");
               }}
             />
           )}

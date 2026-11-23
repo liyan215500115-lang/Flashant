@@ -13,7 +13,7 @@ import { getSignedGetUrl } from "@/lib/s3";
 import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { isInfoShot } from "@/lib/generate/info-shots";
-import { PRESERVE_PRODUCT_LETTERING } from "@/lib/generate/product-lettering";
+import { BLANKET_TEXT_BAN, PRESERVE_PRODUCT_LETTERING, shotPreservesProductLettering } from "@/lib/generate/product-lettering";
 import { compositeSpecCaption } from "@/lib/spec-caption";
 import { prepareReferenceImage } from "@/lib/reference-image";
 import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES, BEAUTY_DARK_SURFACE_GUARD } from "@/lib/ai/constants";
@@ -429,11 +429,14 @@ function assemblePackPrompt(
   const identityLock = input.referenceImageUrl && !wantsTextOnImage && plan.mode !== "product_macro" && dt.key !== "multi_angle"
     ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
     : "";
-  const noTextGuard = infoShot
+  // Product-showing shots keep printed brand lettering. The blanket ban erases it.
+  // Spec text is not part of this prompt; info shots overlay it after generation.
+  const preserveLettering = infoShot || shotPreservesProductLettering(dt.key);
+  const noTextGuard = preserveLettering
     ? ` ${PRESERVE_PRODUCT_LETTERING}`
     : wantsTextOnImage
       ? ""
-      : " CRITICAL: do NOT render any text, words, letters, labels, numbers, or writing on the image.";
+      : ` CRITICAL: ${BLANKET_TEXT_BAN}, numbers, or writing on the image.`;
   const beautySurfaceGuard = input.category === "beauty" ? BEAUTY_DARK_SURFACE_GUARD : "";
   const body = tpl
     ? [
@@ -451,7 +454,8 @@ function assemblePackPrompt(
       ].filter(Boolean).join(". ").trim()
     : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}${beautySurfaceGuard ? ` ${beautySurfaceGuard}` : ""}`.trim();
   const withMacro = plan.mode === "product_macro" ? `${body} ${PRODUCT_MACRO_LOCK}`.trim() : body;
-  return applyPackPromptGuards(withMacro, { detailKey: dt.key, styleLocked });
+  const guarded = applyPackPromptGuards(withMacro, { detailKey: dt.key, styleLocked });
+  return specText ? withoutSpecText(guarded, specText) : guarded;
 }
 
 /**
