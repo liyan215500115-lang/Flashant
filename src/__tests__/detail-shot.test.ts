@@ -5,6 +5,7 @@ import {
   BEAUTY_PERSON_CLOSEUP_PROMPT,
   COMPARE_NAMED_DIFFERENCES,
   COMPARE_ONLY_REAL_ATTRIBUTES,
+  COMPARE_SPLIT_LAYOUT,
   copyListsMultipleColors,
   extraPackInstructions,
   JEWELRY_SILHOUETTE_LOCK,
@@ -177,14 +178,22 @@ describe("single-color merchandising and compare fidelity", () => {
 
   it("lets compare contrast only real attributes and forbids an invented colorway or logo", () => {
     const single = packShotTemplatePatch("compare", "closed white charging case");
-    expect(single.composition).toBe(COMPARE_ONLY_REAL_ATTRIBUTES);
+    expect(single.composition?.startsWith(COMPARE_SPLIT_LAYOUT)).toBe(true);
+    expect(single.composition).toContain("side by side");
+    expect(single.composition).toContain("vertical dividing line centered");
+    expect(single.composition).toContain("pure white background");
+    expect(single.composition).toContain("identical lighting and scale both sides");
+    expect(single.composition).toContain(COMPARE_ONLY_REAL_ATTRIBUTES);
     expect(single.composition).toContain("do not invent a second colorway");
     expect(single.composition).toContain("logo");
     expect(single.composition).toContain("garbled lettering");
     expect(single.composition).toContain("under-glow");
 
     const named = packShotTemplatePatch("compare", "black and white cases");
-    expect(named.composition).toBe(COMPARE_NAMED_DIFFERENCES);
+    expect(named.composition?.startsWith(COMPARE_SPLIT_LAYOUT)).toBe(true);
+    expect(named.composition).toContain("side by side");
+    expect(named.composition).toContain("vertical dividing line centered");
+    expect(named.composition).toContain(COMPARE_NAMED_DIFFERENCES);
     expect(named.composition).toContain("Do not invent an extra colorway");
   });
 

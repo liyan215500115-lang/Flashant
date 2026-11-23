@@ -934,6 +934,10 @@ describe("POST /api/generate pack shots", () => {
     const angles = prompts.find((prompt) => prompt.includes("case angles"));
     expect(selling).toContain(SELLING_POINTS_UNCHANGED_PRODUCT);
     expect(selling?.toLowerCase()).not.toContain("neon accent");
+    expect(compare).toContain("Split-screen comparison layout");
+    expect(compare).toContain("side by side");
+    expect(compare).toContain("vertical dividing line centered");
+    expect(compare).toContain("identical lighting and scale both sides");
     expect(compare).toContain(COMPARE_ONLY_REAL_ATTRIBUTES);
     expect(compare).toContain("logo");
     expect(angles).toContain(NO_UNSEEN_STRUCTURE);

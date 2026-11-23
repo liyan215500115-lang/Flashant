@@ -27,6 +27,10 @@ export const MULTI_ANGLE_DISTINCT_VIEWS =
 export const MULTI_ANGLE_CAMERA =
   "Move the camera between a front view, a side profile near 90 degrees, and a back or opposite-side view of this same object. A small turn is not an angle change. Keep the product the same size in each view. Do not invent a port, connector, or other hardware on the back. For earrings, the back view shows the ear post and clutch.";
 
+/** Left-right compare frame. Fidelity constraints are appended after this sentence. */
+export const COMPARE_SPLIT_LAYOUT =
+  "Split-screen comparison layout: before/after or version A/B side by side on pure white background, clean vertical dividing line centered, identical lighting and scale both sides";
+
 /** Blocks a second colorway, a logo, or decorative light on a compare frame. */
 export const COMPARE_ONLY_REAL_ATTRIBUTES =
   "Contrast only an attribute or function that is visible in the source image or stated in the copy. If the source has only one color, do not invent a second colorway. Do not paint a logo, brand name, or garbled lettering on the product. Do not add lighting effects, colored rims, under-glow, or indicator lights that are absent from the source. Do not change the product's appearance. Both sides stay this same product unless the copy states a real difference.";
@@ -167,8 +171,9 @@ export function packShotTemplatePatch(detailKey: string, copy: string): {
     };
   }
   if (detailKey === "compare") {
+    const fidelity = copyListsMultipleColors(copy) ? COMPARE_NAMED_DIFFERENCES : COMPARE_ONLY_REAL_ATTRIBUTES;
     return {
-      composition: copyListsMultipleColors(copy) ? COMPARE_NAMED_DIFFERENCES : COMPARE_ONLY_REAL_ATTRIBUTES,
+      composition: `${COMPARE_SPLIT_LAYOUT}. ${fidelity}`,
     };
   }
   return {};
