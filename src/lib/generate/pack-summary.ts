@@ -53,6 +53,19 @@ const TIMEOUT_LABEL: Record<AppLocale, string> = {
   ar: "انتهت مهلة التوليد. أعد المحاولة.",
 };
 
+const CAPTION_LABEL: Record<AppLocale, string> = {
+  zh: "规格文字没有叠加上去，请重试",
+  en: "The spec text could not be added. Please try again.",
+  ja: "仕様テキストを重ねられませんでした。もう一度お試しください。",
+  ko: "규격 문구를 올리지 못했습니다. 다시 시도해 주세요.",
+  es: "No se pudo añadir el texto de la ficha. Inténtalo de nuevo.",
+  fr: "Le texte de fiche n'a pas pu être ajouté. Réessayez.",
+  de: "Der Spezifikationstext konnte nicht gesetzt werden. Bitte erneut versuchen.",
+  "pt-BR": "Não foi possível adicionar o texto da ficha. Tente de novo.",
+  it: "Non è stato possibile aggiungere il testo della scheda. Riprova.",
+  ar: "تعذر إضافة نص المواصفات. أعد المحاولة.",
+};
+
 const GENERIC_LABEL: Record<AppLocale, string> = {
   zh: "生成失败，请重试",
   en: "Generation failed. Please try again.",
@@ -66,10 +79,11 @@ const GENERIC_LABEL: Record<AppLocale, string> = {
   ar: "فشل التوليد. أعد المحاولة.",
 };
 
-type FailureKind = "not_started" | "rate_limit" | "safety" | "timeout" | "generic" | "raw";
+type FailureKind = "not_started" | "rate_limit" | "safety" | "timeout" | "caption" | "generic" | "raw";
 
 function failureKind(reason: string): FailureKind {
   const text = reason.trim();
+  if (text === "caption_overlay_failed" || text === "caption_not_persisted") return "caption";
   if (text === NOT_STARTED_REASON) return "not_started";
   if (/\bprediction_timeout\b/i.test(text)) return "timeout";
   if (/\bE005\b/i.test(text) || /flagged as sensitive/i.test(text)) return "safety";
@@ -91,6 +105,7 @@ export function packFailureReasonLabel(reason: string, locale?: string): string 
   if (kind === "rate_limit") return RATE_LIMIT_LABEL[code];
   if (kind === "safety") return SAFETY_LABEL[code];
   if (kind === "timeout") return TIMEOUT_LABEL[code];
+  if (kind === "caption") return CAPTION_LABEL[code];
   if (kind === "generic") return GENERIC_LABEL[code];
   return reason;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { formatQuotaRemaining, presentQuota, quotaBadgeText } from "@/lib/quota-display";
+import { formatQuotaRemaining, presentQuota, quotaBadgeText, refreshWorkbenchQuota } from "@/lib/quota-display";
 
 describe("quota display", () => {
   it("does not show unlimited for a finite wallet, a zero balance, or a loading sentinel", () => {
@@ -115,5 +115,27 @@ describe("GET /api/quota", () => {
     expect(json.unlimited).toBe(false);
     expect(json.limit).toBeGreaterThan(0);
     expect(json.limit).not.toBe(-1);
+  });
+});
+
+describe("refreshWorkbenchQuota", () => {
+  it("does not apply a failed wallet read as 0/0", async () => {
+    const apply = vi.fn();
+    const missed = await refreshWorkbenchQuota({
+      fetchQuota: async () => ({ used: 0, limit: 0, allowed: false, tier: "PRO", balance: 0, allotmentConfigured: true }),
+      apply,
+      sleep: async () => {},
+    });
+    expect(missed).toBeNull();
+    expect(apply).not.toHaveBeenCalled();
+
+    const applied = await refreshWorkbenchQuota({
+      fetchQuota: async () => ({ used: 21, limit: 100, allowed: true, tier: "PRO", balance: 79, allotmentConfigured: true }),
+      apply,
+      sleep: async () => {},
+    });
+    expect(applied?.used).toBe(21);
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(apply.mock.calls[0][0]).toMatchObject({ used: 21, limit: 100 });
   });
 });

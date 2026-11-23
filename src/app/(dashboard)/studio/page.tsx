@@ -14,7 +14,8 @@ import { toast } from "sonner";
 import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
 import { workbenchEngineFromShots } from "@/lib/generate/engine-label";
 import { loadProjectWithRetry } from "@/lib/project-load";
-import { loadConfirmedQuota } from "@/lib/quota-display";
+import { refreshWorkbenchQuota } from "@/lib/quota-display";
+import { packWorkbenchEngine, singleImageEngineType } from "@/lib/generate/pack-engine";
 
 interface ProductImage {
   id: string;
@@ -52,6 +53,8 @@ export default function StudioPage() {
   const [prompt, setPrompt] = useState("");
   const [engineType, setEngineType] = useState("flux");
   const [vegaModelLabel, setVegaModelLabel] = useState("");
+  const packEngineAuto = useRef(false);
+  const engineTouched = useRef(false);
   const [targetPlatform, setTargetPlatform] = useState("SHOPIFY");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [brandPresetId, setBrandPresetId] = useState<string | null>(null);
@@ -97,15 +100,14 @@ export default function StudioPage() {
   }
 
   const refreshQuota = useCallback(() => {
-    loadConfirmedQuota({
+    void refreshWorkbenchQuota({
       fetchQuota: async () => {
         const response = await fetch("/api/quota");
         if (!response.ok) throw new Error("quota");
         return response.json();
       },
-    }).then((quota) => {
-      if (quota) applyQuota(quota);
-    }).catch(() => {});
+      apply: applyQuota,
+    });
   }, []);
 
   async function createProject() {
@@ -133,6 +135,29 @@ export default function StudioPage() {
       setProjectCreating(false);
     }
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/generate/pack-engine")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { engine?: string; modelVersion?: string | null } | null) => {
+        if (cancelled || !data) return;
+        const selection = packWorkbenchEngine({
+          vegaConfigured: data.engine === "vega",
+          providerModel: data.modelVersion,
+          configuredModel: data.modelVersion,
+        });
+        if (selection.engine !== "vega" || !selection.label) return;
+        packEngineAuto.current = true;
+        if (engineTouched.current) return;
+        setEngineType("vega");
+        setVegaModelLabel(selection.label);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     refreshQuota();
@@ -194,6 +219,7 @@ export default function StudioPage() {
               url: g.url || "",
               rawUrl: g.url || "",
               label: g.generationMeta?.detailKey || "detail",
+              id: g.id,
             })));
           }
           const packView = packRunViewFromImages(gens, locale);
@@ -301,7 +327,11 @@ export default function StudioPage() {
           prompt,
           title: productName,
           numOutputs: 1,
-          engineType,
+          engineType: singleImageEngineType({
+            selectedEngine: engineType,
+            packEngineAutoSelected: packEngineAuto.current,
+            userChoseEngine: engineTouched.current,
+          }),
           targetPlatform,
           targetLanguage,
           brandPresetId: brandPresetId || undefined,
@@ -392,7 +422,11 @@ export default function StudioPage() {
               accessoryImages={accessoryImages}
               onPromptChange={setPrompt}
               onProductNameChange={handleProductNameChange}
-              onEngineChange={setEngineType}
+              onEngineChange={(engine) => {
+                engineTouched.current = true;
+                packEngineAuto.current = false;
+                setEngineType(engine);
+              }}
               onPlatformChange={(p) => {
                 setTargetPlatform(p);
                 const spec = PLATFORM_SPECS[p];
@@ -402,7 +436,10 @@ export default function StudioPage() {
               onBrandPresetChange={setBrandPresetId}
               onStyleChange={(key, prompt) => { setActiveStyle(key); setPrompt(prompt); }}
               onStyleReferenceChange={setStyleReferenceUrl}
-              onStyleReferenceUploaded={() => setEngineType("flux")}
+              onStyleReferenceUploaded={() => {
+                engineTouched.current = true;
+                setEngineType("flux");
+              }}
               onGenerate={handleGenerate}
             />
           )}
@@ -446,6 +483,9 @@ export default function StudioPage() {
                   setEngineType("vega");
                   setVegaModelLabel(selection.label);
                 }
+              }}
+              onPackSettled={() => {
+                refreshQuota();
               }}
             />
           )}

@@ -22,6 +22,7 @@ export function createPackIdempotencyKey(): string {
 }
 
 export interface PackProjectImage {
+  id?: string;
   status?: string;
   url?: string | null;
   createdAt?: string;
@@ -39,7 +40,7 @@ export interface PackRunView {
   credit: PackCreditRecord;
   summary: string;
   failures: Array<{ key: string; reason: string }>;
-  successes: Array<{ key: string; url: string; label: string }>;
+  successes: Array<{ key: string; url: string; label: string; id?: string }>;
   engine: { engine: "vega" | "flux"; label: string };
 }
 
@@ -56,7 +57,7 @@ export function packRunViewFromImages(
     const key = meta && typeof meta === "object" && "detailKey" in meta && typeof meta.detailKey === "string"
       ? meta.detailKey
       : "detail";
-    return [{ key, url: image.url, label: key }];
+    return [{ key, url: image.url, label: key, ...(image.id ? { id: image.id } : {}) }];
   });
   return {
     credit,

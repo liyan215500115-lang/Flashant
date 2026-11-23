@@ -40,6 +40,25 @@ export function isConfirmedQuotaPayload(data: unknown): data is QuotaSnapshot {
   return true;
 }
 
+/**
+ * Refresh the workbench badge from a confirmed wallet read.
+ * A failed read returns null and must not be shown as 0/0.
+ */
+export async function refreshWorkbenchQuota(options: {
+  fetchQuota: () => Promise<unknown>;
+  apply: (quota: QuotaSnapshot) => void;
+  attempts?: number;
+  sleep?: (ms: number) => Promise<void>;
+}): Promise<QuotaSnapshot | null> {
+  const quota = await loadConfirmedQuota({
+    fetchQuota: options.fetchQuota,
+    attempts: options.attempts,
+    sleep: options.sleep,
+  });
+  if (quota) options.apply(quota);
+  return quota;
+}
+
 export async function loadConfirmedQuota(options: {
   fetchQuota: () => Promise<unknown>;
   attempts?: number;
