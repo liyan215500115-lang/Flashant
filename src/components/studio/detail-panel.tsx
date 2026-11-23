@@ -441,6 +441,11 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   }
 
   const selectedCount = selected.size;
+  const packTypeKeys = TYPE_GROUPS.flatMap((group) => group.types);
+  const recommendedCount = category && CATEGORY_RECOMMEND[category]
+    ? CATEGORY_RECOMMEND[category].length
+    : GENERAL_PACK.length;
+  const allTypesSelected = packTypeKeys.length > 0 && packTypeKeys.every((key) => selected.has(key));
   if (!projectId) return null;
 
   // Count selected per group for badge
@@ -573,6 +578,14 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
             <div className="mb-2 rounded-lg bg-brand-50 px-2.5 py-2 text-[11px] text-brand-800">
               推荐套图 · {CATEGORIES.find((item) => item.key === category)?.name} · {CATEGORY_RECOMMEND[category].length} 张
             </div>
+          )}
+          <p className="mb-2 text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-300" data-testid="pack-run-hint">
+            {t("studio.packRunHint").replace("{n}", String(recommendedCount))}
+          </p>
+          {allTypesSelected && (
+            <p className="mb-2 text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-300" data-testid="pack-all-selected">
+              {t("studio.packAllTypesSelected")}
+            </p>
           )}
 
           {/* Preview */}

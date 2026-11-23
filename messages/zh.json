@@ -295,7 +295,9 @@
     "sectionPublishSettings": "导出规格",
     "sectionGenerateSettings": "生成设置",
     "exportSpecsHint": "按所选平台的尺寸和背景要求生成，不会自动发布到店铺。",
-    "editingTitle": "编辑项目"
+    "editingTitle": "编辑项目",
+    "packRunHint": "本类推荐一次生成 {n} 张。还可加选其他类型，一共 14 种。一次按已选张数生成并扣点；项目不限总张数，以账户剩余额度为准，成功一张扣一点，失败退回。",
+    "packAllTypesSelected": "已选全部 14 种，本次按 14 张生成。"
   },
   "onboarding": {
     "welcome": "欢迎使用闪象",
@@ -561,6 +563,8 @@
     "tabLong": "详情页长图",
     "tabListing": "Listing 文案",
     "quantityUnit": "{count} 张",
+    "quantityRunCap": "一次最多生成 4 张，将消耗相应点数。",
+    "quantityMaxEnd": "最多 {max} 张",
     "sceneDefaultPrompt": "商品放置在干净明亮的场景中，自然光线，高级质感",
     "whiteBgDefaultPrompt": "纯白色背景，专业产品摄影，柔和均匀布光，高细节清晰度",
     "modelDefaultPrompt": "时尚模特展示商品，自然互动姿态，柔和自然光，生活化场景",

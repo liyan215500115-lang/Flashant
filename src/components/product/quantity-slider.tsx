@@ -35,8 +35,16 @@ export function QuantitySlider({
       />
       <div className="flex justify-between text-xs text-zinc-400 dark:text-zinc-500">
         <span>1</span>
-        <span>{max}</span>
+        <span data-testid="quantity-max-end">{t("generate.quantityMaxEnd").replace("{max}", String(max))}</span>
       </div>
+      <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400" data-testid="quantity-run-cap">
+        {t("generate.quantityRunCap")}
+      </p>
+      {value >= 1 && (
+        <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400" data-testid="quantity-charge-preview">
+          {t("generate.chargePreview").replace("{count}", String(value)).replace("{credits}", String(value))}
+        </p>
+      )}
     </div>
   );
 }

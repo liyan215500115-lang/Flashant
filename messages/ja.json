@@ -284,7 +284,9 @@
     "sectionPublishSettings": "Export specs",
     "sectionGenerateSettings": "Generate Settings",
     "exportSpecsHint": "Images are generated to the selected platform's size and background rules. Nothing is published to a store.",
-    "editingTitle": "Edit project"
+    "editingTitle": "Edit project",
+    "packRunHint": "This category’s recommended pack is {n} images. You can also add other types, up to 14 in total. Each run generates and charges for the number selected. There is no project-wide image cap; usage follows your remaining monthly credits (1 credit per successful image, refunded on failure).",
+    "packAllTypesSelected": "All 14 types are selected; this run will generate 14 images."
   },
   "onboarding": {
     "welcome": "Welcome to Flashant",
@@ -550,6 +552,8 @@
     "tabLong": "Detail Page",
     "tabListing": "Listing Copy",
     "quantityUnit": "{count}",
+    "quantityRunCap": "Up to 4 images per run, charged per image.",
+    "quantityMaxEnd": "Up to {max} images",
     "sceneDefaultPrompt": "Product placed in a clean, bright setting with natural lighting and premium texture",
     "whiteBgDefaultPrompt": "Pure white background, professional product photography, soft even lighting, high detail clarity",
     "modelDefaultPrompt": "Fashion model showcasing the product, natural interaction pose, soft natural light, lifestyle setting",
