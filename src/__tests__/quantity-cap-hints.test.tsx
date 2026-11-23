@@ -139,7 +139,7 @@ describe("generation quantity hints", () => {
     expect(text()).toContain(confirmation(14));
   });
 
-  it("shows the per-run max of 4, a maximum end label, and chargePreview for the chosen quantity", async () => {
+  it("shows the per-run max of 8, a maximum end label, and chargePreview for the chosen quantity", async () => {
     await render(
       <I18nProvider locale="zh" messages={zh}>
         <QuantitySlider value={4} onChange={() => {}} />
@@ -147,12 +147,21 @@ describe("generation quantity hints", () => {
     );
 
     expect(container?.querySelector("[data-testid='quantity-run-cap']")?.textContent).toBe(
-      "一次最多生成 4 张，将消耗相应点数。",
+      "一次最多生成 8 张，将消耗相应点数。",
     );
-    expect(container?.querySelector("[data-testid='quantity-max-end']")?.textContent).toBe("最多 4 张");
-    expect(container?.querySelector("[data-testid='quantity-max-end']")?.textContent).not.toBe("4");
+    expect(container?.querySelector("[data-testid='quantity-max-end']")?.textContent).toBe("最多 8 张");
+    expect(container?.querySelector("[data-testid='quantity-max-end']")?.textContent).not.toBe("8");
     expect(container?.querySelector("[data-testid='quantity-charge-preview']")?.textContent).toBe(
       "本次生成 4 张，消耗 4 点额度",
+    );
+
+    await render(
+      <I18nProvider locale="zh" messages={zh}>
+        <QuantitySlider value={8} onChange={() => {}} />
+      </I18nProvider>,
+    );
+    expect(container?.querySelector("[data-testid='quantity-charge-preview']")?.textContent).toBe(
+      "本次生成 8 张，消耗 8 点额度",
     );
 
     await render(
@@ -162,11 +171,20 @@ describe("generation quantity hints", () => {
     );
 
     expect(container?.querySelector("[data-testid='quantity-run-cap']")?.textContent).toBe(
-      "Up to 4 images per run, charged per image.",
+      "Up to 8 images per run, charged per image.",
     );
-    expect(container?.querySelector("[data-testid='quantity-max-end']")?.textContent).toBe("Up to 4 images");
+    expect(container?.querySelector("[data-testid='quantity-max-end']")?.textContent).toBe("Up to 8 images");
     expect(container?.querySelector("[data-testid='quantity-charge-preview']")?.textContent).toBe(
       "This run creates 2 images and charges 2 credits.",
+    );
+
+    await render(
+      <I18nProvider locale="en" messages={en}>
+        <QuantitySlider value={6} onChange={() => {}} />
+      </I18nProvider>,
+    );
+    expect(container?.querySelector("[data-testid='quantity-charge-preview']")?.textContent).toBe(
+      "This run creates 6 images and charges 6 credits.",
     );
   });
 });

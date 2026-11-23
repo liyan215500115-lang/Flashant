@@ -44,6 +44,7 @@ import {
   PACK_BUDGET_MS,
 } from "@/lib/generate/pack-timing";
 import { claimProjectPack, normalizePackIdempotencyKey, type PackLockStore } from "@/lib/generate/pack-run";
+import { SINGLE_IMAGE_RUN_MAX, singleImageRunExceedsCap } from "@/lib/generate/single-image-quantity";
 import type { PlanTier, Prisma } from "@prisma/client";
 
 function debitSnapshot(value: DebitHold | null): { accountId: string; transactionId: string } | null {
@@ -1142,6 +1143,13 @@ export async function POST(req: Request) {
       projectTitle,
       packIdempotencyKey: typeof packIdempotencyKey === "string" ? packIdempotencyKey : undefined,
     });
+  }
+
+  if (singleImageRunExceedsCap(customNumOutputs)) {
+    return NextResponse.json(
+      { error: "quantity_cap", max: SINGLE_IMAGE_RUN_MAX },
+      { status: 400 },
+    );
   }
 
   // Track which engine will actually be used (may fall back to flux at resolve time)

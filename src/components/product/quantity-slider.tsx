@@ -3,6 +3,7 @@
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n-provider";
+import { SINGLE_IMAGE_RUN_MAX } from "@/lib/generate/single-image-quantity";
 
 interface QuantitySliderProps {
   value: number;
@@ -14,7 +15,7 @@ interface QuantitySliderProps {
 export function QuantitySlider({
   value,
   onChange,
-  max = 4,
+  max = SINGLE_IMAGE_RUN_MAX,
   className,
 }: QuantitySliderProps) {
   const { t } = useT();
@@ -38,7 +39,7 @@ export function QuantitySlider({
         <span data-testid="quantity-max-end">{t("generate.quantityMaxEnd").replace("{max}", String(max))}</span>
       </div>
       <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400" data-testid="quantity-run-cap">
-        {t("generate.quantityRunCap")}
+        {t("generate.quantityRunCap").replace("{max}", String(max))}
       </p>
       {value >= 1 && (
         <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400" data-testid="quantity-charge-preview">
