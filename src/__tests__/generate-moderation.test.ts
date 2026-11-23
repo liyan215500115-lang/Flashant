@@ -250,6 +250,26 @@ describe("POST /api/generate moderation gate", () => {
     expect(refundMock).toHaveBeenCalledWith(expect.objectContaining({ transactionId: "cct_fail" }));
   });
 
+  it("accepts a single-image run of 8 and rejects a run above the cap", async () => {
+    fetchMock.mockResolvedValue(moderationResponse("allow"));
+    const accepted = await generatePost(post("http://localhost/api/generate", { ...body, numOutputs: 8 }));
+    expect(accepted.status).toBe(200);
+    expect(chargeMock).toHaveBeenCalledTimes(1);
+    expect(chargeMock.mock.calls[0][0].imageCount).toBe(8);
+    expect(createPrediction).toHaveBeenCalledTimes(8);
+
+    vi.clearAllMocks();
+    authMock.mockResolvedValue({ user: { id: "user_1" } });
+    const rejected = await generatePost(post("http://localhost/api/generate", { ...body, numOutputs: 9 }));
+    expect(rejected.status).toBe(400);
+    const json = await rejected.json();
+    expect(json.error).toBe("quantity_cap");
+    expect(json.max).toBe(8);
+    expect(createPrediction).not.toHaveBeenCalled();
+    expect(chargeMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("does not debit when the wallet balance is too low", async () => {
     fetchMock.mockResolvedValue(moderationResponse("allow"));
     chargeMock.mockResolvedValue({

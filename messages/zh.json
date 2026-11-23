@@ -563,7 +563,7 @@
     "tabLong": "详情页长图",
     "tabListing": "Listing 文案",
     "quantityUnit": "{count} 张",
-    "quantityRunCap": "一次最多生成 4 张，将消耗相应点数。",
+    "quantityRunCap": "一次最多生成 {max} 张，将消耗相应点数。",
     "quantityMaxEnd": "最多 {max} 张",
     "sceneDefaultPrompt": "商品放置在干净明亮的场景中，自然光线，高级质感",
     "whiteBgDefaultPrompt": "纯白色背景，专业产品摄影，柔和均匀布光，高细节清晰度",
