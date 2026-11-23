@@ -20,9 +20,22 @@ export const LOGIN_SESSION_PROBE_TIMEOUT_MS = 5_000;
 
 const DEFAULT_DESTINATION = "/dashboard";
 
+/**
+ * After the session exists, wait this long before telling the user the
+ * workbench did not open. A full-page load that is still on /login by then
+ * did not finish, and `location.assign` will not throw to say so.
+ */
+export const POST_LOGIN_STUCK_MS = 4_000;
+
 export type CredentialsLoginResult =
   | { ok: true; destination: string }
   | { ok: false; reason: "credentials" | "network" };
+
+export type PostLoginNavigation = {
+  href: string;
+  assigned: boolean;
+  cancel: () => void;
+};
 
 export function safePostLoginPath(
   value: string | null | undefined,
@@ -53,17 +66,86 @@ export function safePostLoginPath(
   }
 }
 
-export async function pushPostLoginRoute(
-  push: (href: string) => void | Promise<unknown>,
+/**
+ * Enter the workbench with a full document load on the page's own host.
+ *
+ * `router.push` often resolves before the destination document finishes, and
+ * it does not throw when that later load fails. The login page then stays
+ * put with no recovery. Assigning a relative path either loads the workbench
+ * on the current host (https://flashant.cn stays on flashant.cn) or leaves
+ * this document in place. If it is still here after `POST_LOGIN_STUCK_MS`,
+ * `onStuck` runs so the page can show 「进入工作台」 again. The assigned URL
+ * is never absolute and never a *.vercel.app host.
+ */
+export function startPostLoginNavigation(
   href: string,
-): Promise<boolean> {
-  if (!isAppPath(href)) return false;
+  options?: {
+    origin?: string;
+    assign?: (url: string) => void;
+    stuckMs?: number;
+    onStuck?: () => void;
+  },
+): PostLoginNavigation {
+  const origin = options?.origin ?? readPageOrigin();
+  const path = postLoginAssignPath(href, origin);
+  const assign = options?.assign ?? assignPage;
   try {
-    await push(href);
-    return true;
+    assign(path);
   } catch {
-    return false;
+    return { href: path, assigned: false, cancel() {} };
   }
+
+  const onStuck = options?.onStuck;
+  const stuckMs = options?.stuckMs ?? POST_LOGIN_STUCK_MS;
+  if (!onStuck || stuckMs < 0) {
+    return { href: path, assigned: true, cancel() {} };
+  }
+  const timer = setTimeout(onStuck, stuckMs);
+  return {
+    href: path,
+    assigned: true,
+    cancel() {
+      clearTimeout(timer);
+    },
+  };
+}
+
+export async function probeActiveSession(input?: {
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+}): Promise<boolean> {
+  return hasActiveSession(
+    input?.fetchImpl ?? fetch,
+    input?.timeoutMs ?? LOGIN_SESSION_PROBE_TIMEOUT_MS,
+  );
+}
+
+function readPageOrigin(): string {
+  if (typeof window === "undefined") return "http://localhost";
+  try {
+    return window.location.origin || "http://localhost";
+  } catch {
+    return "http://localhost";
+  }
+}
+
+function assignPage(url: string) {
+  window.location.assign(url);
+}
+
+/** Relative path on the current host. Unsafe targets become the workbench. */
+function postLoginAssignPath(href: string, origin: string): string {
+  const path = safePostLoginPath(href, { origin });
+  return isAssignableAppPath(path) ? path : DEFAULT_DESTINATION;
+}
+
+function isAssignableAppPath(href: string): boolean {
+  if (!isAppPath(href)) return false;
+  if (href.includes("\\") || href.toLowerCase().includes("vercel.app")) return false;
+  const pathname = href.split(/[?#]/)[0] ?? href;
+  if (pathname === "/login" || pathname.startsWith("/login/")) return false;
+  if (pathname.startsWith("/api/auth")) return false;
+  return true;
 }
 
 export async function submitCredentialsLogin(input: {

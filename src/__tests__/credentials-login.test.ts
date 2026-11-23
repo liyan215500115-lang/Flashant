@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CREDENTIALS_CALLBACK_PATH,
   CREDENTIALS_CSRF_PATH,
+  POST_LOGIN_STUCK_MS,
   SESSION_PATH,
-  pushPostLoginRoute,
+  probeActiveSession,
   safePostLoginPath,
+  startPostLoginNavigation,
   submitCredentialsLogin,
 } from "@/lib/credentials-login";
 import { applyAuthBaseUrl, chooseAuthOrigin, resolveAuthRedirect } from "@/lib/auth-base-url";
@@ -229,11 +231,106 @@ describe("credential login client", () => {
     });
   });
 
-  it("reports a failed workspace navigation without throwing the session away", async () => {
-    const push = vi.fn(() => Promise.reject(new Error("dashboard failed to load")));
-    await expect(pushPostLoginRoute(push, "/projects/abc")).resolves.toBe(false);
-    expect(push).toHaveBeenCalledWith("/projects/abc");
-    await expect(pushPostLoginRoute(push, "https://flashant.vercel.app/dashboard")).resolves.toBe(false);
+  it("reads an existing session only from GET /api/auth/session", async () => {
+    const calls: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      calls.push(String(input));
+      return jsonResponse({ user: { email: "owner@example.com" } });
+    };
+
+    await expect(probeActiveSession({ fetchImpl, timeoutMs: 20 })).resolves.toBe(true);
+    expect(calls).toEqual([SESSION_PATH]);
+    expect(calls.some((url) => url.includes("/api/auth/signin"))).toBe(false);
+  });
+
+  it("loads the workbench with location.assign on the current host", () => {
+    const assign = vi.fn();
+    const previous = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { assign, origin: custom, href: `${custom}/login` },
+    });
+    try {
+      const nav = startPostLoginNavigation("/projects/abc", { stuckMs: -1 });
+      expect(nav.assigned).toBe(true);
+      expect(nav.href).toBe("/projects/abc");
+      expect(assign).toHaveBeenCalledTimes(1);
+      expect(assign).toHaveBeenCalledWith("/projects/abc");
+      expect(String(assign.mock.calls[0][0]).startsWith("/")).toBe(true);
+      expect(String(assign.mock.calls[0][0])).not.toContain("vercel.app");
+    } finally {
+      Object.defineProperty(window, "location", { configurable: true, value: previous });
+    }
+  });
+
+  it("assigns a safe relative path and never a deployment host, login page, or auth route", () => {
+    const assign = vi.fn();
+    const blocked = [
+      `${deployment}/dashboard`,
+      "https://flashant.vercel.app/projects/abc",
+      "//evil.example/dashboard",
+      "/login?callbackUrl=/settings",
+      "/api/auth/signin/credentials",
+      "/api/auth/callback/credentials",
+    ];
+    for (const href of blocked) {
+      assign.mockClear();
+      const nav = startPostLoginNavigation(href, { origin: custom, assign, stuckMs: -1 });
+      expect(nav.href).toBe("/dashboard");
+      expect(assign).toHaveBeenCalledWith("/dashboard");
+      const target = String(assign.mock.calls[0][0]);
+      expect(target.startsWith("/")).toBe(true);
+      expect(target.startsWith("//")).toBe(false);
+      expect(target).not.toContain("vercel.app");
+      expect(target.startsWith("/login")).toBe(false);
+      expect(target.startsWith("/api/auth")).toBe(false);
+    }
+
+    assign.mockClear();
+    const sameHost = startPostLoginNavigation(`${custom}/projects/abc`, {
+      origin: custom,
+      assign,
+      stuckMs: -1,
+    });
+    expect(sameHost.href).toBe("/projects/abc");
+    expect(assign).toHaveBeenCalledWith("/projects/abc");
+  });
+
+  it("keeps the session retryable when the workbench navigation throws or the page stays", () => {
+    const thrown = vi.fn(() => {
+      throw new Error("dashboard failed to load");
+    });
+    const failed = startPostLoginNavigation("/projects/abc", { origin: custom, assign: thrown });
+    expect(failed.assigned).toBe(false);
+    expect(failed.href).toBe("/projects/abc");
+    expect(thrown).toHaveBeenCalledWith("/projects/abc");
+
+    vi.useFakeTimers();
+    const assign = vi.fn();
+    const onStuck = vi.fn();
+    const pending = startPostLoginNavigation("/dashboard", {
+      origin: custom,
+      assign,
+      onStuck,
+      stuckMs: POST_LOGIN_STUCK_MS,
+    });
+    expect(pending.assigned).toBe(true);
+    expect(onStuck).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(POST_LOGIN_STUCK_MS - 1);
+    expect(onStuck).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(onStuck).toHaveBeenCalledTimes(1);
+
+    onStuck.mockClear();
+    const cancelled = startPostLoginNavigation("/dashboard", {
+      origin: custom,
+      assign,
+      onStuck,
+      stuckMs: POST_LOGIN_STUCK_MS,
+    });
+    cancelled.cancel();
+    vi.advanceTimersByTime(POST_LOGIN_STUCK_MS);
+    expect(onStuck).not.toHaveBeenCalled();
   });
 });
 
