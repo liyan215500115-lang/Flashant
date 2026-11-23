@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
-import { BLANKET_TEXT_BAN, PRESERVE_PRODUCT_LETTERING } from "@/lib/generate/product-lettering";
+import { BLANKET_TEXT_BAN, PRESERVE_PRODUCT_LETTERING, shotPreservesProductLettering } from "@/lib/generate/product-lettering";
 import { packFailureReasonLabel } from "@/lib/generate/pack-summary";
 
 const { getProviderMock, openaiCreate, fluxCreate, uploadBuffer, fetchImageBuffer, storage } = vi.hoisted(() => {
@@ -139,6 +139,38 @@ beforeEach(() => {
   });
   uploadBuffer.mockResolvedValue({ s3Key: "generated/unit.png", publicUrl: STORED_URL });
   fetchImageBuffer.mockImplementation(async () => productPng());
+});
+
+describe("product-showing pack shots", () => {
+  it("keeps original lettering and leaves spec text out of the model prompt", async () => {
+    for (const key of ["lifestyle", "multi_angle", "detail", "in_use", "scene_atmosphere"] as const) {
+      expect(shotPreservesProductLettering(key)).toBe(true);
+    }
+    expect(shotPreservesProductLettering("selling_points")).toBe(false);
+
+    const res = await generateDetailPack({
+      userId: "user_1",
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      detailTypes: ["lifestyle", "multi_angle", "detail", "in_use"].map((key) => ({
+        key,
+        prompt: `浴室晨光 ${SPEC}`,
+        specText: SPEC,
+      })),
+    });
+    expect(res.status).toBe(200);
+    const prompts = fluxCreate.mock.calls.map((call) => String(call[0].prompt));
+    expect(prompts).toHaveLength(4);
+    for (const prompt of prompts) {
+      expect(prompt).not.toContain(BLANKET_TEXT_BAN);
+      expect(prompt).toContain(PRESERVE_PRODUCT_LETTERING);
+      expect(prompt).not.toContain(SPEC);
+      expect(prompt).toContain("浴室晨光");
+      expect(prompt.toLowerCase()).not.toContain("selling point");
+    }
+    expect(prompts.some((prompt) => prompt.includes("Macro photograph"))).toBe(true);
+    expect(prompts.some((prompt) => prompt.includes("true side near 90 degrees"))).toBe(true);
+  });
 });
 
 describe("info-shot spec captions", () => {

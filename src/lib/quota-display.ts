@@ -40,23 +40,66 @@ export function isConfirmedQuotaPayload(data: unknown): data is QuotaSnapshot {
   return true;
 }
 
+/** True when the badge would show a different remaining balance. */
+export function quotaSnapshotsDiffer(
+  next: Pick<QuotaSnapshot, "used" | "limit" | "balance">,
+  previous: Pick<QuotaSnapshot, "used" | "limit" | "balance">,
+): boolean {
+  if (next.used !== previous.used || next.limit !== previous.limit) return true;
+  return Number.isFinite(next.balance) && Number.isFinite(previous.balance) && next.balance !== previous.balance;
+}
+
 /**
  * Refresh the workbench badge from a confirmed wallet read.
  * A failed read returns null and must not be shown as 0/0.
+ * After a pack or single shot settles, pass the pre-generation snapshot as
+ * `untilDiffersFrom`. The wallet often still reports that snapshot on the
+ * first read, so keep reading until a confirmed snapshot differs or the
+ * attempts run out. Failed reads are skipped, never applied as 0/0.
  */
 export async function refreshWorkbenchQuota(options: {
   fetchQuota: () => Promise<unknown>;
   apply: (quota: QuotaSnapshot) => void;
   attempts?: number;
   sleep?: (ms: number) => Promise<void>;
+  untilDiffersFrom?: QuotaSnapshot | null;
+  intervalMs?: number;
 }): Promise<QuotaSnapshot | null> {
-  const quota = await loadConfirmedQuota({
-    fetchQuota: options.fetchQuota,
-    attempts: options.attempts,
-    sleep: options.sleep,
-  });
-  if (quota) options.apply(quota);
-  return quota;
+  const previous = options.untilDiffersFrom ?? null;
+  if (!previous) {
+    const quota = await loadConfirmedQuota({
+      fetchQuota: options.fetchQuota,
+      attempts: options.attempts,
+      sleep: options.sleep,
+    });
+    if (quota) options.apply(quota);
+    return quota;
+  }
+
+  const attempts = options.attempts ?? 8;
+  const intervalMs = options.intervalMs ?? 400;
+  const sleep = options.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+  let lastConfirmed: QuotaSnapshot | null = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const data = await options.fetchQuota();
+      if (isConfirmedQuotaPayload(data)) {
+        lastConfirmed = data;
+        if (quotaSnapshotsDiffer(data, previous)) {
+          options.apply(data);
+          return data;
+        }
+      }
+    } catch {
+      // A dropped read is not a balance. Keep the last confirmed snapshot.
+    }
+    if (attempt < attempts - 1) await sleep(intervalMs);
+  }
+  if (lastConfirmed) {
+    options.apply(lastConfirmed);
+    return lastConfirmed;
+  }
+  return null;
 }
 
 export async function loadConfirmedQuota(options: {

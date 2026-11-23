@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { formatQuotaRemaining, presentQuota, quotaBadgeText, refreshWorkbenchQuota } from "@/lib/quota-display";
+import { formatQuotaRemaining, presentQuota, quotaBadgeText, refreshWorkbenchQuota, type QuotaSnapshot } from "@/lib/quota-display";
 
 describe("quota display", () => {
   it("does not show unlimited for a finite wallet, a zero balance, or a loading sentinel", () => {
@@ -137,5 +137,83 @@ describe("refreshWorkbenchQuota", () => {
     expect(applied?.used).toBe(21);
     expect(apply).toHaveBeenCalledTimes(1);
     expect(apply.mock.calls[0][0]).toMatchObject({ used: 21, limit: 100 });
+  });
+
+  it("retries after settle until the confirmed wallet differs from the pre-generation snapshot", async () => {
+    const previous: QuotaSnapshot = {
+      used: 21,
+      limit: 100,
+      tier: "PRO",
+      allowed: true,
+      balance: 79,
+      allotmentConfigured: true,
+    };
+    const updated: QuotaSnapshot = { ...previous, used: 25, balance: 75 };
+    const apply = vi.fn();
+    let calls = 0;
+    let sleeps = 0;
+    const result = await refreshWorkbenchQuota({
+      untilDiffersFrom: previous,
+      attempts: 4,
+      intervalMs: 400,
+      sleep: async () => { sleeps += 1; },
+      fetchQuota: async () => {
+        calls += 1;
+        if (calls < 3) return previous;
+        return updated;
+      },
+      apply,
+    });
+    expect(result).toMatchObject({ used: 25, balance: 75 });
+    expect(calls).toBe(3);
+    expect(sleeps).toBe(2);
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(apply.mock.calls[0][0]).toMatchObject({ used: 25, limit: 100, balance: 75 });
+  });
+
+  it("does not apply a failed read as 0/0 while waiting for the wallet to change", async () => {
+    const previous: QuotaSnapshot = {
+      used: 21,
+      limit: 100,
+      tier: "PRO",
+      allowed: true,
+      balance: 79,
+      allotmentConfigured: true,
+    };
+    const apply = vi.fn();
+    let calls = 0;
+    const stalled = await refreshWorkbenchQuota({
+      untilDiffersFrom: previous,
+      attempts: 3,
+      intervalMs: 0,
+      sleep: async () => {},
+      fetchQuota: async () => {
+        calls += 1;
+        if (calls === 2) {
+          return { used: 0, limit: 0, allowed: false, tier: "PRO", balance: 0, allotmentConfigured: true };
+        }
+        if (calls === 3) throw new Error("Failed to fetch");
+        return previous;
+      },
+      apply,
+    });
+    expect(stalled).toMatchObject({ used: 21, balance: 79 });
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(apply.mock.calls[0][0]).toMatchObject({ used: 21, limit: 100 });
+    expect(apply.mock.calls.some((call) => call[0].used === 0 && call[0].limit === 0)).toBe(false);
+
+    apply.mockClear();
+    const missed = await refreshWorkbenchQuota({
+      untilDiffersFrom: previous,
+      attempts: 2,
+      intervalMs: 0,
+      sleep: async () => {},
+      fetchQuota: async () => {
+        throw new Error("Failed to fetch");
+      },
+      apply,
+    });
+    expect(missed).toBeNull();
+    expect(apply).not.toHaveBeenCalled();
   });
 });

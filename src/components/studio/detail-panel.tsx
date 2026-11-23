@@ -21,7 +21,7 @@ import {
 import { isInfoShot } from "@/lib/generate/info-shots";
 import { packShotRequest } from "@/lib/generate/pack-shot-request";
 import { downloadUrl } from "@/lib/download-image";
-import { generatedImageFilePath } from "@/lib/stored-image";
+import { canvasImageFromViewedShot, viewedShotFileUrl } from "@/lib/viewed-shot";
 
 const TYPE_GROUPS = [
   {
@@ -92,6 +92,7 @@ interface StudioDetailPanelProps {
   initialSummary?: string;
   onEngineResolved?: (selection: { engine: string; label: string }) => void;
   onPackSettled?: () => void;
+  onViewShot?: (image: { id: string; url: string; promptUsed: string }) => void;
 }
 
 function hashString(str: string): number {
@@ -102,7 +103,7 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures, initialSummary, onEngineResolved, onPackSettled }: StudioDetailPanelProps) {
+export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures, initialSummary, onEngineResolved, onPackSettled, onViewShot }: StudioDetailPanelProps) {
   const { t, locale } = useT();
   const [open, setOpen] = useState(!!initialResults?.length);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(GENERAL_PACK));
@@ -120,7 +121,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
   const [downloadNotice, setDownloadNotice] = useState("");
   const [failures, setFailures] = useState<Array<{ key: string; reason: string }>>([]);
   const [batchSummary, setBatchSummary] = useState("");
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ id?: string; url: string; label: string } | null>(null);
   const [lockStyle, setLockStyle] = useState(false);
   const [category, setCategory] = useState("");
 
@@ -415,6 +416,30 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     finish();
   }
 
+  function downloadFailedCopy() {
+    return locale === "zh"
+      ? "下载失败，页面会留在这里。请重试。"
+      : "Couldn't download. This page stays open.";
+  }
+
+  function openShot(shot: { id?: string; url: string; label: string }) {
+    setDownloadNotice("");
+    setLightbox(shot);
+    const canvas = canvasImageFromViewedShot(shot);
+    if (canvas) onViewShot?.(canvas);
+  }
+
+  async function saveShot(shot: { id?: string; url: string; label: string }) {
+    const target = viewedShotFileUrl(shot);
+    if (!target) {
+      setDownloadNotice(downloadFailedCopy());
+      return;
+    }
+    const ok = await downloadUrl(target, `${shot.label || "flashant"}.png`);
+    if (!ok) setDownloadNotice(downloadFailedCopy());
+    else setDownloadNotice("");
+  }
+
   const selectedCount = selected.size;
   if (!projectId) return null;
 
@@ -596,7 +621,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
                     <div className="grid grid-cols-4 gap-1.5">
                       {groupResults.map((r, i) => (
                         <div key={i} className="group relative rounded-lg overflow-hidden border border-zinc-200 hover:ring-2 hover:ring-brand-400 transition-all">
-                          <button type="button" onClick={() => setLightbox(r.url)} className="w-full cursor-pointer">
+                          <button type="button" onClick={() => openShot(r)} className="w-full cursor-pointer">
                             <img src={r.url} alt={r.label} className="aspect-square object-cover w-full" />
                           </button>
                           <div className="flex items-center justify-between px-1 pb-1">
@@ -606,14 +631,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
                               className="text-[9px] text-zinc-400 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-all"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const target = r.id ? generatedImageFilePath(r.id) : r.url;
-                                void downloadUrl(target, `${r.label}.png`).then((ok) => {
-                                  if (!ok) {
-                                    setDownloadNotice(locale === "zh"
-                                      ? "下载失败，页面会留在这里。请重试。"
-                                      : "Couldn't download. This page stays open.");
-                                  }
-                                });
+                                void saveShot(r);
                               }}>
                               下载
                             </button>
@@ -627,8 +645,18 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
             </div>
           )}
           {lightbox && (
-            <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center cursor-pointer" onClick={() => setLightbox(null)}>
-              <img src={lightbox} alt="" className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl" />
+            <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-3 cursor-pointer" onClick={() => setLightbox(null)}>
+              <img src={lightbox.url} alt={lightbox.label} className="max-w-[90vw] max-h-[80vh] rounded-xl shadow-2xl" onClick={(event) => event.stopPropagation()} />
+              <button
+                type="button"
+                className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-zinc-800"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void saveShot(lightbox);
+                }}
+              >
+                下载
+              </button>
             </div>
           )}
         </>
