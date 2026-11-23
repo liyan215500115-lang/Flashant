@@ -3,7 +3,12 @@ import path from "path";
 import { parse as parseFont } from "opentype.js";
 import sharp from "sharp";
 
-const FONT_FILE = "DroidSansFallbackFull.ttf";
+/**
+ * Droid Sans Fallback covers CJK but not Basic Latin, so ASCII letters and
+ * digits would draw as its hollow .notdef boxes. Noto Sans supplies Latin,
+ * digits, and common punctuation. Glyph 0 is .notdef in both fonts.
+ */
+const FONT_FILES = ["NotoSans-Regular.ttf", "DroidSansFallbackFull.ttf"] as const;
 
 /** Readable on a 1024 canvas. Never reduced to squeeze a long caption onto one line. */
 export function captionFontSize(imageWidth: number): number {
@@ -14,19 +19,54 @@ export function captionFontSize(imageWidth: number): number {
 interface CaptionFont {
   getPath(text: string, x: number, y: number, fontSize: number): { toPathData(decimalPlaces?: number): string };
   getAdvanceWidth(text: string, fontSize: number): number;
+  charToGlyph(text: string): { index: number };
 }
 
-let fontCache: CaptionFont | null = null;
+interface ShapedGlyph {
+  ch: string;
+  font: CaptionFont | null;
+  width: number;
+}
 
-function captionFont(): CaptionFont {
+let fontCache: CaptionFont[] | null = null;
+
+function captionFonts(): CaptionFont[] {
   if (fontCache) return fontCache;
-  const fontPath = path.join(process.cwd(), "assets", "fonts", FONT_FILE);
-  const bytes = readFileSync(fontPath);
-  fontCache = parseFont(bytes);
+  fontCache = FONT_FILES.map((file) => {
+    const fontPath = path.join(process.cwd(), "assets", "fonts", file);
+    return parseFont(readFileSync(fontPath));
+  });
   return fontCache;
 }
 
-function wrapCaption(font: CaptionFont, text: string, fontSize: number, maxWidth: number): string[] {
+function shapeText(text: string, fontSize: number): ShapedGlyph[] {
+  const fonts = captionFonts();
+  const shaped: ShapedGlyph[] = [];
+  for (const ch of Array.from(text)) {
+    let chosen: CaptionFont | null = null;
+    for (const font of fonts) {
+      if (font.charToGlyph(ch).index > 0) {
+        chosen = font;
+        break;
+      }
+    }
+    if (!chosen) {
+      if (/\s/u.test(ch)) {
+        shaped.push({ ch, font: null, width: fonts[0].getAdvanceWidth(" ", fontSize) });
+        continue;
+      }
+      throw new Error("caption_glyphs_missing");
+    }
+    shaped.push({ ch, font: chosen, width: chosen.getAdvanceWidth(ch, fontSize) });
+  }
+  return shaped;
+}
+
+function measureText(text: string, fontSize: number): number {
+  return shapeText(text, fontSize).reduce((sum, glyph) => sum + glyph.width, 0);
+}
+
+function wrapCaption(text: string, fontSize: number, maxWidth: number): string[] {
   const lines: string[] = [];
   for (const paragraph of text.split(/\r?\n/)) {
     const chars = Array.from(paragraph);
@@ -37,7 +77,7 @@ function wrapCaption(font: CaptionFont, text: string, fontSize: number, maxWidth
     let current = "";
     for (const ch of chars) {
       const next = current + ch;
-      if (current && font.getAdvanceWidth(next, fontSize) > maxWidth) {
+      if (current && measureText(next, fontSize) > maxWidth) {
         lines.push(current);
         current = ch;
       } else {
@@ -110,12 +150,11 @@ export async function compositeSpecCaption(image: Buffer, text: string): Promise
   const height = info.height;
   const channels = info.channels;
   const bounds = contentBounds(data, width, height, channels);
-  const font = captionFont();
   const fontSize = captionFontSize(width);
   const paddingX = Math.round(fontSize * 0.75);
   const paddingY = Math.round(fontSize * 0.55);
   const maxTextWidth = Math.max(fontSize, width - paddingX * 2);
-  const lines = wrapCaption(font, caption, fontSize, maxTextWidth);
+  const lines = wrapCaption(caption, fontSize, maxTextWidth);
   const lineHeight = Math.round(fontSize * 1.35);
   const blockHeight = lines.length * lineHeight + paddingY * 2;
   const gap = Math.round(fontSize * 0.45);
@@ -140,13 +179,20 @@ export async function compositeSpecCaption(image: Buffer, text: string): Promise
 
   const paths: string[] = [];
   for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const lineWidth = font.getAdvanceWidth(line, fontSize);
-    const x = Math.max(paddingX, Math.round((width - lineWidth) / 2));
+    const shaped = shapeText(lines[index], fontSize);
+    const lineWidth = shaped.reduce((sum, glyph) => sum + glyph.width, 0);
+    let x = Math.max(paddingX, Math.round((width - lineWidth) / 2));
     const baseline = captionTop + paddingY + fontSize + index * lineHeight;
-    const pathData = font.getPath(line, x, baseline, fontSize).toPathData(2);
-    if (!pathData.trim()) throw new Error("caption_glyphs_missing");
-    paths.push(`<path d="${pathData}" fill="#1a1a1a"/>`);
+    const commands: string[] = [];
+    for (const glyph of shaped) {
+      if (glyph.font) {
+        const pathData = glyph.font.getPath(glyph.ch, x, baseline, fontSize).toPathData(2);
+        if (pathData.trim()) commands.push(pathData);
+      }
+      x += glyph.width;
+    }
+    if (commands.length === 0) throw new Error("caption_glyphs_missing");
+    paths.push(`<path d="${commands.join(" ")}" fill="#1a1a1a"/>`);
   }
 
   const svg = Buffer.from(
