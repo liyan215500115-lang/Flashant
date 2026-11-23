@@ -8,10 +8,5 @@ declare module "opentype.js" {
     getAdvanceWidth(text: string, fontSize: number): number;
   }
 
-  interface OpenType {
-    parse(buffer: ArrayBuffer | Buffer): Font;
-  }
-
-  const opentype: OpenType;
-  export default opentype;
+  export function parse(buffer: ArrayBuffer | Buffer): Font;
 }

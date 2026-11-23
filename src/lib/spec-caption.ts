@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import path from "path";
-import opentype from "opentype.js";
+import { parse as parseFont } from "opentype.js";
 import sharp from "sharp";
 
 const FONT_FILE = "DroidSansFallbackFull.ttf";
@@ -22,7 +22,7 @@ function captionFont(): CaptionFont {
   if (fontCache) return fontCache;
   const fontPath = path.join(process.cwd(), "assets", "fonts", FONT_FILE);
   const bytes = readFileSync(fontPath);
-  fontCache = opentype.parse(bytes);
+  fontCache = parseFont(bytes);
   return fontCache;
 }
 
