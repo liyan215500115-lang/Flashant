@@ -1,44 +1,75 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/components/i18n-provider";
+import { pushPostLoginRoute, submitCredentialsLogin } from "@/lib/credentials-login";
 
 export function LoginForm() {
   const { t } = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
+  const [destination, setDestination] = useState("/dashboard");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  async function enterApp(href: string) {
+    setError("");
+    setLoading(true);
+    const opened = await pushPostLoginRoute((path) => router.push(path), href);
+    if (!opened) setError(t("auth.signedInRetry"));
+    setLoading(false);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSignedIn(false);
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const result = await submitCredentialsLogin({
+        email,
+        password,
+        callbackUrl: params.get("callbackUrl"),
+        origin: window.location.origin,
+      });
 
-    setLoading(false);
+      if (!result.ok) {
+        setError(t(result.reason === "credentials" ? "auth.errorEmailPassword" : "auth.errorNetwork"));
+        return;
+      }
 
-    if (result?.error) {
-      setError(t("auth.errorEmailPassword"));
-    } else {
-      router.push("/dashboard");
+      setDestination(result.destination);
+      setSignedIn(true);
+      const opened = await pushPostLoginRoute((path) => router.push(path), result.destination);
+      if (!opened) setError(t("auth.signedInRetry"));
+    } catch {
+      setSignedIn(false);
+      setError(t("auth.errorNetwork"));
+    } finally {
+      setLoading(false);
     }
   }
 
+  const alertText = error || (signedIn ? t("auth.signedInEntering") : "");
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
-          {error}
+    <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {alertText && (
+        <div
+          role="alert"
+          className={
+            error
+              ? "rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600"
+              : "rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3 text-sm text-zinc-700"
+          }
+        >
+          {alertText}
         </div>
       )}
 
@@ -52,6 +83,7 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
           placeholder={t("auth.emailPlaceholder")}
           className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10 transition-colors"
         />
@@ -67,14 +99,16 @@ export function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="current-password"
           placeholder={t("auth.passwordPlaceholder")}
           className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10 transition-colors"
         />
       </div>
 
       <button
-        type="submit"
+        type={signedIn ? "button" : "submit"}
         disabled={loading}
+        onClick={signedIn ? () => void enterApp(destination) : undefined}
         className="inline-flex items-center justify-center gap-2 h-10 w-full rounded-lg bg-brand-900 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-70 transition-colors mt-1 cursor-pointer"
       >
         {loading ? (
@@ -82,6 +116,8 @@ export function LoginForm() {
             <Loader2 size={15} className="animate-spin" />
             {t("auth.loggingIn")}
           </>
+        ) : signedIn ? (
+          t("auth.enterApp")
         ) : (
           t("auth.loginBtn")
         )}
