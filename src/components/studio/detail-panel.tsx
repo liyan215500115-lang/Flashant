@@ -19,7 +19,7 @@ import {
   type PackRunView,
 } from "@/lib/generate/pack-run-client";
 import { isInfoShot } from "@/lib/generate/info-shots";
-import { packShotRequest } from "@/lib/generate/pack-shot-request";
+import { noteFilledOnSelect, packShotRequest, persistedShotNotes } from "@/lib/generate/pack-shot-request";
 import { downloadUrl } from "@/lib/download-image";
 import { canvasImageFromViewedShot, viewedShotFileUrl } from "@/lib/viewed-shot";
 
@@ -173,7 +173,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
         setSelected(new Set(draft.selected.length > 0 ? draft.selected : GENERAL_PACK));
         setCategory(draft.category);
         setLockStyle(draft.lockStyle);
-        setPerTypeDesc(draft.perTypeDesc);
+        setPerTypeDesc(persistedShotNotes(draft.perTypeDesc));
         setOpen(draft.open || !!initialResults?.length);
       }
       return;
@@ -222,23 +222,43 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
     });
   };
 
+  function seedShotNote(typeKey: string) {
+    setPerTypeDesc((prev) => {
+      const filled = noteFilledOnSelect({
+        info: isInfoShot(typeKey),
+        existingNote: prev[typeKey],
+        basePrompt,
+      });
+      if (filled === null) return prev;
+      return { ...prev, [typeKey]: filled };
+    });
+  }
+
   const toggleType = (typeKey: string) => {
+    const adding = !selected.has(typeKey);
     setSelected(prev => {
       const next = new Set(prev);
-      if (next.has(typeKey)) { next.delete(typeKey); } else { next.add(typeKey); if (!perTypeDesc[typeKey]) setPerTypeDesc(p => ({ ...p, [typeKey]: basePrompt })); }
+      if (next.has(typeKey)) next.delete(typeKey);
+      else next.add(typeKey);
       return next;
     });
+    if (adding) seedShotNote(typeKey);
   };
 
   const selectGroup = (types: string[]) => {
+    const allSelected = types.every((typeKey) => selected.has(typeKey));
     setSelected(prev => {
       const next = new Set(prev);
-      const allSelected = types.every(t => next.has(t));
-      for (const t of types) {
-        if (allSelected) next.delete(t); else { next.add(t); if (!perTypeDesc[t]) setPerTypeDesc(p => ({ ...p, [t]: basePrompt })); }
+      const groupSelected = types.every((typeKey) => next.has(typeKey));
+      for (const typeKey of types) {
+        if (groupSelected) next.delete(typeKey);
+        else next.add(typeKey);
       }
       return next;
     });
+    if (!allSelected) {
+      for (const typeKey of types) seedShotNote(typeKey);
+    }
   };
 
   function showPackView(view: PackRunView) {

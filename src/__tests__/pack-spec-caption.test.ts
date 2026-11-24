@@ -206,6 +206,26 @@ describe("info-shot spec captions", () => {
     expect(fetchImageBuffer).not.toHaveBeenCalled();
   });
 
+  it("does not overlay style boilerplate and still returns a clean product shot", async () => {
+    const res = await generateDetailPack(sellingShot({
+      prompt: "",
+      specText: "Product in clean style",
+      baseStyle: "Product in clean style",
+    }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.generated).toHaveLength(1);
+    expect(json.failed ?? []).toEqual([]);
+    expect(fetchImageBuffer).not.toHaveBeenCalled();
+    const prompt = String(openaiCreate.mock.calls[0][0].prompt);
+    expect(prompt).not.toContain("Product in clean style");
+    expect(prompt).toContain("Style lock");
+    expect(prompt).toContain("caption band");
+    expect(prompt.toLowerCase()).toContain("white");
+    const storedPrompt = String(vi.mocked(db.generatedImage.create).mock.calls[0][0].data.promptUsed);
+    expect(storedPrompt).not.toContain("Product in clean style");
+  });
+
   it("persists the server-side caption on our storage URL", async () => {
     storage.enabled = true;
     const res = await generateDetailPack(sellingShot());
