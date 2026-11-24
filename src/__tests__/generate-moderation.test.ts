@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BEAUTY_DARK_SURFACE_GUARD } from "@/lib/ai/constants";
 import { STYLE_PROMPTS } from "@/lib/ai/style-prompts";
 
 const { authMock, dbMock, chargeMock, refundMock, getProviderMock, createPrediction, getPrediction, signedUrl } = vi.hoisted(() => {
@@ -71,6 +72,8 @@ import {
   SOURCE_STRUCTURE_LOCK,
   STYLE_LOCK_SAME_PRODUCT,
 } from "@/lib/generate/detail-shot";
+import { packShotRequest } from "@/lib/generate/pack-shot-request";
+import { PRESERVE_PRODUCT_LETTERING } from "@/lib/generate/product-lettering";
 
 const fetchMock = vi.fn();
 
@@ -980,5 +983,151 @@ describe("POST /api/generate pack shots", () => {
     expect(story?.prompt).toContain("charging cable");
     expect(lifestyle?.referenceImageUrl).toBeUndefined();
     expect(atmosphere?.referenceImageUrl).toBeUndefined();
+  });
+
+  it("follows 户外自然 for scene shots when style lock is off", async () => {
+    const outdoor = STYLE_PROMPTS.find((style) => style.key === "natural")!;
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_outdoor_${Math.random()}`));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_outdoor",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/outdoor.png" }],
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "beauty",
+      detailTypes: [
+        packShotRequest({
+          key: "lifestyle",
+          label: "使用场景",
+          basePrompt: outdoor.promptZh,
+          note: "",
+          info: false,
+        }),
+        packShotRequest({
+          key: "scene_atmosphere",
+          label: "场景氛围",
+          basePrompt: outdoor.promptZh,
+          note: "",
+          info: false,
+        }),
+        packShotRequest({
+          key: "in_use",
+          label: "使用中",
+          basePrompt: outdoor.promptZh,
+          note: "",
+          info: false,
+        }),
+      ],
+    }));
+    expect(res.status).toBe(200);
+    const prompts = createPrediction.mock.calls.map((call) => (call[0] as { prompt: string }).prompt);
+    const lifestyle = prompts.find((prompt) => prompt.includes("使用场景"));
+    const atmosphere = prompts.find((prompt) => prompt.includes("场景氛围"));
+    const inUse = prompts.find((prompt) => prompt.includes("使用中"));
+    for (const prompt of [lifestyle, atmosphere, inUse]) {
+      expect(prompt).toBeTruthy();
+      expect(prompt).toContain("黄金时段");
+      expect(prompt).toContain("苔藓");
+      expect(prompt).toContain("户外自然");
+      expect(prompt?.toLowerCase()).toContain("golden-hour");
+      expect(prompt?.toLowerCase()).toContain("outdoor");
+      expect(prompt).toContain(PRESERVE_PRODUCT_LETTERING);
+      expect(prompt).toContain(SOURCE_STRUCTURE_LOCK);
+      expect(prompt).not.toContain("Style lock:");
+      expect(prompt).not.toContain("large windows");
+      expect(prompt).not.toContain("open shade");
+      expect(prompt).not.toContain("5600K");
+      expect(prompt).not.toContain("dark matte charcoal");
+      expect(prompt).not.toContain("near-black wood");
+      expect(prompt).not.toContain("cyan-blue rim light");
+      expect(prompt).not.toContain(BEAUTY_DARK_SURFACE_GUARD);
+      expect(prompt).not.toContain("practical place where it would actually be used");
+    }
+    expect(lifestyle).toContain("usage context");
+    expect(lifestyle).not.toContain(LIFESTYLE_DISTINCT_COMPOSITION);
+    expect(lifestyle?.toLowerCase()).not.toContain("kinfolk");
+    expect(atmosphere).toContain("emotional space");
+    expect(atmosphere).not.toContain("chiaroscuro");
+    expect(atmosphere).not.toContain("Byredo");
+    expect(inUse?.toLowerCase()).toContain("used or worn");
+    expect(inUse).not.toContain("5500K");
+  });
+
+  it("applies the selected 户外自然 style from the style key when lock is off and the prompt is not the full scene essay", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, `mod_style_key_${Math.random()}`));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_style_key",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/style-key.png" }],
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "beauty",
+      sceneStyle: "natural",
+      detailTypes: [
+        packShotRequest({
+          key: "lifestyle",
+          label: "使用场景",
+          basePrompt: "Product in natural style",
+          note: "",
+          info: false,
+        }),
+        packShotRequest({
+          key: "selling_points",
+          label: "核心卖点",
+          basePrompt: "Product in natural style",
+          note: "",
+          info: true,
+        }),
+      ],
+    }));
+    expect(res.status).toBe(200);
+    const prompts = createPrediction.mock.calls.map((call) => (call[0] as { prompt: string }).prompt);
+    const lifestyle = prompts.find((prompt) => prompt.includes("使用场景"));
+    const selling = prompts.find((prompt) => prompt.includes("caption band"));
+    expect(lifestyle).toContain("户外自然");
+    expect(lifestyle?.toLowerCase()).toContain("golden-hour");
+    expect(lifestyle?.toLowerCase()).toContain("outdoor");
+    expect(lifestyle?.toLowerCase()).toContain("mossy stone");
+    expect(lifestyle).not.toContain("large windows");
+    expect(lifestyle).not.toContain("dark matte charcoal");
+    expect(lifestyle).not.toContain("cyan-blue rim light");
+    expect(lifestyle).not.toContain(BEAUTY_DARK_SURFACE_GUARD);
+    expect(lifestyle).not.toContain("Style lock:");
+    expect(selling).toContain("pure white");
+    expect(selling?.toLowerCase()).not.toContain("golden-hour");
+    expect(selling?.toLowerCase()).not.toContain("mossy stone");
+  });
+
+  it("keeps beauty lifestyle defaults when the user has not selected a style", async () => {
+    fetchMock.mockImplementation(async () => moderationResponse("allow", 200, "mod_unstyled_beauty"));
+    chargePerImage();
+    createPrediction.mockResolvedValue({
+      predictionId: "pred_unstyled",
+      status: "succeeded",
+      outputs: [{ url: "https://cdn.example/unstyled.png" }],
+    });
+
+    const res = await generatePost(post("http://localhost/api/generate", {
+      imageProjectId: "proj_1",
+      productImageId: "img_1",
+      category: "beauty",
+      detailTypes: [{ key: "lifestyle", prompt: "LOTION-MARKER on the counter" }],
+    }));
+    expect(res.status).toBe(200);
+    const prompt = (createPrediction.mock.calls[0][0] as { prompt: string }).prompt;
+    expect(prompt).toContain("LOTION-MARKER");
+    expect(prompt).toContain("large windows");
+    expect(prompt).toContain(LIFESTYLE_DISTINCT_COMPOSITION);
+    expect(prompt).toContain("dark matte charcoal");
+    expect(prompt).toContain("cyan-blue rim light");
+    expect(prompt).toContain(BEAUTY_DARK_SURFACE_GUARD);
   });
 });

@@ -83,6 +83,8 @@ interface StudioDetailPanelProps {
   projectId: string | null;
   productImageId: string;
   basePrompt: string;
+  /** Left-side style key. Sent even when style lock is off. */
+  sceneStyle?: string | null;
   referenceImageUrl?: string;
   referenceHasPerson?: boolean;
   targetPlatform?: string;
@@ -103,7 +105,7 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-export function StudioDetailPanel({ projectId, productImageId, basePrompt, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures, initialSummary, onEngineResolved, onPackSettled, onViewShot }: StudioDetailPanelProps) {
+export function StudioDetailPanel({ projectId, productImageId, basePrompt, sceneStyle, referenceImageUrl, referenceHasPerson, targetPlatform, onDetailGenerated, initialResults, initialFailures, initialSummary, onEngineResolved, onPackSettled, onViewShot }: StudioDetailPanelProps) {
   const { t, locale } = useT();
   const [open, setOpen] = useState(!!initialResults?.length);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(GENERAL_PACK));
@@ -348,6 +350,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, refer
             info: isInfoShot(t.key),
           })),
           baseStyle: lockStyle ? basePrompt : undefined,
+          sceneStyle: sceneStyle?.trim() || undefined,
           referenceImageUrl: styleRef,
           referenceHasPerson: lockStyle ? referenceHasPerson === true : false,
           seed: styleSeed,

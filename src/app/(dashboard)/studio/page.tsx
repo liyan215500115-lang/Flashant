@@ -464,6 +464,7 @@ export default function StudioPage() {
               projectId={projectId}
               productImageId={selectedImage.id}
               basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
+              sceneStyle={activeStyle || undefined}
               referenceImageUrl={latestImage.url}
               referenceHasPerson={
                 activeStyle === "in_use" ||
