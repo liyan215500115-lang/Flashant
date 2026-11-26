@@ -12,7 +12,7 @@ import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { getSignedGetUrl } from "@/lib/s3";
 import { overlayLogo, fetchImageBuffer } from "@/lib/overlay-logo";
 import { uploadBuffer, hasS3Config } from "@/lib/s3";
-import { isInfoShot } from "@/lib/generate/info-shots";
+import { captionSpecText, isInfoShot } from "@/lib/generate/info-shots";
 import { BLANKET_TEXT_BAN, PRESERVE_PRODUCT_LETTERING, shotPreservesProductLettering } from "@/lib/generate/product-lettering";
 import { compositeSpecCaption } from "@/lib/spec-caption";
 import { prepareReferenceImage } from "@/lib/reference-image";
@@ -424,7 +424,7 @@ function detailShotList(value: unknown): Array<{ key: string; prompt: string; sp
     shots.push({
       key: record.key.trim(),
       prompt: typeof record.prompt === "string" ? record.prompt : "",
-      specText: typeof record.specText === "string" ? record.specText.trim() : "",
+      specText: captionSpecText(typeof record.specText === "string" ? record.specText : ""),
     });
   }
   return shots;
@@ -807,7 +807,7 @@ export async function generateDetailPack(input: {
     if (!portraitUrl && anchorKey && attempt.key === anchorKey && providerUrl) {
       portraitUrl = providerUrl;
     }
-    const spec = isInfoShot(attempt.key) ? attempt.specText.trim() : "";
+    const spec = isInfoShot(attempt.key) ? captionSpecText(attempt.specText) : "";
     let captioned: Buffer | undefined;
     if (spec) {
       try {
