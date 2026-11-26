@@ -148,9 +148,19 @@ describe("info-shot spec copy", () => {
     await clickType("使用场景");
     await showNotes();
 
+    await clickType("场景氛围");
+    await clickType("使用中");
+
     expect(noteInput("核心卖点").value).toBe("");
     expect(noteInput("材质成分").value).toBe("");
-    expect(noteInput("使用场景").value).toBe(BOILERPLATE);
+    expect(noteInput("使用场景").value).toBe("");
+    expect(noteInput("场景氛围").value).toBe("");
+    expect(noteInput("使用中").value).toBe("");
+    expect(noteInput("使用场景").placeholder).toBe("AI 视觉描述（不写字）");
+    expect(noteInput("核心卖点").placeholder).toBe("规格文字（写在图上）");
+    expect(container?.textContent).toContain("规格文字留空则不往图上写字");
+    expect(container?.textContent).toContain("AI 视觉描述（不写字）");
+    expect(container?.textContent).toContain("规格文字（写在图上）");
 
     const lock = container?.querySelector('input[type="checkbox"]');
     if (!(lock instanceof HTMLInputElement)) throw new Error("style lock missing");
@@ -182,6 +192,8 @@ describe("info-shot spec copy", () => {
     await clickType("核心卖点");
     await showNotes();
     expect(noteInput("核心卖点").value).toBe("");
+    await clickType("场景氛围");
+    expect(noteInput("场景氛围").value).toBe("蓝牙降噪");
 
     const lock = container?.querySelector('input[type="checkbox"]');
     if (!(lock instanceof HTMLInputElement)) throw new Error("style lock missing");
@@ -224,13 +236,16 @@ describe("info-shot spec copy", () => {
 
   it("drops a saved style-boilerplate spec note and keeps an explicit one", async () => {
     localStorage.setItem("flashant.studioPack.v1:proj-draft", JSON.stringify({
-      selected: ["selling_points", "material", "lifestyle"],
+      selected: ["selling_points", "material", "lifestyle", "scene_atmosphere", "in_use", "detail"],
       category: "",
       lockStyle: true,
       perTypeDesc: {
         selling_points: BOILERPLATE,
         material: "温和保湿",
-        lifestyle: "浴室晨光",
+        lifestyle: BOILERPLATE,
+        scene_atmosphere: "  Product in natural style.  ",
+        in_use: "手持在窗边",
+        detail: "金扣微距",
       },
       open: true,
     }));
@@ -238,16 +253,36 @@ describe("info-shot spec copy", () => {
     await showNotes();
     expect(noteInput("核心卖点").value).toBe("");
     expect(noteInput("材质成分").value).toBe("温和保湿");
+    expect(noteInput("使用场景").value).toBe("");
+    expect(noteInput("场景氛围").value).toBe("");
+    expect(noteInput("使用中").value).toBe("手持在窗边");
+    expect(noteInput("细节特写").value).toBe("金扣微距");
+
+    await act(async () => {
+      typeInto(noteInput("使用场景"), "浴室晨光");
+      typeInto(noteInput("核心卖点"), "温和保湿");
+    });
     expect(noteInput("使用场景").value).toBe("浴室晨光");
+    expect(noteInput("核心卖点").value).toBe("温和保湿");
+    expect(container?.textContent).toContain("AI 视觉描述（不写字）");
+    expect(container?.textContent).toContain("规格文字（写在图上）");
+    expect(container?.textContent).toContain("规格文字留空则不往图上写字");
+    expect(noteInput("细节特写").placeholder).toBe("AI 视觉描述（不写字）");
+    expect(noteInput("材质成分").placeholder).toBe("规格文字（写在图上）");
 
     const body = await generate();
-    expect(body.detailTypes.find((shot) => shot.key === "selling_points")?.specText).toBeUndefined();
+    expect(body.detailTypes.find((shot) => shot.key === "selling_points")).toMatchObject({
+      prompt: "",
+      specText: "温和保湿",
+    });
     expect(body.detailTypes.find((shot) => shot.key === "material")).toMatchObject({
       prompt: "",
       specText: "温和保湿",
     });
     expect(body.detailTypes.find((shot) => shot.key === "lifestyle")?.prompt).toContain("浴室晨光");
     expect(body.detailTypes.find((shot) => shot.key === "lifestyle")?.prompt).toContain(BOILERPLATE);
+    expect(body.detailTypes.find((shot) => shot.key === "in_use")?.prompt).toContain("手持在窗边");
+    expect(body.detailTypes.find((shot) => shot.key === "scene_atmosphere")?.prompt).not.toContain("Product in natural style");
     expect(body.baseStyle).toBe(BOILERPLATE);
   });
 });

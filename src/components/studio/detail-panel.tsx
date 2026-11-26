@@ -20,6 +20,7 @@ import {
 } from "@/lib/generate/pack-run-client";
 import { isInfoShot } from "@/lib/generate/info-shots";
 import { noteFilledOnSelect, packShotRequest, persistedShotNotes } from "@/lib/generate/pack-shot-request";
+import { isSceneShot } from "@/lib/generate/scene-style";
 import { downloadUrl } from "@/lib/download-image";
 import { canvasImageFromViewedShot, viewedShotFileUrl } from "@/lib/viewed-shot";
 
@@ -228,6 +229,7 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
     setPerTypeDesc((prev) => {
       const filled = noteFilledOnSelect({
         info: isInfoShot(typeKey),
+        scene: isSceneShot(typeKey),
         existingNote: prev[typeKey],
         basePrompt,
       });
@@ -575,20 +577,28 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
           </button>
           {showCustomDesc && selected.size > 0 && (
             <div className="space-y-1.5 mb-2">
-              {[...selected].map(typeKey => (
-                <div key={`desc-${typeKey}`} className="flex items-start gap-1.5">
-                  <span className="text-[10px] text-zinc-400 flex-shrink-0 mt-1.5 w-14 text-right">
-                    {TYPE_LABELS[typeKey] || typeKey}
-                  </span>
-                  <input
-                    type="text"
-                    value={perTypeDesc[typeKey] ?? ""}
-                    onChange={(e) => setPerTypeDesc(p => ({ ...p, [typeKey]: e.target.value }))}
-                    placeholder={isInfoShot(typeKey) ? "规格文字（写在图上）" : "AI 视觉描述（不写字）"}
-                    className="flex-1 rounded-md border border-zinc-200 px-2 py-1 text-[10px] placeholder:text-zinc-300 focus:border-brand-500 focus:outline-none"
-                  />
-                </div>
-              ))}
+              <p className="text-[10px] leading-relaxed text-zinc-400">规格文字留空则不往图上写字</p>
+              {[...selected].map(typeKey => {
+                const fieldTitle = isInfoShot(typeKey) ? "规格文字（写在图上）" : "AI 视觉描述（不写字）";
+                return (
+                  <div key={`desc-${typeKey}`} className="flex items-start gap-1.5">
+                    <span className="text-[10px] text-zinc-400 flex-shrink-0 mt-1.5 w-14 text-right">
+                      {TYPE_LABELS[typeKey] || typeKey}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-[10px] leading-none text-zinc-500">{fieldTitle}</p>
+                      <input
+                        type="text"
+                        value={perTypeDesc[typeKey] ?? ""}
+                        onChange={(e) => setPerTypeDesc(p => ({ ...p, [typeKey]: e.target.value }))}
+                        placeholder={fieldTitle}
+                        aria-label={`${TYPE_LABELS[typeKey] || typeKey} ${fieldTitle}`}
+                        className="w-full rounded-md border border-zinc-200 px-2 py-1 text-[10px] placeholder:text-zinc-300 focus:border-brand-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
