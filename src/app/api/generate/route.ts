@@ -57,6 +57,13 @@ import {
   type PackShotPlan,
 } from "@/lib/generate/detail-shot";
 import {
+  isSceneShot,
+  resolveSelectedStyle,
+  sceneShotRole,
+  sceneStyleHint,
+  sceneStyleStaticFragments,
+} from "@/lib/generate/scene-style";
+import {
   MIN_START_MS,
   NOT_STARTED_REASON,
   PACK_BUDGET_MS,
@@ -408,6 +415,7 @@ function generationStaticFragments(): string[] {
     LIFESTYLE_DISTINCT_COMPOSITION,
     ATMOSPHERE_DISTINCT_COMPOSITION,
     PORTRAIT_REFERENCE_LOCK,
+    ...sceneStyleStaticFragments(),
   );
   return fragments;
 }
@@ -439,7 +447,14 @@ function withoutSpecText(prompt: string, specText: string): string {
 function assemblePackPrompt(
   dt: { key: string; prompt: string; specText?: string },
   plan: PackShotPlan,
-  input: { baseStyle?: string; referenceImageUrl?: string; category?: string; lockPortrait?: boolean },
+  input: {
+    baseStyle?: string;
+    referenceImageUrl?: string;
+    category?: string;
+    lockPortrait?: boolean;
+    /** Left-side style key. Independent of style lock, which is `baseStyle`. */
+    sceneStyle?: string;
+  },
 ): string {
   const styleLocked = packStyleLocked(input);
   if (plan.promptOverride) {
@@ -463,14 +478,26 @@ function assemblePackPrompt(
   const copy = [input.baseStyle, supplied, specText].filter(Boolean).join("\n");
   const tplBase = TYPE_TEMPLATES[dt.key];
   const tpl = tplBase ? { ...tplBase, ...packShotTemplatePatch(dt.key, copy) } : undefined;
+  const selectedStyle = resolveSelectedStyle({
+    sceneStyleKey: input.sceneStyle,
+    texts: [supplied, input.baseStyle],
+  });
+  // Style lock sends baseStyle. The picked left-side style must still set
+  // environment, lighting, and mood when that lock is off. Leaving the shot
+  // template and the category surface hint in place overrides the style:
+  // lifestyle daylight from large windows, plus beauty's dark charcoal and
+  // cyan rim, turned 户外自然 into an indoor vanity.
+  const sceneStyled = isSceneShot(dt.key) && Boolean(selectedStyle);
+  const selectedStyleHint = sceneStyled && selectedStyle ? sceneStyleHint(selectedStyle) : "";
   const catProfile = input.category ? CATEGORY_PROFILES[input.category] : null;
-  const categoryHint = !plan.omitCategoryHint && catProfile?.compositionHint
+  const categoryHint = !sceneStyled && !plan.omitCategoryHint && catProfile?.compositionHint
     ? ` ${catProfile.compositionHint}.`
     : "";
   const wantsTextOnImage = !infoShot && /(write|text|label|overlay|render.*word|render.*text|add.*text|写|字|标注|文字|打上|印上|加上字|显示文字)/i.test(userPrompt);
-  const styleHint = !infoShot && input.baseStyle && !wantsTextOnImage
+  const lockedStyleHint = !infoShot && input.baseStyle && !wantsTextOnImage && !sceneStyled
     ? ` Keep the same overall style, material, and color: ${input.baseStyle}.`
     : "";
+  const styleHint = selectedStyleHint || lockedStyleHint;
   const identityReference = plan.referenceImageUrl || input.referenceImageUrl;
   const identityLock = identityReference && !wantsTextOnImage && plan.mode !== "product_macro" && dt.key !== "multi_angle"
     ? " Keep any person visually identical to the reference image — same face, same body, same clothing."
@@ -483,22 +510,25 @@ function assemblePackPrompt(
     : wantsTextOnImage
       ? ""
       : ` CRITICAL: ${BLANKET_TEXT_BAN}, numbers, or writing on the image.`;
-  const beautySurfaceGuard = input.category === "beauty" ? BEAUTY_DARK_SURFACE_GUARD : "";
+  const beautySurfaceGuard = input.category === "beauty" && !sceneStyled ? BEAUTY_DARK_SURFACE_GUARD : "";
+  const composition = sceneStyled ? sceneShotRole(dt.key) : tpl?.composition;
+  const lighting = sceneStyled ? "" : tpl?.lighting;
+  const mood = sceneStyled ? "" : tpl?.mood;
   const body = tpl
     ? [
         identityLock,
-        styleHint,
+        sceneStyled ? "" : styleHint,
         userPrompt || "Professional product photography",
         categoryHint,
-        tpl.composition,
-        tpl.lighting,
+        composition,
+        sceneStyled ? styleHint : lighting,
         tpl.camera,
-        tpl.mood,
+        mood,
         tpl.technical,
         noTextGuard,
         beautySurfaceGuard,
       ].filter(Boolean).join(". ").trim()
-    : `${identityLock}${styleHint} ${userPrompt || "Professional product photography"}.${categoryHint} ${noTextGuard}${beautySurfaceGuard ? ` ${beautySurfaceGuard}` : ""}`.trim();
+    : `${identityLock}${sceneStyled ? "" : styleHint} ${userPrompt || "Professional product photography"}.${sceneStyled ? ` ${styleHint}` : ""}${categoryHint} ${noTextGuard}${beautySurfaceGuard ? ` ${beautySurfaceGuard}` : ""}`.trim();
   const withMacro = plan.mode === "product_macro" ? `${body} ${PRODUCT_MACRO_LOCK}`.trim() : body;
   const guarded = applyPackPromptGuards(withMacro, { detailKey: dt.key, styleLocked });
   const withFidelity = [
@@ -536,6 +566,8 @@ export async function generateDetailPack(input: {
   referenceHasPerson?: boolean;
   seed?: number;
   category?: string;
+  /** Left-side style key. Does not turn style lock on. */
+  sceneStyle?: string;
   projectTitle?: string;
   /** Clock for the pack deadline. Tests advance it; production uses Date.now. */
   now?: () => number;
@@ -1234,6 +1266,7 @@ export async function POST(req: Request) {
     referenceHasPerson,
     seed,
     category, // product category for template matching
+    sceneStyle,
     packIdempotencyKey,
   } = await req.json();
 
@@ -1251,6 +1284,7 @@ export async function POST(req: Request) {
       detailTypes,
       baseStyle,
       referenceImageUrl,
+      sceneStyle: typeof sceneStyle === "string" ? sceneStyle : undefined,
       referenceHasPerson: typeof referenceHasPerson === "boolean" ? referenceHasPerson : undefined,
       seed: typeof seed === "number" ? seed : undefined,
       category: typeof category === "string" ? category : undefined,
