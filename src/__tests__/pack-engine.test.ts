@@ -125,7 +125,7 @@ describe("pack shot request", () => {
     expect(lifestyle.specText).toBeUndefined();
   });
 
-  it("seeds visual notes for scene shots and leaves info-shot spec text empty", () => {
+  it("does not seed scene-shot visual notes with the style fallback sentence", () => {
     expect(noteFilledOnSelect({
       info: true,
       basePrompt: "Product in clean style",
@@ -139,8 +139,32 @@ describe("pack shot request", () => {
       existingNote: "温和保湿",
       basePrompt: "Product in clean style",
     })).toBeNull();
+
     expect(noteFilledOnSelect({
       info: false,
+      scene: true,
+      basePrompt: "Product in clean style",
+    })).toBeNull();
+    expect(noteFilledOnSelect({
+      info: false,
+      scene: true,
+      basePrompt: "  Product in dark_moody style.  ",
+    })).toBeNull();
+    expect(noteFilledOnSelect({
+      info: false,
+      scene: true,
+      basePrompt: "浴室晨光",
+    })).toBe("浴室晨光");
+    expect(noteFilledOnSelect({
+      info: false,
+      scene: true,
+      existingNote: "手持在窗边",
+      basePrompt: "Product in clean style",
+    })).toBeNull();
+
+    expect(noteFilledOnSelect({
+      info: false,
+      scene: false,
       basePrompt: "Product in clean style",
     })).toBe("Product in clean style");
     expect(noteFilledOnSelect({
@@ -153,9 +177,13 @@ describe("pack shot request", () => {
       selling_points: "Product in clean style",
       material: "温和保湿",
       lifestyle: "Product in clean style",
+      scene_atmosphere: "  Product in natural style.  ",
+      in_use: "手持在窗边",
+      detail: "金扣微距",
     })).toEqual({
       material: "温和保湿",
-      lifestyle: "Product in clean style",
+      in_use: "手持在窗边",
+      detail: "金扣微距",
     });
   });
 });

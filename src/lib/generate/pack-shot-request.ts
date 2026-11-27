@@ -1,4 +1,5 @@
 import { captionSpecText, isInfoShot, isStyleBoilerplateCaption } from "@/lib/generate/info-shots";
+import { isSceneShot } from "@/lib/generate/scene-style";
 
 export interface PackShotRequest {
   key: string;
@@ -34,23 +35,31 @@ export function packShotRequest(input: {
 /**
  * Non-info shots can inherit the left-side prompt as a visual note.
  * Info shots stay blank until the user types the words that should be drawn.
+ * Scene shots do not inherit `Product in {style} style`; that sentence is the
+ * empty-prompt fallback, and the selected style still reaches them through sceneStyle.
  */
 export function noteFilledOnSelect(input: {
   info: boolean;
+  scene?: boolean;
   existingNote?: string;
   basePrompt: string;
 }): string | null {
   if (input.existingNote?.trim()) return null;
   if (input.info) return null;
+  if (input.scene && isStyleBoilerplateCaption(input.basePrompt)) return null;
   return input.basePrompt;
 }
 
-/** Drop saved info-shot notes that are only the style fallback sentence. */
+/**
+ * Drop saved notes that are only the style fallback sentence.
+ * Info shots must not overlay it, and scene-shot visual descriptions must not show it.
+ * Any other text, including spec copy the user typed, is kept.
+ */
 export function persistedShotNotes(notes: Record<string, string>): Record<string, string> {
   const next: Record<string, string> = {};
   for (const [key, value] of Object.entries(notes)) {
     if (typeof value !== "string") continue;
-    if (isInfoShot(key) && isStyleBoilerplateCaption(value)) continue;
+    if ((isInfoShot(key) || isSceneShot(key)) && isStyleBoilerplateCaption(value)) continue;
     next[key] = value;
   }
   return next;
