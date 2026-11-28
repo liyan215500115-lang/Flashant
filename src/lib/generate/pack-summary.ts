@@ -66,6 +66,32 @@ const CAPTION_LABEL: Record<AppLocale, string> = {
   ar: "تعذر إضافة نص المواصفات. أعد المحاولة.",
 };
 
+const POSTER_LABEL: Record<AppLocale, string> = {
+  zh: "海报没有叠加上去，无字原图仍在",
+  en: "The poster could not be added. The original image is unchanged.",
+  ja: "ポスターを重ねられませんでした。文字なしの元画像はそのままです。",
+  ko: "포스터를 올리지 못했습니다. 글자 없는 원본은 그대로입니다.",
+  es: "No se pudo añadir el póster. La imagen original no cambió.",
+  fr: "L'affiche n'a pas pu être ajoutée. L'image d'origine est inchangée.",
+  de: "Das Poster konnte nicht gesetzt werden. Das Originalbild ist unverändert.",
+  "pt-BR": "Não foi possível adicionar o pôster. A imagem original não mudou.",
+  it: "Non è stato possibile aggiungere il poster. L'immagine originale è invariata.",
+  ar: "تعذر إضافة الملصق. الصورة الأصلية لم تتغير.",
+};
+
+const GLYPH_LABEL: Record<AppLocale, string> = {
+  zh: "海报缺字，没有叠加上去。无字原图仍在。",
+  en: "A glyph is missing, so the poster was not created. The original image is unchanged.",
+  ja: "文字がないためポスターは作られませんでした。文字なしの元画像はそのままです。",
+  ko: "글리프가 없어 포스터를 만들지 못했습니다. 글자 없는 원본은 그대로입니다.",
+  es: "Falta un glifo, así que no se creó el póster. La imagen original no cambió.",
+  fr: "Un glyphe manque, donc l'affiche n'a pas été créée. L'image d'origine est inchangée.",
+  de: "Eine Glyphe fehlt, daher wurde kein Poster erzeugt. Das Originalbild ist unverändert.",
+  "pt-BR": "Falta um glifo, então o pôster não foi criado. A imagem original não mudou.",
+  it: "Manca un glifo, quindi il poster non è stato creato. L'immagine originale è invariata.",
+  ar: "هناك حرف ناقص، لذا لم يُنشأ الملصق. الصورة الأصلية لم تتغير.",
+};
+
 const GENERIC_LABEL: Record<AppLocale, string> = {
   zh: "生成失败，请重试",
   en: "Generation failed. Please try again.",
@@ -79,10 +105,12 @@ const GENERIC_LABEL: Record<AppLocale, string> = {
   ar: "فشل التوليد. أعد المحاولة.",
 };
 
-type FailureKind = "not_started" | "rate_limit" | "safety" | "timeout" | "caption" | "generic" | "raw";
+type FailureKind = "not_started" | "rate_limit" | "safety" | "timeout" | "caption" | "poster" | "glyph" | "generic" | "raw";
 
 function failureKind(reason: string): FailureKind {
   const text = reason.trim();
+  if (text === "caption_glyphs_missing") return "glyph";
+  if (text === "poster_overlay_failed" || text === "poster_not_persisted" || text === "poster_source_unavailable") return "poster";
   if (text === "caption_overlay_failed" || text === "caption_not_persisted") return "caption";
   if (text === NOT_STARTED_REASON) return "not_started";
   if (/\bprediction_timeout\b/i.test(text)) return "timeout";
@@ -106,6 +134,8 @@ export function packFailureReasonLabel(reason: string, locale?: string): string 
   if (kind === "safety") return SAFETY_LABEL[code];
   if (kind === "timeout") return TIMEOUT_LABEL[code];
   if (kind === "caption") return CAPTION_LABEL[code];
+  if (kind === "poster") return POSTER_LABEL[code];
+  if (kind === "glyph") return GLYPH_LABEL[code];
   if (kind === "generic") return GENERIC_LABEL[code];
   return reason;
 }

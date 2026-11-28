@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
     "/api/generate": [
       "./assets/fonts/DroidSansFallbackFull.ttf",
       "./assets/fonts/NotoSans-Regular.ttf",
+      "./assets/fonts/NotoSans-Bold.ttf",
+      "./assets/fonts/NotoSansJP-Regular.ttf",
+      "./assets/fonts/NotoSansJP-Bold.ttf",
+      "./assets/fonts/NotoSansKR-Regular.ttf",
+      "./assets/fonts/NotoSansKR-Bold.ttf",
     ],
   },
   // native pg packages only needed for direct TCP connections (local dev / Docker)

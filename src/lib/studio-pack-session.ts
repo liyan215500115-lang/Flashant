@@ -2,16 +2,50 @@ export const GENERAL_PACK = ["selling_points", "detail", "multi_angle", "lifesty
 
 const STORAGE_PREFIX = "flashant.studioPack.v1";
 
+export interface PackPosterDraft {
+  enabled: boolean;
+  language: "zh" | "en" | "ja" | "ko";
+  template: "auto" | "A" | "B" | "C";
+  series: string;
+  title: string;
+  dek: string;
+  tags: Array<{ en: string; cn: string }>;
+}
+
 export interface PackDraft {
   selected: string[];
   category: string;
   lockStyle: boolean;
   perTypeDesc: Record<string, string>;
   open: boolean;
+  poster?: PackPosterDraft;
 }
 
 export function packStorageKey(projectId: string): string {
   return `${STORAGE_PREFIX}:${projectId}`;
+}
+
+function posterDraft(value: unknown): PackPosterDraft | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const rec = value as Partial<PackPosterDraft>;
+  const language = rec.language === "en" || rec.language === "ja" || rec.language === "ko" ? rec.language : "zh";
+  const template = rec.template === "A" || rec.template === "B" || rec.template === "C" ? rec.template : "auto";
+  const tags = Array.isArray(rec.tags)
+    ? rec.tags.slice(0, 3).map((tag) => ({
+      en: typeof tag?.en === "string" ? tag.en : "",
+      cn: typeof tag?.cn === "string" ? tag.cn : "",
+    }))
+    : [];
+  while (tags.length < 3) tags.push({ en: "", cn: "" });
+  return {
+    enabled: rec.enabled === true,
+    language,
+    template,
+    series: typeof rec.series === "string" ? rec.series : "",
+    title: typeof rec.title === "string" ? rec.title : "",
+    dek: typeof rec.dek === "string" ? rec.dek : "",
+    tags,
+  };
 }
 
 export function readPackDraft(projectId: string, storage?: Storage): PackDraft | null {
@@ -28,6 +62,7 @@ export function readPackDraft(projectId: string, storage?: Storage): PackDraft |
       lockStyle: parsed.lockStyle === true,
       perTypeDesc: parsed.perTypeDesc && typeof parsed.perTypeDesc === "object" ? parsed.perTypeDesc : {},
       open: parsed.open !== false,
+      ...(posterDraft(parsed.poster) ? { poster: posterDraft(parsed.poster) } : {}),
     };
   } catch {
     return null;

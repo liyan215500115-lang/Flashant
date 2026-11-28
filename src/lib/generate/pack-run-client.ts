@@ -40,7 +40,16 @@ export interface PackRunView {
   credit: PackCreditRecord;
   summary: string;
   failures: Array<{ key: string; reason: string }>;
-  successes: Array<{ key: string; url: string; label: string; id?: string }>;
+  successes: Array<{
+    key: string;
+    url: string;
+    label: string;
+    id?: string;
+    unlettered?: boolean;
+    poster?: boolean;
+    sourceId?: string;
+    market?: string;
+  }>;
   engine: { engine: "vega" | "flux"; label: string };
 }
 
@@ -54,10 +63,19 @@ export function packRunViewFromImages(
   const successes = mine.flatMap((image) => {
     if (image.status !== "SUCCEEDED" || !image.url) return [];
     const meta = image.generationMeta;
-    const key = meta && typeof meta === "object" && "detailKey" in meta && typeof meta.detailKey === "string"
-      ? meta.detailKey
-      : "detail";
-    return [{ key, url: image.url, label: key, ...(image.id ? { id: image.id } : {}) }];
+    const record = meta && typeof meta === "object" ? meta as Record<string, unknown> : {};
+    const key = typeof record.detailKey === "string" ? record.detailKey : "detail";
+    const poster = record.posterRole === "poster";
+    return [{
+      key,
+      url: image.url,
+      label: key,
+      ...(image.id ? { id: image.id } : {}),
+      ...(record.unlettered === true ? { unlettered: true } : {}),
+      ...(poster ? { poster: true } : {}),
+      ...(typeof record.posterSourceId === "string" ? { sourceId: record.posterSourceId } : {}),
+      ...(typeof record.market === "string" ? { market: record.market } : {}),
+    }];
   });
   return {
     credit,
