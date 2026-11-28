@@ -15,6 +15,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Image,
+  ImageOff,
   Trash2,
   Type,
   X,
@@ -34,6 +35,12 @@ import { toast } from "sonner";
 import { downloadBlob, downloadUrls } from "@/lib/download-image";
 import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
 import { saveGeneratedImage } from "@/lib/persist-project-image";
+import {
+  displayForGeneratedImage,
+  downloadableGeneratedSrc,
+  generationCompletionBanner,
+  generationStatusText,
+} from "@/lib/generated-image-display";
 import { projectGenerationError } from "@/lib/project-fetch-error";
 import { packFailureReasonLabel } from "@/lib/generate/pack-summary";
 import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
@@ -53,6 +60,7 @@ interface GeneratedImage {
   id: string;
   productImageId: string | null;
   url: string;
+  s3Key?: string | null;
   status: string;
   promptUsed: string | null;
   errorMessage: string | null;
@@ -101,6 +109,9 @@ export default function ProductDetailPage() {
   const [editingImage, setEditingImage] = useState<{ url: string; name: string; productImageId: string } | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
+  const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
+  const [trackedProjectId, setTrackedProjectId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [textEditImg, setTextEditImg] = useState<{url:string; id:string} | null>(null);
   const [textInput, setTextInput] = useState("");
@@ -116,6 +127,31 @@ export default function ProductDetailPage() {
   function copy(key: string, fallback: string) {
     const value = t(key);
     return value && value !== key ? value : fallback;
+  }
+
+  function fill(key: string, vars: Record<string, string | number>) {
+    return Object.entries(vars).reduce(
+      (text, [name, value]) => text.split(`{${name}}`).join(String(value)),
+      t(key),
+    );
+  }
+
+  function rememberBroken(id: string) {
+    setBrokenIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
+
+  function rememberLoaded(id: string) {
+    setLoadedIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
   }
 
   const fetchProject = useCallback(async () => {
@@ -309,8 +345,8 @@ export default function ProductDetailPage() {
         })
       );
       const failed = results.filter((r) => r.status === "rejected").length;
-      if (failed > 0) toast.error(`${failed} 张删除失败，请重试`);
-      else toast.success(ids.length > 1 ? `已删除 ${ids.length} 张图片` : "已删除");
+      if (failed > 0) toast.error(fill("detail.deleteSomeFailed", { count: failed }));
+      else toast.success(ids.length > 1 ? fill("detail.deletedMany", { count: ids.length }) : t("detail.deletedOne"));
       if (imageDeleteTarget.kind === "batch") setSelectedIds(new Set());
       setImageDeleteTarget(null);
       fetchProject();
@@ -329,11 +365,11 @@ export default function ProductDetailPage() {
         productImageId: editingImage.productImageId || project.productImages[0]?.id || null,
         promptUsed: "manual-edit",
       });
-      toast.success("已保存到项目");
+      toast.success(t("detail.savedToProject"));
       setEditingImage(null);
       await fetchProject();
     } catch (error) {
-      toast.error("保存失败，请重试");
+      toast.error(t("detail.saveFailed"));
       throw error;
     }
   }
@@ -350,12 +386,12 @@ export default function ProductDetailPage() {
         promptUsed: "text-overlay",
       });
       downloadBlob(blob, "image-text.png");
-      toast.success("已保存到项目并开始下载");
+      toast.success(t("detail.savedAndDownloading"));
       setTextEditImg(null);
       setTextInput("");
       await fetchProject();
     } catch {
-      toast.error("保存失败，请重试");
+      toast.error(t("detail.saveFailed"));
     } finally {
       setTextSaving(false);
     }
@@ -368,7 +404,7 @@ export default function ProductDetailPage() {
         body: JSON.stringify({ imageProjectId: project!.id, productImageId, prompt: promptUsed, numOutputs: 1 }),
       });
       if (res.ok) {
-        toast.success("Regenerating...");
+        toast.success(t("detail.regenerating"));
         fetchProject();
       }
     } catch {}
@@ -384,7 +420,7 @@ export default function ProductDetailPage() {
     if (project) {
       const updated = reordered.map((img, i) => ({ ...img, createdAt: new Date(Date.now() - (reordered.length - i) * 1000).toISOString() }));
       const allImages = project.generatedImages.map(g => updated.find(u => u.id === g.id) || g);
-      setProject({ ...project, generatedImages: allImages as any });
+      setProject({ ...project, generatedImages: allImages });
     }
     const order = reordered.map((img) => img.id);
     try {
@@ -440,16 +476,34 @@ export default function ProductDetailPage() {
   }
 
   const category = project.promptTemplate?.category ?? "general";
+  if (project.id !== trackedProjectId) {
+    setTrackedProjectId(project.id);
+    setBrokenIds(new Set());
+    setLoadedIds(new Set());
+  }
+
   const succeededImages = project.generatedImages.filter(
     (img) => img.status === "SUCCEEDED"
   );
   const failedImages = project.generatedImages.filter((img) => img.status === "FAILED");
+  const loadState = { loadedIds, brokenIds };
+  const banner = generationCompletionBanner({
+    projectStatus: project.status,
+    images: project.generatedImages,
+    loadedIds,
+    brokenIds,
+  });
+  const statusText = generationStatusText(banner, t);
+  const downloadableShots = succeededImages.flatMap((img) => {
+    const src = downloadableGeneratedSrc(img, loadState);
+    return src ? [{ img, src }] : [];
+  });
   const packView = packRunViewFromImages(project.generatedImages, locale);
   const listedFailures = packView
     ? packView.failures.map((failure, index) => ({ id: `${failure.key}-${index}`, reason: failure.reason }))
     : failedImages.map((img) => ({
         id: img.id,
-        reason: packFailureReasonLabel(img.errorMessage || "生成失败", locale),
+        reason: packFailureReasonLabel(img.errorMessage || t("error.generateFailed"), locale),
       }));
   const quotaText = quotaBadgeText({
     used: quota.used,
@@ -470,6 +524,7 @@ export default function ProductDetailPage() {
   const deleteCopy = imageDeleteConfirmCopy({
     count: Math.max(deleteCount, 1),
     removesDerivatives,
+    t,
   });
 
   return (
@@ -478,7 +533,7 @@ export default function ProductDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 mb-2 transition-colors">
-            <ArrowLeft size={14} /> 我的项目
+            <ArrowLeft size={14} /> {t("sidebar.products")}
           </Link>
           <h1 className="text-xl font-semibold">{project.title || t("workspace.noName")}</h1>
           <div className="flex items-center gap-2 mt-1">
@@ -495,7 +550,7 @@ export default function ProductDetailPage() {
               ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400"
               : "bg-zinc-50 border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700"
           }`}>
-            <span>本月剩余</span>
+            <span>{t("detail.quotaRemaining")}</span>
             <span className="font-mono tabular-nums">{quotaText}</span>
           </div>
         </div>
@@ -503,7 +558,7 @@ export default function ProductDetailPage() {
           {editMode ? (
             <>
               <span className="text-xs text-muted-foreground">
-                {selectedIds.size > 0 ? `已选 ${selectedIds.size} 张` : "点击图片选择"}
+                {selectedIds.size > 0 ? fill("detail.selectedCount", { count: selectedIds.size }) : t("detail.clickToSelect")}
               </span>
               <Button
                 variant="outline" size="sm" className="cursor-pointer gap-1"
@@ -512,27 +567,29 @@ export default function ProductDetailPage() {
                   const items: { url: string; fileName: string }[] = [];
                   for (const id of selectedIds) {
                     const img = succeededImages.find((i) => i.id === id);
-                    if (img) {
-                      items.push({ url: img.url, fileName: `flashant-${img.id.slice(0, 8)}.png` });
+                    const src = img ? downloadableGeneratedSrc(img, loadState) : null;
+                    if (img && src) {
+                      items.push({ url: src, fileName: `flashant-${img.id.slice(0, 8)}.png` });
                       continue;
                     }
                     const pi = project.productImages.find((p) => p.id === id);
                     if (pi) items.push({ url: pi.originalUrl, fileName: pi.fileName || `flashant-${id.slice(0, 8)}.png` });
                   }
                   void downloadUrls(items).then(({ failed }) => {
-                    if (failed > 0) toast.error(`${failed} 张下载失败`);
+                    if (failed > 0) toast.error(fill("detail.downloadSomeFailed", { count: failed }));
                   });
                 }}>
-                <Download size={14} />下载
+                <Download size={14} />{t("detail.download")}
               </Button>
               <Button
                 variant="outline" size="sm" className="cursor-pointer gap-1"
                 disabled={selectedIds.size === 0}
                 onClick={() => {
                   const img = succeededImages.find((i) => selectedIds.has(i.id));
-                  if (img) { setTextEditImg({url: img.url, id: img.id}); setTextInput(""); }
+                  const src = img ? downloadableGeneratedSrc(img, loadState) : null;
+                  if (img && src) { setTextEditImg({url: src, id: img.id}); setTextInput(""); }
                 }}>
-                <Type size={14} />加文字
+                <Type size={14} />{t("detail.addText")}
               </Button>
               <Button
                 variant="outline" size="sm" className="cursor-pointer gap-1"
@@ -545,51 +602,51 @@ export default function ProductDetailPage() {
                   }
                   setSelectedIds(new Set());
                 }}>
-                <Sparkles size={14} />重生成
+                <Sparkles size={14} />{t("detail.regenerateShort")}
               </Button>
               <Button
                 variant="outline" size="sm" className="cursor-pointer gap-1 text-zinc-500 hover:text-red-600 hover:border-red-200"
                 disabled={selectedIds.size === 0}
                 onClick={() => setImageDeleteTarget({ kind: "batch" })}>
-                <Trash2 size={14} />删除
+                <Trash2 size={14} />{t("detail.delete")}
               </Button>
               <Button variant="default" size="sm" className="cursor-pointer" onClick={() => { setEditMode(false); setSelectedIds(new Set()); }}>
-                完成
+                {t("detail.doneSelecting")}
               </Button>
             </>
           ) : (
             <>
-              {succeededImages.length > 0 && (
+              {downloadableShots.length > 0 && (
                 <Button
                   variant="default"
                   size="sm"
                   className="cursor-pointer gap-1.5"
                   onClick={() => {
                     void downloadUrls(
-                      succeededImages.map((img) => ({
-                        url: img.url,
+                      downloadableShots.map(({ img, src }) => ({
+                        url: src,
                         fileName: `flashant-${img.id.slice(0, 8)}.png`,
                       }))
                     ).then(({ failed }) => {
-                      if (failed > 0) toast.error(`${failed} 张下载失败`);
+                      if (failed > 0) toast.error(fill("detail.downloadSomeFailed", { count: failed }));
                     });
                   }}
                 >
                   <Download size={14} />
-                  下载
+                  {t("detail.download")}
                 </Button>
               )}
-              {succeededImages.length > 0 && (
+              {downloadableShots.length > 0 && (
                 <Link href={`/projects/${project.id}/publish`}>
                   <Button variant="outline" size="sm" className="cursor-pointer">
-                    发布到 Shopify
+                    {t("detail.publishShopify")}
                   </Button>
                 </Link>
               )}
               <Link href={`/studio?projectId=${project.id}`}>
                 <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
                   <Sparkles size={14} />
-                  AI 编辑
+                  {t("detail.aiEdit")}
                 </Button>
               </Link>
               <Button
@@ -597,7 +654,7 @@ export default function ProductDetailPage() {
                 onClick={() => setEditMode(true)}
                 className="cursor-pointer gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                选择图片
+                {t("detail.selectImages")}
               </Button>
               <Button
                 variant="outline"
@@ -679,7 +736,7 @@ export default function ProductDetailPage() {
                   <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: pi.originalUrl, name: pi.fileName, productImageId: pi.id }); }}
                     className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 hover:text-zinc-800 transition-all flex items-center gap-1">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    编辑
+                    {t("detail.edit")}
                   </button>
                 )}
               </div>
@@ -690,7 +747,11 @@ export default function ProductDetailPage() {
                   </Button>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {imageResults.map((img) => (
+                    {imageResults.map((img) => {
+                      const display = displayForGeneratedImage(img);
+                      const broken = brokenIds.has(img.id);
+                      const visible = broken ? { ...display, src: null } : display;
+                      return (
                       <div key={img.id}
                         draggable={!editMode}
                         onDragStart={(e) => {
@@ -726,20 +787,22 @@ export default function ProductDetailPage() {
                               if (next.has(img.id)) next.delete(img.id); else next.add(img.id);
                               return next;
                             });
-                          } else {
-                            setLightboxUrl(img.url);
+                          } else if (visible.src) {
+                            setLightboxUrl(visible.src);
                           }
                         }}>
-                        <img src={img.url} alt="" className="w-full h-full object-cover pointer-events-none"
-                  onError={(e) => {
-                    const t = e.currentTarget;
-                    t.onerror = null;
-                    t.style.display = "none";
-                    const placeholder = document.createElement("div");
-                    placeholder.className = "w-full h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800";
-                    placeholder.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
-                    t.parentElement?.appendChild(placeholder);
-                  }} />
+                        {visible.src ? (
+                        <img src={visible.src} alt="" className="w-full h-full object-cover pointer-events-none"
+                          onLoad={() => {
+                            if (!display.durable) rememberLoaded(img.id);
+                          }}
+                          onError={() => rememberBroken(img.id)} />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-zinc-100 px-2 text-center dark:bg-zinc-800">
+                            <ImageOff size={18} className="text-zinc-400" />
+                            <span className="text-[10px] leading-tight text-zinc-500">{t("detail.imageUnavailable")}</span>
+                          </div>
+                        )}
                         {/* Hover delete icon */}
                         {!editMode && (
                           <button type="button" onClick={(e) => { e.stopPropagation(); setImageDeleteTarget({ kind: "single", imageId: img.id, removesDerivatives: false }); }}
@@ -747,11 +810,13 @@ export default function ProductDetailPage() {
                             <Trash2 size={12} />
                           </button>
                         )}
-                        {!editMode && (
-                          <button type="button" title="下载" aria-label="下载" onClick={(e) => {
+                        {!editMode && visible.src && (
+                          <button type="button" title={t("detail.download")} aria-label={t("detail.download")} onClick={(e) => {
                             e.stopPropagation();
-                            void downloadUrls([{ url: img.url, fileName: `flashant-${img.id.slice(0, 8)}.png` }]).then(({ failed }) => {
-                              if (failed > 0) toast.error("下载失败");
+                            const src = downloadableGeneratedSrc(img, loadState) ?? visible.src;
+                            if (!src) return;
+                            void downloadUrls([{ url: src, fileName: `flashant-${img.id.slice(0, 8)}.png` }]).then(({ failed }) => {
+                              if (failed > 0) toast.error(t("detail.downloadFailed"));
                             });
                           }}
                             className="absolute top-2 right-2 p-1 rounded-md bg-white/80 hover:bg-white text-zinc-500 hover:text-zinc-900 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10">
@@ -768,7 +833,8 @@ export default function ProductDetailPage() {
                           </div>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -802,14 +868,18 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-      {/* Completed badge */}
-      {project.status === "GENERATED" && succeededImages.length > 0 && failedImages.length === 0 && (
-        <div className="flex items-center justify-center gap-2 py-4 text-sm text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 size={16} />
-          {t("detail.allDone")} — {succeededImages.length} {t("detail.imagesReady")}
+      {/* Completed badge. Hidden when the rows exist but the files cannot be shown. */}
+      {statusText && (
+        <div className={`flex items-center justify-center gap-2 py-4 text-sm ${
+          banner.kind === "complete"
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-amber-700 dark:text-amber-400"
+        }`}>
+          {banner.kind === "complete" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          {statusText}
         </div>
       )}
-      {packView && (
+      {packView && banner.kind !== "unavailable" && banner.kind !== "partial" && banner.kind !== "pending" && (
         <div className={`flex flex-col items-center gap-1 py-4 text-sm ${packView.failures.length > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}>
           <p>{packView.summary}</p>
           {packView.failures.length > 0 && (
@@ -821,9 +891,23 @@ export default function ProductDetailPage() {
           )}
         </div>
       )}
-      {!packView && failedImages.length > 0 && (
+      {packView && (banner.kind === "unavailable" || banner.kind === "partial") && packView.failures.length > 0 && (
+        <ul className="flex flex-col items-center gap-1 py-2 text-xs text-amber-800/80 dark:text-amber-300/80">
+          {listedFailures.slice(0, 8).map((failure) => (
+            <li key={failure.id}>{failure.reason}</li>
+          ))}
+        </ul>
+      )}
+      {!packView && banner.failed > 0 && (
         <div className="flex flex-col items-center gap-1 py-4 text-sm text-amber-700 dark:text-amber-400">
-          <p>已完成 {succeededImages.length}/{succeededImages.length + failedImages.length}，{failedImages.length} 张失败</p>
+          <p>{fill("detail.partialResult", {
+            done: banner.ready,
+            total: banner.ready + banner.unavailable + banner.failed + banner.pending,
+            failed: banner.failed,
+          })}</p>
+          {banner.unavailable > 0 && (
+            <p>{fill("detail.imagesUnavailable", { count: banner.unavailable })}</p>
+          )}
           <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
             {listedFailures.slice(0, 8).map((failure) => (
               <li key={failure.id}>{failure.reason}</li>
@@ -847,18 +931,18 @@ export default function ProductDetailPage() {
             className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-lg cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
-              const generated = project.generatedImages.find((img) => img.url === lightboxUrl);
+              const generated = project.generatedImages.find((img) => img.url === lightboxUrl || displayForGeneratedImage(img).src === lightboxUrl);
               const original = project.productImages.find((img) => img.originalUrl === lightboxUrl);
               const fileName = generated
                 ? `flashant-${generated.id.slice(0, 8)}.png`
                 : original?.fileName || "flashant-image.png";
               void downloadUrls([{ url: lightboxUrl, fileName }]).then(({ failed }) => {
-                if (failed > 0) toast.error("下载失败");
+                if (failed > 0) toast.error(t("detail.downloadFailed"));
               });
             }}
           >
             <Download size={16} />
-            下载
+            {t("detail.download")}
           </button>
         </div>
       )}
@@ -874,13 +958,13 @@ export default function ProductDetailPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleAddText();
               }}
-              placeholder="输入文字，保存到项目并下载"
+              placeholder={t("detail.textPlaceholder")}
               disabled={textSaving}
               className="w-64 h-9 rounded-lg border border-zinc-200 px-3 text-sm focus:border-brand-500 focus:outline-none" />
             <Button size="sm" className="cursor-pointer bg-brand-900 hover:bg-brand-800"
               disabled={!textInput.trim() || textSaving}
               onClick={() => { void handleAddText(); }}>
-              {textSaving ? "保存中..." : "保存并下载"}
+              {textSaving ? t("detail.saving") : t("detail.saveAndDownload")}
             </Button>
             <button onClick={() => setTextEditImg(null)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800">
               <X size={18} />
@@ -900,14 +984,14 @@ export default function ProductDetailPage() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setImageDeleteTarget(null)} disabled={imageDeleting} className="cursor-pointer">
-              取消
+              {t("detail.cancel")}
             </Button>
             <Button
               variant="destructive" size="sm"
               onClick={() => { void confirmImageDelete(); }}
               disabled={imageDeleting}
               className="cursor-pointer">
-              {imageDeleting ? "删除中..." : deleteCopy.confirmLabel}
+              {imageDeleting ? t("detail.deleting") : deleteCopy.confirmLabel}
             </Button>
           </DialogFooter>
         </DialogContent>
