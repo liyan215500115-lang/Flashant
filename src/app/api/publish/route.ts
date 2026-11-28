@@ -3,7 +3,35 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { publishToShopify } from "@/lib/platform/shopify";
 import { publishToTikTokShop } from "@/lib/platform/tiktok";
+import { resolvePublishImageSource } from "@/lib/publish-image";
+import { getSignedGetUrl } from "@/lib/s3";
 import type { Platform } from "@prisma/client";
+
+const UNFETCHABLE = "Image is not a public URL the shop can fetch";
+
+async function fetchableImageUrl(
+  image: { id: string; url?: string | null; s3Key?: string | null; createdAt?: Date | string | null },
+  origin: string,
+): Promise<string | null> {
+  const resolved = resolvePublishImageSource(
+    {
+      id: image.id,
+      url: image.url,
+      s3Key: image.s3Key,
+      createdAt: image.createdAt instanceof Date ? image.createdAt.toISOString() : image.createdAt,
+    },
+    { origin, publicBaseUrl: process.env.S3_PUBLIC_URL },
+  );
+  if (resolved.kind === "url") return resolved.url;
+  if (resolved.kind === "owned") {
+    try {
+      return await getSignedGetUrl(resolved.key, 3600);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 export async function GET() {
   const session = await auth();
@@ -76,16 +104,28 @@ export async function POST(req: Request) {
       try {
         let result: { postId: string; postUrl: string } | null = null;
 
-        if (platform === "SHOPIFY") {
-          result = await publishToShopify(userId, {
+        if (platform === "SHOPIFY" || platform === "TIKTOK_SHOP") {
+          const src = await fetchableImageUrl(genImage, new URL(req.url).origin);
+          if (!src) {
+            await db.publishRecord.create({
+              data: {
+                imageProjectId,
+                generatedImageId: genImage.id,
+                platform,
+                status: "FAILED",
+                errorMessage: UNFETCHABLE,
+              },
+            });
+            results.push({ platform, status: "failed", error: UNFETCHABLE });
+            continue;
+          }
+          const payload = {
             title: project.title || "Product Image",
-            images: [{ url: genImage.url }],
-          });
-        } else if (platform === "TIKTOK_SHOP") {
-          result = await publishToTikTokShop(userId, {
-            title: project.title || "Product Image",
-            images: [{ url: genImage.url }],
-          });
+            images: [{ url: src }],
+          };
+          result = platform === "SHOPIFY"
+            ? await publishToShopify(userId, payload)
+            : await publishToTikTokShop(userId, payload);
         } else {
           results.push({
             platform,

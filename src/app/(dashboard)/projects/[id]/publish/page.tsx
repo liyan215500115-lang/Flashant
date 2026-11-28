@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
   FileImage,
   Send,
 } from "lucide-react";
+import { displayForGeneratedImage } from "@/lib/generated-image-display";
 import { PLATFORM_LIST } from "@/lib/platform-specs";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { useT } from "@/components/i18n-provider";
@@ -25,6 +27,8 @@ import { useT } from "@/components/i18n-provider";
 interface GeneratedImage {
   id: string;
   url: string;
+  s3Key?: string | null;
+  createdAt?: string | null;
   status: string;
   productImageId: string | null;
 }
@@ -149,8 +153,10 @@ export default function PublishPage() {
 
     for (let i = 0; i < succeededImages.length; i++) {
       const img = succeededImages[i];
+      const src = displayForGeneratedImage(img).src;
+      if (!src) continue;
       try {
-        const response = await fetch(img.url);
+        const response = await fetch(src);
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -216,11 +222,9 @@ export default function PublishPage() {
     return (
       <div className="max-w-[720px] mx-auto py-8">
         <p className="text-destructive">{t("detail.projectNotFound")}</p>
-        <Link href="/dashboard">
-          <Button variant="outline" size="sm" className="mt-4">
-            <ArrowLeft size={14} className="mr-1" />
-            {t("publish.backToDashboard")}
-          </Button>
+        <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-4 gap-1")}>
+          <ArrowLeft size={14} />
+          {t("publish.backToDashboard")}
         </Link>
       </div>
     );
@@ -269,6 +273,7 @@ export default function PublishPage() {
                 <div className="grid grid-cols-3 gap-3">
                   {succeededImages.map((img) => {
                     const isSelected = selectedImages.has(img.id);
+                    const src = displayForGeneratedImage(img).src;
                     return (
                       <button
                         key={img.id}
@@ -280,11 +285,13 @@ export default function PublishPage() {
                           background: "var(--muted)",
                         }}
                       >
+                        {src ? (
                         <img
-                          src={img.url}
+                          src={src}
                           alt=""
                           className="w-full h-full object-cover"
                         />
+                        ) : null}
                         {isSelected && (
                           <div className="absolute top-2 right-2">
                             <div
@@ -433,6 +440,7 @@ export default function PublishPage() {
                 variant="outline"
                 size="lg"
                 className="w-full gap-2"
+                data-testid="publish-submit"
                 onClick={handlePublish}
                 disabled={publishing || selectedImages.size === 0}
               >
@@ -451,11 +459,13 @@ export default function PublishPage() {
                     "Connect a Shopify store before publishing. Download does not need a store."
                   )}
                 </p>
-                <Link href="/integrations">
-                  <Button variant="outline" size="sm" className="gap-1.5">
-                    <Store size={14} />
-                    {label("publish.connectShopify", "Connect Shopify")}
-                  </Button>
+                <Link
+                  href="/integrations"
+                  data-testid="connect-shopify"
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-fit gap-1.5")}
+                >
+                  <Store size={14} />
+                  {label("publish.connectShopify", "Connect Shopify")}
                 </Link>
               </div>
             )}
@@ -501,15 +511,11 @@ export default function PublishPage() {
               ))}
             </div>
             <div className="flex gap-2 mt-5">
-              <Link href={`/projects/${project.id}`}>
-                <Button variant="outline" size="sm">
-                  {t("publish.backToProject")}
-                </Button>
+              <Link href={`/projects/${project.id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                {t("publish.backToProject")}
               </Link>
-              <Link href="/dashboard">
-                <Button variant="default" size="sm">
-                  {t("publish.backToDashboard")}
-                </Button>
+              <Link href="/dashboard" className={cn(buttonVariants({ variant: "default", size: "sm" }))}>
+                {t("publish.backToDashboard")}
               </Link>
             </div>
           </CardContent>

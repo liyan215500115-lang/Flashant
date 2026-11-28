@@ -4,23 +4,19 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { ImageEditor } from "@/components/project/image-editor";
+import {
+  ProjectDetailLoading,
+  ProjectDetailView,
+  type DetailShotModel,
+} from "@/components/project/project-detail-view";
 
 import {
-  ArrowLeft,
-  Sparkles,
   AlertCircle,
-  CheckCircle2,
-  Image,
-  ImageOff,
-  Trash2,
-  Type,
-  X,
-  Check,
+  ArrowLeft,
   Download,
+  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -47,9 +43,6 @@ import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
 import { loadProjectWithRetry } from "@/lib/project-load";
 import { loadProjectQuota, PROJECT_QUOTA_LOADING, type ProjectQuotaState } from "@/lib/project-quota";
 import { quotaBadgeText } from "@/lib/quota-display";
-import { AiEditLink } from "@/components/project/ai-edit-link";
-import { QuotaRemainingBadge } from "@/components/project/quota-badge";
-import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
 
 interface ProductImage {
@@ -121,11 +114,6 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const { t, locale } = useT();
   const projectRef = useRef<Project | null>(null);
-
-  function copy(key: string, fallback: string) {
-    const value = t(key);
-    return value && value !== key ? value : fallback;
-  }
 
   function fill(key: string, vars: Record<string, string | number>) {
     return Object.entries(vars).reduce(
@@ -264,43 +252,6 @@ export default function ProductDetailPage() {
     pollTimers.current.set(taskId, setTimeout(poll, initialDelay));
   }
 
-  async function handleGenerate(productImageId: string) {
-    if (generatingIds.has(productImageId)) return;
-    setError("");
-
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageProjectId: project!.id,
-          productImageId,
-          promptTemplateId: project!.promptTemplate?.id ?? null,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        if (data.error === "quota_exceeded") {
-          setError(data.message || t("error.quotaExceeded"));
-        } else if (data.error === "already_generating") {
-          // Already in progress, start polling
-          startPolling(data.taskId, productImageId);
-          return;
-        } else {
-          throw new Error(data.message || data.error || t("error.generateFailed"));
-        }
-      } else {
-        const data = await res.json();
-        startPolling(data.taskId, productImageId);
-        fetchProject(); // Refresh to show updated status
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.generateFailed"));
-      fetchProject();
-    }
-  }
-
   async function confirmImageDelete() {
     if (!imageDeleteTarget || imageDeleting) return;
     const ids = imageDeleteTarget.kind === "batch" ? [...selectedIds] : [imageDeleteTarget.imageId];
@@ -412,43 +363,51 @@ export default function ProductDetailPage() {
     }
   }
 
+  const quotaModel = {
+    status: quota.status,
+    value: quota.status === "error"
+      ? ""
+      : quotaBadgeText({
+          used: quota.status === "ready" ? quota.used : 0,
+          limit: quota.status === "ready" ? quota.limit : 0,
+          tier: quota.tier,
+          allotmentConfigured: quota.allotmentConfigured,
+          loading: quota.status !== "ready",
+        }, t("generate.unlimited")),
+    exhausted: quota.status === "ready" && quota.limit > 0 && quota.used >= quota.limit,
+    onRetry: refreshQuota,
+  };
+
   if (loading) {
-    return (
-      <div className="max-w-[960px] mx-auto py-8">
-        <Skeleton className="h-8 w-48 mb-2" />
-        <Skeleton className="h-4 w-64 mb-8" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-64 rounded-lg" />
-          <Skeleton className="h-64 rounded-lg" />
-        </div>
-      </div>
-    );
+    return <ProjectDetailLoading quota={quotaModel} />;
   }
 
   if (!project || error === t("error.loadFailed")) {
     return (
-      <div className="max-w-[960px] mx-auto py-8">
-        <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 mb-4">
-          <ArrowLeft size={14} /> {t("products.title")}
-        </Link>
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="p-6">
-            <p className="text-sm text-destructive font-medium">{t("detail.projectNotFound")}</p>
-          </CardContent>
-        </Card>
-        <div className="mt-4">
-          <Link href="/projects">
-            <Button variant="outline" size="sm">
-              <ArrowLeft size={14} className="mr-1" />
-              {t("detail.backToWorkspace")}
-            </Button>
+      <div className="project-detail">
+        <div className="pd-canvas">
+          <Link href="/projects" className="pd-back" data-testid="back-to-projects">
+            <span className="pd-back-icon" aria-hidden="true">
+              <ArrowLeft size={16} strokeWidth={2} />
+            </span>
+            {t("sidebar.products")}
           </Link>
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-6">
+              <p className="text-sm text-destructive font-medium">{t("detail.projectNotFound")}</p>
+            </CardContent>
+          </Card>
+          <div className="mt-4">
+            <Link href="/projects" className="pd-btn pd-btn-outline">
+              <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" />
+              {t("detail.backToWorkspace")}
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
-  const category = project.promptTemplate?.category ?? "general";
   if (project.id !== trackedProjectId) {
     setTrackedProjectId(project.id);
     setBrokenIds(new Set());
@@ -478,15 +437,6 @@ export default function ProductDetailPage() {
         id: img.id,
         reason: packFailureReasonLabel(img.errorMessage || t("error.generateFailed"), locale),
       }));
-  const quotaText = quota.status === "error"
-    ? ""
-    : quotaBadgeText({
-        used: quota.status === "ready" ? quota.used : 0,
-        limit: quota.status === "ready" ? quota.limit : 0,
-        tier: quota.tier,
-        allotmentConfigured: quota.allotmentConfigured,
-        loading: quota.status !== "ready",
-      }, t("generate.unlimited"));
   const deleteCount = imageDeleteTarget?.kind === "batch" ? selectedIds.size : 1;
   const removesDerivatives = imageDeleteTarget?.kind === "single"
     ? imageDeleteTarget.removesDerivatives
@@ -502,400 +452,206 @@ export default function ProductDetailPage() {
     t,
   });
 
-  return (
-    <div className="max-w-[960px] mx-auto flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 mb-2 transition-colors">
-            <ArrowLeft size={14} /> {t("sidebar.products")}
-          </Link>
-          <h1 className="text-xl font-semibold">{project.title || t("workspace.noName")}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <StatusBadge status={project.status} />
-            {project.promptTemplate && (
-              <span className="text-xs text-muted-foreground">
-                {locale === "zh" && project.promptTemplate.nameZh ? project.promptTemplate.nameZh : project.promptTemplate.name} · {category}
-              </span>
-            )}
-          </div>
-          <QuotaRemainingBadge
-            label={t("detail.quotaRemaining")}
-            status={quota.status}
-            value={quotaText}
-            retryLabel={t("detail.quotaRetry")}
-            exhausted={quota.status === "ready" && quota.limit > 0 && quota.used >= quota.limit}
-            onRetry={refreshQuota}
-          />
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {editMode ? (
-            <>
-              <span className="text-xs text-muted-foreground">
-                {selectedIds.size > 0 ? fill("detail.selectedCount", { count: selectedIds.size }) : t("detail.clickToSelect")}
-              </span>
-              <Button
-                variant="outline" size="sm" className="cursor-pointer gap-1"
-                disabled={selectedIds.size === 0}
-                onClick={() => {
-                  const items: { url: string; fileName: string }[] = [];
-                  for (const id of selectedIds) {
-                    const img = succeededImages.find((i) => i.id === id);
-                    const src = img ? downloadableGeneratedSrc(img, loadState) : null;
-                    if (img && src) {
-                      items.push({ url: src, fileName: `flashant-${img.id.slice(0, 8)}.png` });
-                      continue;
-                    }
-                    const pi = project.productImages.find((p) => p.id === id);
-                    if (pi) items.push({ url: pi.originalUrl, fileName: pi.fileName || `flashant-${id.slice(0, 8)}.png` });
-                  }
-                  void downloadUrls(items).then(({ failed }) => {
-                    if (failed > 0) toast.error(fill("detail.downloadSomeFailed", { count: failed }));
-                  });
-                }}>
-                <Download size={14} />{t("detail.download")}
-              </Button>
-              <Button
-                variant="outline" size="sm" className="cursor-pointer gap-1"
-                disabled={selectedIds.size === 0}
-                onClick={() => {
-                  const img = succeededImages.find((i) => selectedIds.has(i.id));
-                  const src = img ? downloadableGeneratedSrc(img, loadState) : null;
-                  if (img && src) { setTextEditImg({url: src, id: img.id}); setTextInput(""); }
-                }}>
-                <Type size={14} />{t("detail.addText")}
-              </Button>
-              <Button
-                variant="outline" size="sm" className="cursor-pointer gap-1"
-                disabled={selectedIds.size === 0}
-                onClick={() => {
-                  for (const id of selectedIds) {
-                    const img = succeededImages.find(i => i.id === id);
-                    const pi = project.productImages.find(p => p.id === img?.productImageId);
-                    if (img && pi) handleRegenerateImage(img.promptUsed || "", pi.id);
-                  }
-                  setSelectedIds(new Set());
-                }}>
-                <Sparkles size={14} />{t("detail.regenerateShort")}
-              </Button>
-              <Button
-                variant="outline" size="sm" className="cursor-pointer gap-1 text-zinc-500 hover:text-red-600 hover:border-red-200"
-                disabled={selectedIds.size === 0}
-                onClick={() => setImageDeleteTarget({ kind: "batch" })}>
-                <Trash2 size={14} />{t("detail.delete")}
-              </Button>
-              <Button variant="default" size="sm" className="cursor-pointer" onClick={() => { setEditMode(false); setSelectedIds(new Set()); }}>
-                {t("detail.doneSelecting")}
-              </Button>
-            </>
-          ) : (
-            <>
-              {downloadableShots.length > 0 && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="cursor-pointer gap-1.5"
-                  onClick={() => {
-                    void downloadUrls(
-                      downloadableShots.map(({ img, src }) => ({
-                        url: src,
-                        fileName: `flashant-${img.id.slice(0, 8)}.png`,
-                      }))
-                    ).then(({ failed }) => {
-                      if (failed > 0) toast.error(fill("detail.downloadSomeFailed", { count: failed }));
-                    });
-                  }}
-                >
-                  <Download size={14} />
-                  {t("detail.download")}
-                </Button>
-              )}
-              {downloadableShots.length > 0 && (
-                <Link href={`/projects/${project.id}/publish`}>
-                  <Button variant="outline" size="sm" className="cursor-pointer">
-                    {t("detail.publishShopify")}
-                  </Button>
-                </Link>
-              )}
-              <AiEditLink projectId={project.id}>
-                <Sparkles size={14} />
-                {t("detail.aiEdit")}
-              </AiEditLink>
-              <Button
-                variant="outline" size="sm"
-                onClick={() => setEditMode(true)}
-                className="cursor-pointer gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                {t("detail.selectImages")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(true)}
-                className="gap-1.5 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 cursor-pointer"
-              >
-                <Trash2 size={14} />
-                {t("detail.delete")}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+  const shots: DetailShotModel[] = [
+    ...project.productImages.map((pi) => ({
+      id: pi.id,
+      kind: "original" as const,
+      src: pi.originalUrl,
+      alt: pi.fileName,
+      fileName: pi.fileName || "original",
+    })),
+    ...succeededImages.map((img) => {
+      const display = displayForGeneratedImage(img);
+      return {
+        id: img.id,
+        kind: "generated" as const,
+        src: brokenIds.has(img.id) ? null : display.src,
+        alt: "",
+        fileName: `flashant-${img.id.slice(0, 8)}.png`,
+      };
+    }),
+  ];
 
+  const detailProject = project;
+
+  function editShot(id: string) {
+    const original = detailProject.productImages.find((pi) => pi.id === id);
+    if (original) {
+      setEditingImage({ url: original.originalUrl, name: original.fileName, productImageId: original.id });
+      return;
+    }
+    const img = succeededImages.find((image) => image.id === id);
+    if (!img) return;
+    const src = downloadableGeneratedSrc(img, loadState) ?? displayForGeneratedImage(img).src;
+    if (!src) return;
+    setEditingImage({
+      url: src,
+      name: `flashant-${img.id.slice(0, 8)}.png`,
+      productImageId: img.productImageId || detailProject.productImages[0]?.id || "",
+    });
+  }
+
+  function downloadOne(id: string) {
+    const img = succeededImages.find((image) => image.id === id);
+    if (img) {
+      const src = downloadableGeneratedSrc(img, loadState) ?? displayForGeneratedImage(img).src;
+      if (!src) return;
+      void downloadUrls([{ url: src, fileName: `flashant-${img.id.slice(0, 8)}.png` }]).then(({ failed }) => {
+        if (failed > 0) toast.error(t("detail.downloadFailed"));
+      });
+      return;
+    }
+    const original = detailProject.productImages.find((pi) => pi.id === id);
+    if (!original?.originalUrl) return;
+    void downloadUrls([{
+      url: original.originalUrl,
+      fileName: original.fileName || `flashant-${id.slice(0, 8)}.png`,
+    }]).then(({ failed }) => {
+      if (failed > 0) toast.error(t("detail.downloadFailed"));
+    });
+  }
+
+  function deleteShot(id: string) {
+    const original = detailProject.productImages.some((pi) => pi.id === id);
+    setImageDeleteTarget({
+      kind: "single",
+      imageId: id,
+      removesDerivatives: original
+        ? detailProject.generatedImages.some((img) => img.productImageId === id && img.status !== "DELETED")
+        : false,
+    });
+  }
+
+  const notices = (
+    <>
       {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+        <div className="pd-alert" role="alert">
           <AlertCircle size={16} />
           {error}
         </div>
       )}
-
-      <div className="flex flex-col gap-6">
-        {project.productImages.map((pi) => {
-          const imageResults = succeededImages.filter((img) => img.productImageId === pi.id);
-          return (
-            <div key={pi.id} className="flex flex-col md:flex-row gap-5 items-start">
-              <div className="w-full md:w-[280px] flex-shrink-0 relative group">
-                <div className={`aspect-square rounded-xl overflow-hidden bg-muted border-2 transition-all ${
-                  editMode && selectedIds.has(pi.id) ? "border-brand-500 ring-2 ring-brand-500" : "border-zinc-200"
-                } cursor-pointer`}
-                  draggable={!editMode}
-                  onDragStart={(e) => { if (editMode) return; e.dataTransfer.setData("source", "product"); e.dataTransfer.setData("url", pi.originalUrl); e.dataTransfer.setData("name", pi.fileName); e.dataTransfer.setData("productImageId", pi.id); }}
-                  onClick={() => {
-                    if (editMode) {
-                      setSelectedIds(prev => {
-                        const next = new Set(prev);
-                        if (next.has(pi.id)) next.delete(pi.id); else next.add(pi.id);
-                        return next;
-                      });
-                    } else {
-                      setLightboxUrl(pi.originalUrl);
-                    }
-                  }}>
-                  <img src={pi.originalUrl} alt={pi.fileName} className="w-full h-full object-cover pointer-events-none"
-                    onError={(e) => {
-                      const t = e.currentTarget;
-                      t.onerror = null;
-                      t.style.display = "none";
-                      const placeholder = document.createElement("div");
-                      placeholder.className = "w-full h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800";
-                      placeholder.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
-                      t.parentElement?.appendChild(placeholder);
-                    }} />
-                </div>
-                {/* Edit mode checkbox */}
-                {editMode && (
-                  <div className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                    selectedIds.has(pi.id) ? "bg-brand-500 border-brand-500" : "bg-white/80 border-zinc-300"
-                  }`}>
-                    {selectedIds.has(pi.id) && <Check size={12} className="text-white" />}
-                  </div>
-                )}
-                {/* Hover delete icon */}
-                {!editMode && (
-                  <button type="button" onClick={(e) => {
-                    e.stopPropagation();
-                    setImageDeleteTarget({
-                      kind: "single",
-                      imageId: pi.id,
-                      removesDerivatives: project.generatedImages.some((img) => img.productImageId === pi.id && img.status !== "DELETED"),
-                    });
-                  }}
-                    className="absolute top-2 left-2 p-1 rounded-md bg-white/80 hover:bg-red-50 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm">
-                    <Trash2 size={12} />
-                  </button>
-                )}
-                {!editMode && (
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ url: pi.originalUrl, name: pi.fileName, productImageId: pi.id }); }}
-                    className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-white/90 hover:bg-white shadow-sm text-[10px] font-medium text-zinc-600 hover:text-zinc-800 transition-all flex items-center gap-1">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    {t("detail.edit")}
-                  </button>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                {imageResults.length === 0 ? (
-                  <Button variant="default" size="sm" className="gap-2" onClick={() => handleGenerate(pi.id)} disabled={generatingIds.has(pi.id)}>
-                    <Sparkles size={14} /> {t("detail.generateScene")}
-                  </Button>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {imageResults.map((img) => {
-                      const display = displayForGeneratedImage(img);
-                      const broken = brokenIds.has(img.id);
-                      const visible = broken ? { ...display, src: null } : display;
-                      return (
-                      <div key={img.id}
-                        draggable={!editMode}
-                        onDragStart={(e) => {
-                          if (editMode) return;
-                          e.dataTransfer.setData("source", "generated");
-                          e.dataTransfer.setData("id", img.id);
-                        }}
-                        onDragOver={(e) => { if (!editMode) e.preventDefault(); }}
-                        onDrop={(e) => {
-                          if (editMode) return;
-                          e.preventDefault();
-                          const src = e.dataTransfer.getData("source");
-                          if (src === "generated") {
-                            handleReorder(e.dataTransfer.getData("id"), img.id);
-                          }
-                          if (src === "product") {
-                            setEditingImage({
-                              url: e.dataTransfer.getData("url"),
-                              name: e.dataTransfer.getData("name"),
-                              productImageId: e.dataTransfer.getData("productImageId"),
-                            });
-                          }
-                        }}
-                        className={`relative group w-[160px] h-[160px] rounded-lg overflow-hidden bg-muted border-2 border-zinc-200 ${
-                          editMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
-                        } transition-all ${
-                          editMode && selectedIds.has(img.id) ? "ring-2 ring-brand-500 border-brand-500" : ""
-                        }`}
-                        onClick={() => {
-                          if (editMode) {
-                            setSelectedIds(prev => {
-                              const next = new Set(prev);
-                              if (next.has(img.id)) next.delete(img.id); else next.add(img.id);
-                              return next;
-                            });
-                          } else if (visible.src) {
-                            setLightboxUrl(visible.src);
-                          }
-                        }}>
-                        {visible.src ? (
-                        <img src={visible.src} alt="" className="w-full h-full object-cover pointer-events-none"
-                          onLoad={() => {
-                            if (!display.durable) rememberLoaded(img.id);
-                          }}
-                          onError={() => rememberBroken(img.id)} />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-zinc-100 px-2 text-center dark:bg-zinc-800">
-                            <ImageOff size={18} className="text-zinc-400" />
-                            <span className="text-[10px] leading-tight text-zinc-500">{t("detail.imageUnavailable")}</span>
-                          </div>
-                        )}
-                        {/* Hover delete icon */}
-                        {!editMode && (
-                          <button type="button" onClick={(e) => { e.stopPropagation(); setImageDeleteTarget({ kind: "single", imageId: img.id, removesDerivatives: false }); }}
-                            className="absolute top-2 left-2 p-1 rounded-md bg-white/80 hover:bg-red-50 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10">
-                            <Trash2 size={12} />
-                          </button>
-                        )}
-                        {!editMode && visible.src && (
-                          <button type="button" title={t("detail.download")} aria-label={t("detail.download")} onClick={(e) => {
-                            e.stopPropagation();
-                            const src = downloadableGeneratedSrc(img, loadState) ?? visible.src;
-                            if (!src) return;
-                            void downloadUrls([{ url: src, fileName: `flashant-${img.id.slice(0, 8)}.png` }]).then(({ failed }) => {
-                              if (failed > 0) toast.error(t("detail.downloadFailed"));
-                            });
-                          }}
-                            className="absolute top-2 right-2 p-1 rounded-md bg-white/80 hover:bg-white text-zinc-500 hover:text-zinc-900 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10">
-                            <Download size={12} />
-                          </button>
-                        )}
-                        {editMode && (
-                          <div className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                            selectedIds.has(img.id)
-                              ? "bg-brand-500 border-brand-500"
-                              : "bg-white/80 border-zinc-300"
-                          }`}>
-                            {selectedIds.has(img.id) && <Check size={12} className="text-white" />}
-                          </div>
-                        )}
-                      </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {project.productImages.length === 0 && (
-          <Card className="border-dashed md:col-span-2">
-            <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-              <Image size={40} className="text-muted-foreground" />
-              <div>
-                <h3 className="text-lg font-semibold">{t("detail.noImages")}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{t("detail.noImagesDesc")}</p>
-              </div>
-              <div className="w-full max-w-[280px] text-left">
-                <ImageUploadZone
-                  projectId={project.id}
-                  currentImage={null}
-                  onImageChange={() => { void fetchProject(); }}
-                />
-              </div>
-              <AiEditLink projectId={project.id}>
-                <Sparkles size={14} />
-                {copy("detail.backToStudio", "Back to studio")}
-              </AiEditLink>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Completed badge. Hidden when the rows exist but the files cannot be shown. */}
-      {statusText && (
-        <div className={`flex items-center justify-center gap-2 py-4 text-sm ${
-          banner.kind === "complete"
-            ? "text-emerald-600 dark:text-emerald-400"
-            : "text-amber-700 dark:text-amber-400"
-        }`}>
-          {banner.kind === "complete" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-          {statusText}
+      {statusText && banner.kind !== "complete" && (
+        <div className="pd-notice is-warn" role="status">
+          <AlertCircle size={16} />
+          <span>{statusText}</span>
         </div>
       )}
-      {packView && banner.kind !== "unavailable" && banner.kind !== "partial" && banner.kind !== "pending" && (
-        <div className={`flex flex-col items-center gap-1 py-4 text-sm ${packView.failures.length > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}>
-          <p>{packView.summary}</p>
-          {packView.failures.length > 0 && (
-            <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
+      {packView && banner.kind !== "complete" && banner.kind !== "unavailable" && banner.kind !== "partial" && banner.kind !== "pending" && packView.failures.length > 0 && (
+        <div className="pd-notice is-warn">
+          <div>
+            <p>{packView.summary}</p>
+            <ul>
               {listedFailures.slice(0, 8).map((failure) => (
                 <li key={failure.id}>{failure.reason}</li>
               ))}
             </ul>
-          )}
+          </div>
         </div>
       )}
       {packView && (banner.kind === "unavailable" || banner.kind === "partial") && packView.failures.length > 0 && (
-        <ul className="flex flex-col items-center gap-1 py-2 text-xs text-amber-800/80 dark:text-amber-300/80">
+        <ul className="pd-notice is-warn">
           {listedFailures.slice(0, 8).map((failure) => (
             <li key={failure.id}>{failure.reason}</li>
           ))}
         </ul>
       )}
       {!packView && banner.failed > 0 && (
-        <div className="flex flex-col items-center gap-1 py-4 text-sm text-amber-700 dark:text-amber-400">
-          <p>{fill("detail.partialResult", {
-            done: banner.ready,
-            total: banner.ready + banner.unavailable + banner.failed + banner.pending,
-            failed: banner.failed,
-          })}</p>
-          {banner.unavailable > 0 && (
-            <p>{fill("detail.imagesUnavailable", { count: banner.unavailable })}</p>
-          )}
-          <ul className="text-xs text-amber-800/80 dark:text-amber-300/80">
-            {listedFailures.slice(0, 8).map((failure) => (
-              <li key={failure.id}>{failure.reason}</li>
-            ))}
-          </ul>
+        <div className="pd-notice is-warn">
+          <div>
+            <p>{fill("detail.partialResult", {
+              done: banner.ready,
+              total: banner.ready + banner.unavailable + banner.failed + banner.pending,
+              failed: banner.failed,
+            })}</p>
+            {banner.unavailable > 0 && (
+              <p>{fill("detail.imagesUnavailable", { count: banner.unavailable })}</p>
+            )}
+            <ul>
+              {listedFailures.slice(0, 8).map((failure) => (
+                <li key={failure.id}>{failure.reason}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
+    </>
+  );
 
-      {/* Lightbox */}
+  return (
+    <>
+      <ProjectDetailView
+        projectId={project.id}
+        title={project.title || t("workspace.noName")}
+        shots={shots}
+        originalCount={project.productImages.length}
+        generatedCount={succeededImages.length}
+        downloadableCount={downloadableShots.length}
+        editMode={editMode}
+        selectedIds={selectedIds}
+        quota={quotaModel}
+        generating={generatingIds.size > 0}
+        onDownloadAll={() => {
+          void downloadUrls(
+            downloadableShots.map(({ img, src }) => ({
+              url: src,
+              fileName: `flashant-${img.id.slice(0, 8)}.png`,
+            })),
+          ).then(({ failed }) => {
+            if (failed > 0) toast.error(fill("detail.downloadSomeFailed", { count: failed }));
+          });
+        }}
+        onEnterSelect={() => setEditMode(true)}
+        onExitSelect={() => {
+          setEditMode(false);
+          setSelectedIds(new Set());
+        }}
+        onDeleteProject={() => setDeleteDialogOpen(true)}
+        onToggleShot={(id) => {
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          });
+        }}
+        onOpenShot={(id) => {
+          const shot = shots.find((item) => item.id === id);
+          if (shot?.src) setLightboxUrl(shot.src);
+        }}
+        onEditShot={editShot}
+        onDownloadShot={downloadOne}
+        onDeleteShot={deleteShot}
+        onAddText={() => {
+          const img = succeededImages.find((image) => selectedIds.has(image.id));
+          const src = img ? downloadableGeneratedSrc(img, loadState) : null;
+          if (img && src) {
+            setTextEditImg({ url: src, id: img.id });
+            setTextInput("");
+          }
+        }}
+        onRegenerateSelected={() => {
+          for (const id of selectedIds) {
+            const img = succeededImages.find((image) => image.id === id);
+            const pi = project.productImages.find((item) => item.id === img?.productImageId);
+            if (img && pi) void handleRegenerateImage(img.promptUsed || "", pi.id);
+          }
+          setSelectedIds(new Set());
+        }}
+        onBatchDelete={() => setImageDeleteTarget({ kind: "batch" })}
+        onReorder={handleReorder}
+        onDropOriginal={(payload) => setEditingImage(payload)}
+        onShotLoad={(id) => {
+          const img = succeededImages.find((image) => image.id === id);
+          if (img && !displayForGeneratedImage(img).durable) rememberLoaded(id);
+        }}
+        onShotError={rememberBroken}
+        footer={notices}
+      />
+
       {lightboxUrl && !textEditImg && (
         <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-4 cursor-pointer" onClick={() => setLightboxUrl(null)}>
           <img src={lightboxUrl} alt="" className="max-w-[90vw] max-h-[80vh] rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-            onError={(e) => {
-              const t = e.currentTarget;
-              t.onerror = null;
-              t.style.display = "none";
-            }} />
+            onClick={(e) => e.stopPropagation()} />
           <button
             type="button"
             className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-lg cursor-pointer"
@@ -917,12 +673,10 @@ export default function ProductDetailPage() {
         </div>
       )}
 
-      {/* Text Edit Lightbox */}
       {textEditImg && (
         <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-4" onClick={() => setTextEditImg(null)}>
-          <img src={textEditImg.url} alt="" className="max-w-[85vw] max-h-[70vh] rounded-xl shadow-2xl object-contain"
-            onError={(e) => { const t = e.currentTarget; t.onerror = null; t.style.display = "none"; }} />
-          <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 shadow-xl" onClick={e => e.stopPropagation()}>
+          <img src={textEditImg.url} alt="" className="max-w-[85vw] max-h-[70vh] rounded-xl shadow-2xl object-contain" />
+          <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <input type="text" value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               onKeyDown={(e) => {
@@ -936,14 +690,13 @@ export default function ProductDetailPage() {
               onClick={() => { void handleAddText(); }}>
               {textSaving ? t("detail.saving") : t("detail.saveAndDownload")}
             </Button>
-            <button onClick={() => setTextEditImg(null)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800">
+            <button type="button" onClick={() => setTextEditImg(null)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800">
               <X size={18} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Single and batch image delete confirmation */}
       <Dialog open={imageDeleteTarget !== null} onOpenChange={(open) => { if (!open && !imageDeleting) setImageDeleteTarget(null); }}>
         <DialogContent>
           <DialogHeader>
@@ -967,7 +720,6 @@ export default function ProductDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Image Editor */}
       {editingImage && (
         <ImageEditor
           imageUrl={editingImage.url}
@@ -977,7 +729,6 @@ export default function ProductDetailPage() {
         />
       )}
 
-      {/* Delete confirmation dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -1008,9 +759,10 @@ export default function ProductDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
+
 
 function renderTextOverlay(imageUrl: string, text: string): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -1039,20 +791,4 @@ function renderTextOverlay(imageUrl: string, text: string): Promise<Blob> {
     img.onerror = () => reject(new Error("image"));
     img.src = imageUrl;
   });
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const { t } = useT();
-  const label = t(`status.${status}`);
-  if (status === "FAILED")
-    return <Badge variant="destructive">{label}</Badge>;
-  if (status === "GENERATED")
-    return (
-      <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-        {label}
-      </Badge>
-    );
-  if (status === "GENERATING")
-    return <Badge variant="secondary">{label}</Badge>;
-  return <Badge variant="default">{label}</Badge>;
 }
