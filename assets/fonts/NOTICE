@@ -5,7 +5,21 @@ Droid is a trademark of Google Corp.
 Source: https://android.googlesource.com/platform/frameworks/base/
 
 NotoSans-Regular.ttf
+NotoSans-Bold.ttf
 Copyright 2015 Google Inc.
 Licensed under the SIL Open Font License, Version 1.1.
 See NotoSans-OFL.txt.
 Source: https://github.com/notofonts/NotoSans
+NotoSans-Bold.ttf is the Latin Bold subset used for poster titles.
+
+NotoSansJP-Regular.ttf
+NotoSansJP-Bold.ttf
+NotoSansKR-Regular.ttf
+NotoSansKR-Bold.ttf
+Copyright Google Inc.
+Licensed under the SIL Open Font License, Version 1.1.
+See NotoSans-OFL.txt.
+Source: Noto Sans JP and Noto Sans KR (SIL OFL).
+These faces are selected when the merchant chooses Japanese or Korean.
+Chinese and English posters use Noto Sans Latin plus Droid Sans Fallback
+(or Noto Sans CJK SC when those optional files are added).

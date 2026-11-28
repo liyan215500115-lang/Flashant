@@ -15,6 +15,8 @@ import { uploadBuffer, hasS3Config } from "@/lib/s3";
 import { captionSpecText, isInfoShot } from "@/lib/generate/info-shots";
 import { BLANKET_TEXT_BAN, PRESERVE_PRODUCT_LETTERING, shotPreservesProductLettering } from "@/lib/generate/product-lettering";
 import { compositeSpecCaption } from "@/lib/spec-caption";
+import { composePoster } from "@/lib/poster/compose";
+import { parsePosterJob, posterCopyLines, posterFailureCode } from "@/lib/poster/copy";
 import { prepareReferenceImage } from "@/lib/reference-image";
 import { ASYNC_ENGINES, FALLBACK_ENGINES, BRIA_SCENE_TYPES, BEAUTY_DARK_SURFACE_GUARD } from "@/lib/ai/constants";
 import { chargeScreenedGeneration, localPlanTier, refundGenerationDebit, type DebitHold } from "@/lib/creem/credits-runtime";
@@ -575,6 +577,8 @@ export async function generateDetailPack(input: {
   packIdempotencyKey?: string;
   /** Tests skip the real poll gap. Production waits between parallel reads. */
   sleep?: (ms: number) => Promise<void>;
+  /** Optional poster overlay. Off unless `enabled` is true. Copy is never sent to the model. */
+  poster?: unknown;
 }): Promise<NextResponse> {
   const shots = detailShotList(input.detailTypes);
   if (shots.length === 0) {
@@ -650,15 +654,22 @@ export async function generateDetailPack(input: {
   }
 
   const fragments = generationStaticFragments();
+  const posterRequested = Boolean(
+    input.poster && typeof input.poster === "object" && (input.poster as { enabled?: unknown }).enabled === true,
+  );
+  const posterLines = posterRequested ? posterCopyLines((input.poster as { copy?: unknown }).copy) : [];
   const gates = [];
   for (let index = 0; index < shots.length; index += 1) {
     const shot = shots[index];
     const gate = await screenGenerationPrompts({
       userId: input.userId,
-      prompts: promptsForModeration(
-        { prompt: shot.prompt, baseStyle: input.baseStyle, detailTypes: [shot] },
-        fragments,
-      ),
+      prompts: [
+        ...promptsForModeration(
+          { prompt: shot.prompt, baseStyle: input.baseStyle, detailTypes: [shot] },
+          fragments,
+        ),
+        ...(index === 0 ? posterLines : []),
+      ],
       placeholder: SCREEN_PLACEHOLDERS.generate,
       combine: true,
       externalSuffix: `pack-${index}-${shot.key}`,
@@ -716,8 +727,19 @@ export async function generateDetailPack(input: {
     error?: string;
   };
 
-  const generated: Array<{ key: string; url: string; label: string; id: string }> = [];
+  const generated: Array<{ key: string; url: string; label: string; id: string; unlettered?: boolean }> = [];
   const failed: Array<{ key: string; reason: string; creditsRefunded: boolean; charged: boolean }> = [];
+  const posters: Array<{
+    key: string;
+    url: string;
+    label: string;
+    id: string;
+    sourceId: string;
+    market: string;
+    template: string;
+    fallback: string | null;
+  }> = [];
+  const posterFailed: Array<{ key: string; sourceId: string; reason: string; market: string }> = [];
   let creditsRefunded = 0;
   let creditsCharged = 0;
   /** Debits taken for a shot that is not stored yet. Cleared on store or refund. */
@@ -835,15 +857,141 @@ export async function generateDetailPack(input: {
     failed.push({ key: attempt.key, reason: message, creditsRefunded: refunded, charged });
   }
 
+  async function storePosterVersion(
+    attempt: Attempt,
+    sourceId: string,
+    source: Buffer | undefined,
+    sourceStored: boolean,
+    posterJob: NonNullable<ReturnType<typeof parsePosterJob>>,
+  ) {
+    const fail = async (reason: string, existingId?: string) => {
+      posterFailed.push({ key: attempt.key, sourceId, reason, market: posterJob.market });
+      const data = {
+        status: "FAILED" as const,
+        errorMessage: reason,
+        url: "",
+        s3Key: "failed",
+        completedAt: new Date(),
+      };
+      try {
+        if (existingId) {
+          await db.generatedImage.update({ where: { id: existingId }, data });
+          return;
+        }
+        await db.generatedImage.create({
+          data: {
+            ...data,
+            imageProjectId: input.imageProjectId,
+            productImageId: input.productImageId,
+            promptUsed: attempt.prompt,
+            aiProvider: attempt.engine,
+            ...(attempt.modelVersion ? { modelVersion: attempt.modelVersion } : {}),
+            generationMeta: {
+              ...shotMeta(attempt),
+              posterRole: "poster",
+              posterSourceId: sourceId,
+              unlettered: false,
+              market: posterJob.market,
+              copy: posterJob.copy,
+            } as unknown as Prisma.InputJsonValue,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to record poster overlay failure", error);
+      }
+    };
+
+    if (!source || !sourceStored || !sourceId) {
+      await fail("poster_source_unavailable");
+      return;
+    }
+
+    let rendered: Awaited<ReturnType<typeof composePoster>>;
+    try {
+      rendered = await composePoster(source, posterJob);
+    } catch (error) {
+      console.error(`Poster overlay failed: ${error instanceof Error ? error.message : "poster_overlay_failed"}`);
+      await fail(posterFailureCode(error));
+      return;
+    }
+    if (!rendered) return;
+
+    const posterMeta = {
+      ...shotMeta(attempt),
+      posterRole: "poster",
+      posterSourceId: sourceId,
+      unlettered: false,
+      market: posterJob.market,
+      template: rendered.template,
+      requestedTemplate: posterJob.template,
+      fallback: rendered.fallback,
+      copy: posterJob.copy,
+    };
+    let posterId = "";
+    try {
+      const created = await db.generatedImage.create({
+        data: {
+          imageProjectId: input.imageProjectId,
+          productImageId: input.productImageId,
+          s3Key: "pending",
+          url: "",
+          promptUsed: attempt.prompt,
+          aiProvider: attempt.engine,
+          ...(attempt.modelVersion ? { modelVersion: attempt.modelVersion } : {}),
+          status: "SUCCEEDED",
+          completedAt: new Date(),
+          generationMeta: posterMeta as unknown as Prisma.InputJsonValue,
+        },
+      });
+      posterId = created?.id ? String(created.id) : "";
+      if (!posterId || !hasS3Config()) {
+        await fail("poster_not_persisted", posterId || undefined);
+        return;
+      }
+      const uploaded = await uploadBuffer(rendered.buffer, "image/png", "generated/");
+      await db.generatedImage.update({
+        where: { id: posterId },
+        data: { url: uploaded.publicUrl, s3Key: uploaded.s3Key, status: "SUCCEEDED" },
+      });
+      posters.push({
+        key: attempt.key,
+        url: uploaded.publicUrl,
+        label: attempt.key,
+        id: posterId,
+        sourceId,
+        market: posterJob.market,
+        template: rendered.template,
+        fallback: rendered.fallback,
+      });
+    } catch (error) {
+      console.error("Failed to store poster version", error);
+      await fail("poster_not_persisted", posterId || undefined);
+    }
+  }
+
   async function storeSuccess(attempt: Attempt, providerUrl: string) {
     if (!portraitUrl && anchorKey && attempt.key === anchorKey && providerUrl) {
       portraitUrl = providerUrl;
     }
-    const spec = isInfoShot(attempt.key) ? captionSpecText(attempt.specText) : "";
+    const posterJob = parsePosterJob(input.poster, attempt.key);
+    const spec = posterJob ? "" : (isInfoShot(attempt.key) ? captionSpecText(attempt.specText) : "");
     let captioned: Buffer | undefined;
-    if (spec) {
+    let source: Buffer | undefined;
+    if (spec || posterJob) {
       try {
-        const source = await fetchImageBuffer(providerUrl, 12_000);
+        source = await fetchImageBuffer(providerUrl, 12_000);
+      } catch (error) {
+        if (spec) {
+          const message = error instanceof Error ? error.message : "caption_overlay_failed";
+          console.error(`Spec caption overlay failed: ${message}`);
+          await settleFailure(attempt, "caption_overlay_failed");
+          return;
+        }
+        source = undefined;
+      }
+    }
+    if (spec && source) {
+      try {
         captioned = await compositeSpecCaption(source, spec);
       } catch (error) {
         const message = error instanceof Error ? error.message : "caption_overlay_failed";
@@ -853,7 +1001,9 @@ export async function generateDetailPack(input: {
       }
     }
 
-    const meta = shotMeta(attempt);
+    const meta = shotMeta(attempt, posterJob
+      ? { posterRole: "original", unlettered: true, market: posterJob.market }
+      : {});
     const created = await db.generatedImage.create({
       data: {
         imageProjectId: input.imageProjectId,
@@ -880,7 +1030,7 @@ export async function generateDetailPack(input: {
           imageId,
           null,
           "FREE",
-          captioned,
+          captioned ?? (posterJob && source ? source : undefined),
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : "persist_failed";
@@ -933,7 +1083,16 @@ export async function generateDetailPack(input: {
         console.error("Failed to mark pack image succeeded", error);
       }
     }
-    generated.push({ key: attempt.key, url: finalUrl, label: attempt.key, id: imageId });
+    generated.push({
+      key: attempt.key,
+      url: finalUrl,
+      label: attempt.key,
+      id: imageId,
+      ...(posterJob && finalUrl !== providerUrl ? { unlettered: true } : {}),
+    });
+    if (posterJob) {
+      await storePosterVersion(attempt, imageId, source, finalUrl !== providerUrl, posterJob);
+    }
     if (attempt.hold) creditsCharged += 1;
     try {
       await db.task.create({
@@ -1217,6 +1376,7 @@ export async function generateDetailPack(input: {
       creditsCharged,
       creditsRefunded,
       creditsNotCharged,
+      ...(posterRequested ? { posters, posterFailed } : {}),
       ...engineFields,
     }, { status: chargeBlocked.status });
   }
@@ -1230,6 +1390,7 @@ export async function generateDetailPack(input: {
     creditsCharged,
     creditsRefunded,
     creditsNotCharged,
+    ...(posterRequested ? { posters, posterFailed } : {}),
     ...engineFields,
   };
   if (generated.length === 0) {
@@ -1268,6 +1429,7 @@ export async function POST(req: Request) {
     category, // product category for template matching
     sceneStyle,
     packIdempotencyKey,
+    poster,
   } = await req.json();
 
   if (Array.isArray(detailTypes) && detailTypes.length > 0) {
@@ -1290,6 +1452,7 @@ export async function POST(req: Request) {
       category: typeof category === "string" ? category : undefined,
       projectTitle,
       packIdempotencyKey: typeof packIdempotencyKey === "string" ? packIdempotencyKey : undefined,
+      poster,
     });
   }
 

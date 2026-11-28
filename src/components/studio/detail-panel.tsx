@@ -23,6 +23,8 @@ import { noteFilledOnSelect, packShotRequest, persistedShotNotes } from "@/lib/g
 import { isSceneShot } from "@/lib/generate/scene-style";
 import { downloadUrl } from "@/lib/download-image";
 import { canvasImageFromViewedShot, viewedShotFileUrl } from "@/lib/viewed-shot";
+import { PosterFields, type PosterTagDraft, type PosterTemplateChoice } from "@/components/studio/poster-fields";
+import type { PosterLanguage } from "@/lib/poster/options";
 
 const TYPE_GROUPS = [
   {
@@ -120,7 +122,30 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
   const packLock = useRef(false);
   const [enhancing, setEnhancing] = useState(false);
   const [stageLabel, setStageLabel] = useState("");
-  const [results, setResults] = useState<Array<{ key: string; url: string; label: string; rawUrl: string; id?: string }>>([]);
+  const [results, setResults] = useState<Array<{
+    key: string;
+    url: string;
+    label: string;
+    rawUrl: string;
+    id?: string;
+    unlettered?: boolean;
+    poster?: boolean;
+    sourceId?: string;
+    market?: string;
+  }>>([]);
+  const [posterEnabled, setPosterEnabled] = useState(false);
+  const [posterLanguage, setPosterLanguage] = useState<PosterLanguage>("zh");
+  const [posterTemplate, setPosterTemplate] = useState<PosterTemplateChoice>("auto");
+  const [posterSeries, setPosterSeries] = useState("");
+  const [posterTitle, setPosterTitle] = useState("");
+  const [posterDek, setPosterDek] = useState("");
+  const [posterTags, setPosterTags] = useState<PosterTagDraft[]>([
+    { en: "", cn: "" },
+    { en: "", cn: "" },
+    { en: "", cn: "" },
+  ]);
+  const [posterReapplying, setPosterReapplying] = useState(false);
+  const [posterNotice, setPosterNotice] = useState("");
   const [downloadNotice, setDownloadNotice] = useState("");
   const [failures, setFailures] = useState<Array<{ key: string; reason: string }>>([]);
   const [batchSummary, setBatchSummary] = useState("");
@@ -178,6 +203,15 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
         setLockStyle(draft.lockStyle);
         setPerTypeDesc(persistedShotNotes(draft.perTypeDesc));
         setOpen(draft.open || !!initialResults?.length);
+        if (draft.poster) {
+          setPosterEnabled(draft.poster.enabled === true);
+          setPosterLanguage(draft.poster.language === "en" || draft.poster.language === "ja" || draft.poster.language === "ko" ? draft.poster.language : "zh");
+          setPosterTemplate(draft.poster.template === "A" || draft.poster.template === "B" || draft.poster.template === "C" ? draft.poster.template : "auto");
+          setPosterSeries(draft.poster.series);
+          setPosterTitle(draft.poster.title);
+          setPosterDek(draft.poster.dek);
+          setPosterTags(draft.poster.tags);
+        }
       }
       return;
     }
@@ -187,8 +221,17 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
       lockStyle,
       perTypeDesc,
       open,
+      poster: {
+        enabled: posterEnabled,
+        language: posterLanguage,
+        template: posterTemplate,
+        series: posterSeries,
+        title: posterTitle,
+        dek: posterDek,
+        tags: posterTags,
+      },
     });
-  }, [projectId, selected, category, lockStyle, perTypeDesc, open, initialResults?.length]);
+  }, [projectId, selected, category, lockStyle, perTypeDesc, open, initialResults?.length, posterEnabled, posterLanguage, posterTemplate, posterSeries, posterTitle, posterDek, posterTags]);
 
   // Sync initialResults after async load (e.g. when project is fetched from API)
   useEffect(() => {
@@ -277,8 +320,14 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
         key: shot.key,
         url: shot.url,
         rawUrl: shot.url,
-        label: TYPE_LABELS[shot.key] || shot.label || shot.key,
+        label: shot.poster
+          ? `${TYPE_LABELS[shot.key] || shot.label || shot.key} · ${t("studio.poster.badge")}`
+          : (TYPE_LABELS[shot.key] || shot.label || shot.key),
         id: shot.id,
+        unlettered: shot.unlettered,
+        poster: shot.poster,
+        sourceId: shot.sourceId,
+        market: shot.market,
       }));
       setResults(out);
       onDetailGenerated?.(out);
@@ -360,10 +409,25 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
           numOutputs: 1,
           category: category || undefined,
           packIdempotencyKey,
+          ...(posterEnabled ? {
+            poster: {
+              enabled: true,
+              template: posterTemplate,
+              market: posterLanguage,
+              copy: {
+                series: posterSeries,
+                title: posterTitle,
+                dek: posterDek,
+                tags: posterTags,
+              },
+            },
+          } : {}),
         }),
       });
       let data: {
-        generated?: Array<{ key: string; url: string; label?: string; id?: string }>;
+        generated?: Array<{ key: string; url: string; label?: string; id?: string; unlettered?: boolean }>;
+        posters?: Array<{ key: string; url: string; id?: string; sourceId?: string; market?: string; label?: string }>;
+        posterFailed?: Array<{ key?: string; reason?: string }>;
         failed?: Array<{ key?: string; reason?: string }>;
         requested?: number;
         completed?: number;
@@ -420,10 +484,28 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
         const out: typeof results = [];
         for (const g of generated) {
           const label = TYPE_LABELS[g.key] || g.label || g.key;
-          out.push({ key: g.key, url: g.url, rawUrl: g.url, label, id: g.id });
+          out.push({ key: g.key, url: g.url, rawUrl: g.url, label, id: g.id, unlettered: g.unlettered === true });
+        }
+        for (const poster of data.posters ?? []) {
+          const label = `${TYPE_LABELS[poster.key] || poster.label || poster.key} · ${t("studio.poster.badge")}`;
+          out.push({
+            key: poster.key,
+            url: poster.url,
+            rawUrl: poster.url,
+            label,
+            id: poster.id,
+            poster: true,
+            sourceId: poster.sourceId,
+            market: poster.market,
+          });
         }
         setResults(out);
-        onDetailGenerated?.(out);
+        onDetailGenerated?.(out.filter((item) => !item.poster));
+        setPosterNotice((data.posterFailed?.length ?? 0) > 0
+          ? (data.posterFailed?.some((item) => item.reason === "caption_glyphs_missing")
+            ? t("studio.poster.missingGlyph")
+            : t("studio.poster.failed"))
+          : "");
       } else if (failedShots.length === 0) {
         setBatchSummary(locale === "zh" ? "生成完成但没有返回图片，请重试。" : "Generation finished without an image. Please retry.");
       }
@@ -439,6 +521,49 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
       }
     }
     finish();
+  }
+
+  async function reapplyPosters() {
+    const sources = results.filter((item) => item.unlettered && item.id);
+    if (sources.length === 0 || posterReapplying) return;
+    setPosterReapplying(true);
+    setPosterNotice("");
+    try {
+      for (const source of sources) {
+        const res = await fetch(`/api/generated-images/${source.id}/poster`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            template: posterTemplate,
+            market: posterLanguage,
+            copy: { series: posterSeries, title: posterTitle, dek: posterDek, tags: posterTags },
+          }),
+        });
+        const data = await res.json().catch(() => ({} as { error?: string; poster?: { id?: string; url?: string } }));
+        if (!res.ok || !data.poster?.url) {
+          setPosterNotice(data.error === "caption_glyphs_missing" ? t("studio.poster.missingGlyph") : t("studio.poster.failed"));
+          continue;
+        }
+        const url = data.poster.url;
+        const posterId = data.poster.id;
+        setResults((prev) => {
+          const next = prev.filter((item) => !(item.poster && item.sourceId === source.id && item.market === posterLanguage));
+          next.push({
+            key: source.key,
+            url,
+            rawUrl: url,
+            label: `${TYPE_LABELS[source.key] || source.key} · ${t("studio.poster.badge")}`,
+            id: posterId,
+            poster: true,
+            sourceId: source.id,
+            market: posterLanguage,
+          });
+          return next;
+        });
+      }
+    } finally {
+      setPosterReapplying(false);
+    }
   }
 
   function downloadFailedCopy() {
@@ -612,6 +737,31 @@ export function StudioDetailPanel({ projectId, productImageId, basePrompt, scene
               推荐套图 · {CATEGORIES.find((item) => item.key === category)?.name} · {CATEGORY_RECOMMEND[category].length} 张
             </div>
           )}
+          <PosterFields
+            enabled={posterEnabled}
+            onEnabled={setPosterEnabled}
+            language={posterLanguage}
+            onLanguage={setPosterLanguage}
+            template={posterTemplate}
+            onTemplate={setPosterTemplate}
+            series={posterSeries}
+            title={posterTitle}
+            dek={posterDek}
+            tags={posterTags}
+            onSeries={setPosterSeries}
+            onTitle={setPosterTitle}
+            onDek={setPosterDek}
+            onTag={(index, field, value) => {
+              setPosterTags((prev) => prev.map((tag, tagIndex) => tagIndex === index ? { ...tag, [field]: value } : tag));
+            }}
+            canReapply={results.some((item) => item.unlettered && item.id)}
+            reapplying={posterReapplying}
+            onReapply={() => { void reapplyPosters(); }}
+          />
+          {posterNotice && (
+            <p className="mb-2 text-[11px] text-center text-red-600" data-testid="poster-notice">{posterNotice}</p>
+          )}
+
           <p className="mb-2 text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-300" data-testid="pack-run-hint">
             {t("studio.packRunHint").replace("{n}", String(recommendedCount))}
           </p>
