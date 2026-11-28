@@ -24,16 +24,19 @@ describe("quota remaining badge", () => {
     container = null;
   });
 
-  function render(status: "loading" | "ready" | "error", value: string) {
+  function render(
+    status: "loading" | "ready" | "error",
+    value: string,
+    copy: { label: string; retryLabel: string } = { label: "本月剩余", retryLabel: "重新读取" },
+  ) {
     const onRetry = vi.fn();
     act(() => {
       root?.render(
         <QuotaRemainingBadge
-          label="本月剩余"
+          label={copy.label}
           status={status}
           value={value}
-          errorLabel="剩余额度加载失败"
-          retryLabel="重试"
+          retryLabel={copy.retryLabel}
           exhausted={false}
           onRetry={onRetry}
         />,
@@ -57,20 +60,27 @@ describe("quota remaining badge", () => {
     expect(container?.textContent).not.toContain("无限");
   });
 
-  it("ends a failed load on a retry message and never paints 0/0 or unlimited", () => {
+  it("shows the month label, an em dash, and a reload button after a failed load", () => {
     const onRetry = render("error", "0/0");
     const text = container?.textContent ?? "";
-    expect(text).toContain("剩余额度加载失败");
-    expect(text).toContain("重试");
+    expect(text).toBe("本月剩余 — 重新读取");
+    expect(text).not.toContain("剩余额度加载失败");
     expect(text).not.toContain("0/0");
     expect(text).not.toContain("…");
     expect(text).not.toContain("无限");
     expect(text).not.toMatch(/unlimited|∞/i);
     const retry = container?.querySelector("[data-testid='quota-retry']");
     expect(retry?.tagName).toBe("BUTTON");
+    expect(retry?.textContent).toBe("重新读取");
     act(() => {
       retry?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(onRetry).toHaveBeenCalledTimes(1);
+
+    render("error", "0/0", { label: "Remaining this month", retryLabel: "Reload" });
+    const english = container?.textContent ?? "";
+    expect(english).toBe("Remaining this month — Reload");
+    expect(english).not.toContain("Couldn't load remaining quota");
+    expect(english).not.toContain("0/0");
   });
 });

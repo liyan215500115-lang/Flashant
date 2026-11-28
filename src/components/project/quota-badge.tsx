@@ -4,7 +4,6 @@ export function QuotaRemainingBadge({
   label,
   status,
   value,
-  errorLabel,
   retryLabel,
   exhausted,
   onRetry,
@@ -13,7 +12,6 @@ export function QuotaRemainingBadge({
   status: "loading" | "ready" | "error";
   /** Ignored while status is error, even if the caller still holds 0/0. */
   value: string;
-  errorLabel: string;
   retryLabel: string;
   exhausted: boolean;
   onRetry: () => void;
@@ -30,7 +28,7 @@ export function QuotaRemainingBadge({
       <span>{label}</span>
       {status === "error" ? (
         <>
-          <span data-testid="quota-error">{errorLabel}</span>
+          <span aria-hidden="true"> — </span>
           <button
             type="button"
             data-testid="quota-retry"

@@ -523,7 +523,6 @@ export default function ProductDetailPage() {
             label={t("detail.quotaRemaining")}
             status={quota.status}
             value={quotaText}
-            errorLabel={t("detail.quotaUnavailable")}
             retryLabel={t("detail.quotaRetry")}
             exhausted={quota.status === "ready" && quota.limit > 0 && quota.used >= quota.limit}
             onRetry={refreshQuota}

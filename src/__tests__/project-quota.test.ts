@@ -47,18 +47,24 @@ describe("project page quota", () => {
     }
   });
 
-  it("keeps failure and retry copy in every locale catalog", () => {
+  it("keeps a reload label in every locale and does not keep the stacked failure sentence", () => {
     const dir = path.resolve(__dirname, "../../messages");
     const files = readdirSync(dir).filter((name) => name.endsWith(".json"));
     expect(files.length).toBeGreaterThan(1);
     for (const name of files) {
       const messages = JSON.parse(readFileSync(path.join(dir, name), "utf8")) as {
-        detail?: { quotaUnavailable?: string; quotaRetry?: string };
+        detail?: { quotaUnavailable?: string; quotaRetry?: string; quotaRemaining?: string };
       };
-      expect(messages.detail?.quotaUnavailable, name).toBeTruthy();
+      expect(messages.detail?.quotaRemaining, name).toBeTruthy();
       expect(messages.detail?.quotaRetry, name).toBeTruthy();
-      expect(messages.detail?.quotaUnavailable).not.toBe("detail.quotaUnavailable");
-      expect(messages.detail?.quotaRetry).not.toMatch(/0\/0|无限|unlimited/i);
+      expect(messages.detail).not.toHaveProperty("quotaUnavailable");
+      expect(messages.detail?.quotaRetry).not.toMatch(/0\/0|无限|unlimited|Couldn't load|剩余额度加载失败/i);
+      expect(JSON.stringify(messages.detail)).not.toContain("Couldn't load remaining quota");
+      expect(JSON.stringify(messages.detail)).not.toContain("剩余额度加载失败");
     }
+    const en = JSON.parse(readFileSync(path.join(dir, "en.json"), "utf8")) as { detail: { quotaRetry: string } };
+    const zh = JSON.parse(readFileSync(path.join(dir, "zh.json"), "utf8")) as { detail: { quotaRetry: string } };
+    expect(en.detail.quotaRetry).toBe("Reload");
+    expect(zh.detail.quotaRetry).toBe("重新读取");
   });
 });
