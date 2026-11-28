@@ -11,9 +11,8 @@ import { StudioDetailPanel } from "@/components/studio/detail-panel";
 import { useT } from "@/components/i18n-provider";
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
 import { toast } from "sonner";
-import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
-import { workbenchEngineFromShots } from "@/lib/generate/engine-label";
 import { loadProjectWithRetry } from "@/lib/project-load";
+import { restoreStudioSession, studioDetailPanelVisible } from "@/lib/studio-session";
 import { refreshWorkbenchQuota, type QuotaSnapshot } from "@/lib/quota-display";
 import { packWorkbenchEngine, singleImageEngineType } from "@/lib/generate/pack-engine";
 
@@ -48,6 +47,7 @@ export default function StudioPage() {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
+  const [sourceImages, setSourceImages] = useState<ProductImage[]>([]);
   const [activeStyle, setActiveStyle] = useState<string | null>(null);
   const [productName, setProductName] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -65,6 +65,8 @@ export default function StudioPage() {
   const [loadedDetailFailures, setLoadedDetailFailures] = useState<Array<{ key: string; reason: string }>>([]);
   const [loadedPackSummary, setLoadedPackSummary] = useState("");
   const projectVisible = useRef(false);
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
 
   // Sync product name to project title (debounced)
   function handleProductNameChange(name: string) {
@@ -157,98 +159,76 @@ export default function StudioPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     refreshQuota();
-    // If we got a projectId from URL, load project + restore history. Otherwise create a new one.
     if (existingId) {
-      loadProjectWithRetry({
+      // A projectId that arrives after the first paint must still restore this
+      // project. A blank draft created before that id was visible must not win.
+      setProjectId(existingId);
+      setProjectCreating(false);
+      setProjectError("");
+      projectVisible.current = false;
+      setSelectedImage(null);
+      setSourceImages([]);
+      setLatestImage(null);
+      setGenerationHistory([]);
+      setLoadedDetailResults([]);
+      setLoadedDetailFailures([]);
+      setLoadedPackSummary("");
+      void loadProjectWithRetry({
         hasVisibleProject: () => projectVisible.current,
         fetchProject: async () => {
           const response = await fetch(`/api/products/${existingId}`);
           if (!response.ok) throw new Error("Failed to fetch");
           const body = await response.json();
           if (!body?.project?.id) return null;
-          return body;
+          return body.project;
         },
       }).then((loaded) => {
+        if (cancelled) return;
         if (!loaded.ok) {
           if (!loaded.keepVisible) setProjectError("项目加载失败，请检查链接是否有效");
           return;
         }
-        const d = loaded.project;
         projectVisible.current = true;
         setProjectError("");
-        return d;
-      }).then((d) => {
-        if (!d) return;
-        const imgs = d.project?.productImages ?? [];
-        if (imgs.length > 0) setSelectedImage(imgs[0]);
-        if (d.project?.title && !d.project.title.startsWith("202")) setProductName(d.project.title);
-        const gens = (d.project?.generatedImages ?? []) as Array<{
-          id?: string;
-          url?: string;
-          status?: string;
-          promptUsed?: string;
-          errorMessage?: string;
-          aiProvider?: string | null;
-          modelVersion?: string | null;
-          generationMeta?: { sourceType?: string; detailKey?: string } | null;
-        }>;
-        const engine = workbenchEngineFromShots(gens);
-        if (engine.engine === "vega") {
+        const session = restoreStudioSession(loaded.project, localeRef.current);
+        setProjectId(session.projectId);
+        setSourceImages(session.sourceImages);
+        setSelectedImage(session.selectedImage);
+        if (session.productName) setProductName(session.productName);
+        if (session.engine.engine === "vega") {
           setEngineType("vega");
-          setVegaModelLabel(engine.label);
+          setVegaModelLabel(session.engine.label);
         }
-        if (gens.length > 0) {
-          const succeeded = gens.filter((g) => g.status === "SUCCEEDED");
-          const mainImages = succeeded.filter((g) => {
-            const meta = g.generationMeta;
-            return !meta || meta.sourceType !== "detail";
-          });
-          const detailImages = succeeded.filter((g) => g.generationMeta?.sourceType === "detail");
-          const history = mainImages.map((g) => ({ id: g.id || "", url: g.url || "", promptUsed: g.promptUsed || "" }));
-          if (history.length > 0) {
-            setLatestImage(history[0]);
-            setGenerationHistory(history);
-          }
-          if (detailImages.length > 0) {
-            setLoadedDetailResults(detailImages.map((g) => ({
-              key: g.generationMeta?.detailKey || "detail",
-              url: g.url || "",
-              rawUrl: g.url || "",
-              label: g.generationMeta?.detailKey || "detail",
-              id: g.id,
-            })));
-          }
-          const packView = packRunViewFromImages(gens, locale);
-          if (packView) {
-            setLoadedPackSummary(packView.summary);
-            setLoadedDetailFailures(packView.failures);
-            if (packView.engine.engine === "vega") {
-              setEngineType("vega");
-              setVegaModelLabel(packView.engine.label);
-            }
-          } else {
-            const failedDetails = gens.filter((g) => g.status === "FAILED" && g.generationMeta?.sourceType === "detail");
-            if (failedDetails.length > 0) {
-              setLoadedDetailFailures(failedDetails.map((g) => ({
-                key: g.generationMeta?.detailKey || "detail",
-                reason: g.errorMessage || "生成失败",
-              })));
-            }
-          }
-        }
+        setLatestImage(session.latestImage);
+        setGenerationHistory(session.generationHistory);
+        setLoadedDetailResults(session.detailResults);
+        setLoadedDetailFailures(session.detailFailures);
+        setLoadedPackSummary(session.packSummary);
       });
-      setProjectCreating(false);
-    } else {
-      // Auto-create a draft project so upload works
-      setProjectCreating(true);
-      fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
-        .then((r) => r.json())
-        .then((d) => { if (d.project?.id) setProjectId(d.project.id); })
-        .catch((e) => setProjectError(e.message))
-        .finally(() => setProjectCreating(false));
+      return () => {
+        cancelled = true;
+      };
     }
-  }, []);
+
+    setProjectCreating(true);
+    fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        if (d.project?.id) setProjectId(d.project.id);
+      })
+      .catch((e) => {
+        if (!cancelled) setProjectError(e.message);
+      })
+      .finally(() => {
+        if (!cancelled) setProjectCreating(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [existingId, refreshQuota]);
 
   // Cleanup polling timer on unmount
   useEffect(() => {
@@ -363,8 +343,14 @@ export default function StudioPage() {
   }
 
   function handleImageChange(image: ProductImage) {
+    if (selectedImage && selectedImage.id !== image.id) {
+      setLatestImage(null);
+      setGenerationHistory([]);
+      setLoadedDetailResults([]);
+      setLoadedDetailFailures([]);
+      setLoadedPackSummary("");
+    }
     setSelectedImage(image);
-    setLatestImage(null);
   }
 
   return (
@@ -405,6 +391,7 @@ export default function StudioPage() {
             <StudioControlPanel
               projectId={projectId}
               selectedImage={selectedImage}
+              sourceImages={sourceImages}
               prompt={prompt}
               productName={productName}
               engineType={engineType}
@@ -459,17 +446,24 @@ export default function StudioPage() {
             onDismissError={() => setGenerationError("")}
           />
 
-          {latestImage && projectId && selectedImage && (
+          {selectedImage && studioDetailPanelVisible({
+            projectId,
+            hasSelectedImage: true,
+            hasLatestImage: Boolean(latestImage),
+            detailResultCount: loadedDetailResults.length,
+            packSummary: loadedPackSummary,
+            failureCount: loadedDetailFailures.length,
+          }) && (
             <StudioDetailPanel
               projectId={projectId}
               productImageId={selectedImage.id}
               basePrompt={prompt || `Product in ${activeStyle ?? "clean"} style`}
               sceneStyle={activeStyle || undefined}
-              referenceImageUrl={latestImage.url}
+              referenceImageUrl={latestImage?.url || selectedImage.originalUrl}
               referenceHasPerson={
                 activeStyle === "in_use" ||
                 /模特|人物|人脸|面部|手部|皮肤|佩戴|穿着|涂抹|person|people|model|face|wearing|worn/i.test(
-                  `${prompt} ${latestImage.promptUsed ?? ""}`,
+                  `${prompt} ${latestImage?.promptUsed ?? ""}`,
                 )
               }
               targetPlatform={targetPlatform}

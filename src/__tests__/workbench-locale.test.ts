@@ -23,6 +23,8 @@ const WORKBENCH_COPY: Array<[string, string, string]> = [
   ["detail.aiEdit", "AI Edit", "AI 编辑"],
   ["detail.selectImages", "Select images", "选择图片"],
   ["detail.quotaRemaining", "Remaining this month", "本月剩余"],
+  ["detail.quotaUnavailable", "Couldn't load remaining quota", "剩余额度加载失败"],
+  ["detail.quotaRetry", "Retry", "重试"],
   ["detail.imageUnavailable", "Unavailable", "图片已失效"],
 ];
 
@@ -43,6 +45,10 @@ describe("workbench locale strings", () => {
     expect(page).toContain('t("detail.aiEdit")');
     expect(page).toContain('t("detail.selectImages")');
     expect(page).toContain('t("detail.quotaRemaining")');
+    expect(page).toContain('t("detail.quotaUnavailable")');
+    expect(page).toContain('t("detail.quotaRetry")');
+    expect(page).toContain("<AiEditLink");
+    expect(page).not.toContain('<Link href={`/studio?projectId=${project.id}`}>');
     expect(page).toContain("generationStatusText");
     expect(page).not.toContain("All generations complete");
     expect(page).not.toContain(">我的项目<");

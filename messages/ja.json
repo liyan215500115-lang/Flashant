@@ -175,6 +175,8 @@
     "confirmDeleteBtn": "Confirm Delete",
     "deleting": "Deleting...",
     "quotaRemaining": "Remaining this month",
+    "quotaUnavailable": "Couldn't load remaining quota",
+    "quotaRetry": "Retry",
     "download": "Download",
     "downloadFailed": "Download failed",
     "downloadSomeFailed": "{count} downloads failed",

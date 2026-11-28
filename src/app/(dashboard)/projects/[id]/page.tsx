@@ -45,7 +45,10 @@ import { projectGenerationError } from "@/lib/project-fetch-error";
 import { packFailureReasonLabel } from "@/lib/generate/pack-summary";
 import { packRunViewFromImages } from "@/lib/generate/pack-run-client";
 import { loadProjectWithRetry } from "@/lib/project-load";
-import { loadConfirmedQuota, quotaBadgeText } from "@/lib/quota-display";
+import { loadProjectQuota, PROJECT_QUOTA_LOADING, type ProjectQuotaState } from "@/lib/project-quota";
+import { quotaBadgeText } from "@/lib/quota-display";
+import { AiEditLink } from "@/components/project/ai-edit-link";
+import { QuotaRemainingBadge } from "@/components/project/quota-badge";
 import { ImageUploadZone } from "@/components/product/image-upload-zone";
 
 
@@ -96,13 +99,8 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
-  const [quota, setQuota] = useState({
-    used: 0,
-    limit: 0,
-    tier: "" as string,
-    allotmentConfigured: false,
-    loading: true,
-  });
+  const [quota, setQuota] = useState<ProjectQuotaState>(PROJECT_QUOTA_LOADING);
+  const quotaRequest = useRef(0);
   const pollTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -182,29 +180,23 @@ export default function ProductDetailPage() {
     fetchProject();
   }, [fetchProject]);
 
-  // Fetch quota. A transient empty payload stays on the loading ellipsis.
+  const refreshQuota = useCallback(() => {
+    const request = quotaRequest.current + 1;
+    quotaRequest.current = request;
+    setQuota((current) => (current.status === "ready" ? current : PROJECT_QUOTA_LOADING));
+    void loadProjectQuota(async () => {
+      const res = await fetch("/api/quota");
+      if (!res.ok) throw new Error("quota");
+      return res.json();
+    }).then((next) => {
+      if (quotaRequest.current === request) setQuota(next);
+    });
+  }, []);
+
+  // A failed or unrecognized quota payload ends loading. It is not left on "…".
   useEffect(() => {
-    let cancelled = false;
-    loadConfirmedQuota({
-      fetchQuota: async () => {
-        const res = await fetch("/api/quota");
-        if (!res.ok) throw new Error("quota");
-        return res.json();
-      },
-    }).then((data) => {
-      if (cancelled || !data) return;
-      setQuota({
-        used: data.used,
-        limit: data.limit,
-        tier: typeof data.tier === "string" ? data.tier : "",
-        allotmentConfigured: data.allotmentConfigured === true,
-        loading: false,
-      });
-    }).catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [project?.id]);
+    refreshQuota();
+  }, [refreshQuota, project?.id]);
 
   // Resume polling for in-progress tasks on mount
   useEffect(() => {
@@ -307,25 +299,6 @@ export default function ProductDetailPage() {
       setError(e instanceof Error ? e.message : t("error.generateFailed"));
       fetchProject();
     }
-  }
-
-  function refreshQuota() {
-    loadConfirmedQuota({
-      fetchQuota: async () => {
-        const res = await fetch("/api/quota");
-        if (!res.ok) throw new Error("quota");
-        return res.json();
-      },
-    }).then((data) => {
-      if (!data) return;
-      setQuota({
-        used: data.used,
-        limit: data.limit,
-        tier: typeof data.tier === "string" ? data.tier : "",
-        allotmentConfigured: data.allotmentConfigured === true,
-        loading: false,
-      });
-    }).catch(() => {});
   }
 
   async function confirmImageDelete() {
@@ -505,13 +478,15 @@ export default function ProductDetailPage() {
         id: img.id,
         reason: packFailureReasonLabel(img.errorMessage || t("error.generateFailed"), locale),
       }));
-  const quotaText = quotaBadgeText({
-    used: quota.used,
-    limit: quota.limit,
-    tier: quota.tier,
-    allotmentConfigured: quota.allotmentConfigured,
-    loading: quota.loading,
-  }, t("generate.unlimited"));
+  const quotaText = quota.status === "error"
+    ? ""
+    : quotaBadgeText({
+        used: quota.status === "ready" ? quota.used : 0,
+        limit: quota.status === "ready" ? quota.limit : 0,
+        tier: quota.tier,
+        allotmentConfigured: quota.allotmentConfigured,
+        loading: quota.status !== "ready",
+      }, t("generate.unlimited"));
   const deleteCount = imageDeleteTarget?.kind === "batch" ? selectedIds.size : 1;
   const removesDerivatives = imageDeleteTarget?.kind === "single"
     ? imageDeleteTarget.removesDerivatives
@@ -544,15 +519,15 @@ export default function ProductDetailPage() {
               </span>
             )}
           </div>
-          {/* Quota badge. Loading stays 「…」, never blank and never 无限. */}
-          <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border mt-2 ${
-            !quota.loading && quota.limit > 0 && quota.used >= quota.limit
-              ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400"
-              : "bg-zinc-50 border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700"
-          }`}>
-            <span>{t("detail.quotaRemaining")}</span>
-            <span className="font-mono tabular-nums">{quotaText}</span>
-          </div>
+          <QuotaRemainingBadge
+            label={t("detail.quotaRemaining")}
+            status={quota.status}
+            value={quotaText}
+            errorLabel={t("detail.quotaUnavailable")}
+            retryLabel={t("detail.quotaRetry")}
+            exhausted={quota.status === "ready" && quota.limit > 0 && quota.used >= quota.limit}
+            onRetry={refreshQuota}
+          />
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {editMode ? (
@@ -643,12 +618,10 @@ export default function ProductDetailPage() {
                   </Button>
                 </Link>
               )}
-              <Link href={`/studio?projectId=${project.id}`}>
-                <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
-                  <Sparkles size={14} />
-                  {t("detail.aiEdit")}
-                </Button>
-              </Link>
+              <AiEditLink projectId={project.id}>
+                <Sparkles size={14} />
+                {t("detail.aiEdit")}
+              </AiEditLink>
               <Button
                 variant="outline" size="sm"
                 onClick={() => setEditMode(true)}
@@ -857,12 +830,10 @@ export default function ProductDetailPage() {
                   onImageChange={() => { void fetchProject(); }}
                 />
               </div>
-              <Link href={`/studio?projectId=${project.id}`}>
-                <Button variant="outline" size="sm" className="cursor-pointer gap-1.5">
-                  <Sparkles size={14} />
-                  {copy("detail.backToStudio", "Back to studio")}
-                </Button>
-              </Link>
+              <AiEditLink projectId={project.id}>
+                <Sparkles size={14} />
+                {copy("detail.backToStudio", "Back to studio")}
+              </AiEditLink>
             </CardContent>
           </Card>
         )}
