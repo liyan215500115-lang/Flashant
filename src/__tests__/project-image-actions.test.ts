@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import en from "../../messages/en.json";
+import zh from "../../messages/zh.json";
 import { imageDeleteConfirmCopy } from "@/lib/image-delete-copy";
+import { translate } from "@/lib/translate";
 import { PLATFORM_SPECS, PUBLISHABLE_PLATFORMS } from "@/lib/platform-specs";
+
+const tZh = (key: string) => translate(zh, key);
+const tEn = (key: string) => translate(en, key);
 
 const { authMock, dbMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
@@ -34,7 +40,7 @@ function post(body: unknown) {
 
 describe("imageDeleteConfirmCopy", () => {
   it("uses the batch dialog copy without a derivative warning", () => {
-    expect(imageDeleteConfirmCopy({ count: 3, removesDerivatives: false })).toEqual({
+    expect(imageDeleteConfirmCopy({ count: 3, removesDerivatives: false, t: tZh })).toEqual({
       title: "删除选中图片",
       description: "确定要删除选中的 3 张图片吗？此操作不可撤销。",
       confirmLabel: "删除 3 张",
@@ -42,11 +48,20 @@ describe("imageDeleteConfirmCopy", () => {
   });
 
   it("warns that deleting an original also removes its generated images", () => {
-    const copy = imageDeleteConfirmCopy({ count: 1, removesDerivatives: true });
+    const copy = imageDeleteConfirmCopy({ count: 1, removesDerivatives: true, t: tZh });
     expect(copy.title).toBe("删除图片");
     expect(copy.description).toContain("此操作不可撤销");
     expect(copy.description).toContain("由它生成的图片也会一并删除");
     expect(copy.confirmLabel).toBe("删除");
+  });
+
+  it("uses English copy when the workbench locale is English", () => {
+    const copy = imageDeleteConfirmCopy({ count: 2, removesDerivatives: true, t: tEn });
+    expect(copy.title).toBe("Delete selected images");
+    expect(copy.description).toContain("Delete the 2 selected images?");
+    expect(copy.description).toContain("also deletes the images generated from it");
+    expect(copy.confirmLabel).toBe("Delete 2");
+    expect(copy.description).not.toMatch(/删除/);
   });
 });
 

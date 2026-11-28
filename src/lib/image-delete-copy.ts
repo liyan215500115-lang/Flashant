@@ -1,20 +1,20 @@
+import { fillTemplate } from "@/lib/generated-image-display";
+
 export function imageDeleteConfirmCopy(input: {
   count: number;
   removesDerivatives: boolean;
+  t: (key: string) => string;
 }): { title: string; description: string; confirmLabel: string } {
   const count = Math.max(1, Math.floor(input.count));
-  const title = count > 1 ? "删除选中图片" : "删除图片";
-  const description =
-    count > 1
-      ? `确定要删除选中的 ${count} 张图片吗？此操作不可撤销。`
-      : "确定要删除这张图片吗？此操作不可撤销。";
-  const derivativeWarning = input.removesDerivatives
-    ? "删除产品原图时，由它生成的图片也会一并删除。"
-    : "";
+  const title = count > 1 ? input.t("detail.deleteSelectedTitle") : input.t("detail.deleteImageTitle");
+  const description = count > 1
+    ? fillTemplate(input.t("detail.deleteSelectedDesc"), { count })
+    : input.t("detail.deleteImageDesc");
+  const derivativeWarning = input.removesDerivatives ? input.t("detail.deleteOriginalAlso") : "";
 
   return {
     title,
     description: derivativeWarning ? `${description}${derivativeWarning}` : description,
-    confirmLabel: count > 1 ? `删除 ${count} 张` : "删除",
+    confirmLabel: count > 1 ? fillTemplate(input.t("detail.deleteCount"), { count }) : input.t("detail.delete"),
   };
 }
