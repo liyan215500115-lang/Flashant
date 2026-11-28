@@ -175,6 +175,7 @@
     "generateBtn": "Generate {count} Detail Images",
     "results": "Results",
     "quotaRemaining": "Remaining this month",
+    "quotaRetry": "Reload",
     "download": "Download",
     "downloadFailed": "Download failed",
     "downloadSomeFailed": "{count} downloads failed",

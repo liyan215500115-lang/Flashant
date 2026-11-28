@@ -15,6 +15,7 @@ interface ProductImage {
 
 interface StudioControlPanelProps {
   projectId: string | null; selectedImage: ProductImage | null;
+  sourceImages?: ProductImage[];
   prompt: string; productName: string;
   engineType: string; vegaModelLabel?: string; targetPlatform: string; targetLanguage: string;
   brandPresetId: string | null; isGenerating: boolean;
@@ -35,7 +36,7 @@ interface StudioControlPanelProps {
 }
 
 export function StudioControlPanel({
-  projectId, selectedImage, prompt, productName,
+  projectId, selectedImage, sourceImages, prompt, productName,
   engineType, vegaModelLabel, targetPlatform, targetLanguage, brandPresetId, isGenerating,
   activeStyle, onImageChange, onAccessoryUpload, accessoryImages, onPromptChange,
   onProductNameChange, onEngineChange, onPlatformChange, onLanguageChange, onBrandPresetChange,
@@ -54,7 +55,7 @@ export function StudioControlPanel({
           <span className="text-xs font-semibold text-zinc-700">{t("studio.sectionProductImage")}</span>
         </div>
         {projectId ? (
-          <ImageUploadZone projectId={projectId} currentImage={selectedImage} onImageChange={onImageChange} onAccessoryUpload={onAccessoryUpload} accessoryImages={accessoryImages} />
+          <ImageUploadZone projectId={projectId} currentImage={selectedImage} allImages={sourceImages} onImageChange={onImageChange} onAccessoryUpload={onAccessoryUpload} accessoryImages={accessoryImages} />
         ) : (
           <div className="aspect-square rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-sm text-zinc-400 py-12">
             {t("generate.noProject")}
