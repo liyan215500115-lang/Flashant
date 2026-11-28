@@ -45,19 +45,32 @@ describe("quota remaining badge", () => {
     return onRetry;
   }
 
-  it("shows the confirmed remaining balance", () => {
+  it("shows the confirmed remaining balance without clipping the figures", () => {
     render("ready", "96/100");
+    const badge = container?.querySelector("[data-testid='quota-badge']");
+    const value = container?.querySelector("[data-testid='quota-value']");
     expect(container?.textContent).toContain("本月剩余");
-    expect(container?.textContent).toContain("96/100");
+    expect(value?.textContent).toBe("96/100");
     expect(container?.querySelector("[data-testid='quota-retry']")).toBeNull();
     expect(container?.textContent).not.toContain("…");
+    expect(badge?.className).toContain("whitespace-nowrap");
+    expect(badge?.className).toContain("min-w-[13em]");
+    expect(badge?.className).not.toMatch(/truncate|ellipsis/);
+    expect(value?.className).toContain("tabular-nums");
   });
 
-  it("shows an ellipsis only while loading", () => {
+  it("shows a fixed slot while loading and does not show a balance or an ellipsis", () => {
     render("loading", "…");
-    expect(container?.querySelector("[data-testid='quota-value']")?.textContent).toBe("…");
+    const badge = container?.querySelector("[data-testid='quota-badge']");
+    expect(container?.querySelector("[data-testid='quota-skel']")).not.toBeNull();
+    expect(container?.querySelector("[data-testid='quota-value']")).toBeNull();
     expect(container?.textContent).not.toContain("0/0");
+    expect(container?.textContent).not.toContain("…");
     expect(container?.textContent).not.toContain("无限");
+    expect(badge?.className).toContain("whitespace-nowrap");
+    expect(badge?.className).toContain("min-w-[13em]");
+    expect(badge?.className).not.toMatch(/truncate|ellipsis/);
+    expect(badge?.className).not.toContain("overflow-hidden");
   });
 
   it("shows the month label, an em dash, and a reload button after a failed load", () => {
